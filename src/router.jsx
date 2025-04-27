@@ -19,6 +19,8 @@ import StudentsAttending from "./pages/studentsAttending";
 import SchoolTransportation from "./pages/schoolTransportation";
 import ResetPassword from "./auth/resetPassword/ResetPassword";
 import PasswordResetSuccess from "./auth/passwordResetSuccess/PasswordResetSuccess";
+import TeacherManagement from "./pages/teachers/teacherManagement";
+import StudentForm from "./components/Students/studentForAdd";
 
 
 
@@ -84,6 +86,17 @@ export const dashboardRoutes = [
     {
       path: '/dashboard/schoolTransportation',
       element: <SchoolTransportation/>,
+    },
+    
+    {
+      path: '/dashboard/teacher/teacherManagement',
+      element: <TeacherManagement/>,
+    },
+
+
+    {
+      path: '/dashboard/student/studentFormAdd',
+      element: <StudentForm/>,
     },
 ]
 

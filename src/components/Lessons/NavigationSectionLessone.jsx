@@ -6,6 +6,8 @@ import BreakAndHolidays from './DailySchedule/Section3';
 import ExamScheduleSection1 from './ExamSchedule/Section1/index';
 import ExamScheduleTable from './ExamSchedule/Section2';
 import PaginationSection from './../../layout/PaginationSection';
+import ArabicCalendar from './activityTables/Section2';
+import UpcomingEvents from './activityTables/Section3';
 
 const NavigationSectionLessone = () => {
     const [activeButton, setActiveButton] = useState('الجدول اليومي'); 
@@ -79,6 +81,8 @@ const NavigationSectionLessone = () => {
                     {activeButton === 'النشاط' && (
                         <Typography variant="body1">
                             <Section1 />
+                            <ArabicCalendar/>
+                            <UpcomingEvents/>
                         </Typography>
                     )}
                 </Box>

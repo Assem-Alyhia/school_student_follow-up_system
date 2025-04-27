@@ -1,52 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Paper, Typography, Button, Grid, IconButton, Avatar } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/Person';
+import ParentChildrenModal from '../parentChildrenModal/ParentChildrenModal';
 
 const Section2 = () => {
+    const [selectedParent, setSelectedParent] = useState(null);
+    const [openModal, setOpenModal] = useState(false);
+
+    const handleOpenModal = (parent) => {
+        setSelectedParent(parent);
+        setOpenModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setSelectedParent(null);
+        setOpenModal(false);
+    };
+
     const parents = [
-        {
-            id: 'P1892433',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            addedDate: '20/02/2025',
-            avatar: '/Guardian/1.jpg',
-            status: 'active',
-            childrenAvatars: ['/Students/1.jpg', '/Students/1.jpg', '/Students/1.jpg'],
-        },
-        {
-            id: 'P1892434',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            addedDate: '21/02/2025',
-            avatar: '/Guardian/1.jpg',
-            status: 'inactive',
-            childrenAvatars: ['/Students/1.jpg', '/Students/1.jpg', '/Students/1.jpg'], 
-        },
-        {
-            id: 'P1892433',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            addedDate: '20/02/2025',
-            avatar: '/Guardian/1.jpg',
-            status: 'active',
-            childrenAvatars: ['/Students/1.jpg', '/Students/1.jpg', '/Students/1.jpg'],
-        },
-        {
-            id: 'P1892434',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            addedDate: '21/02/2025',
-            avatar: '/Guardian/1.jpg',
-            status: 'inactive',
-            childrenAvatars: ['/Students/1.jpg', '/Students/1.jpg', '/Students/1.jpg'], 
-        },
         {
             id: 'P1892433',
             name: 'Joann Michael',
@@ -82,9 +56,8 @@ const Section2 = () => {
                             border: '1px solid #308A9F',
                             maxWidth: '90%',
                             margin: 'auto',
-                            position: 'relative', // لجعل العناصر المطلقة تعمل بشكل صحيح
+                            position: 'relative',
                         }}>
-                            {/* أعلى الكارد: ثلاث نقاط وكود ولي الأمر وأيقونة */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                     <IconButton>
@@ -99,7 +72,6 @@ const Section2 = () => {
                                 </IconButton>
                             </Box>
 
-                            {/* صورة ولي الأمر مع إشارة الحالة */}
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -136,7 +108,6 @@ const Section2 = () => {
                                 />
                             </Box>
 
-                            {/* اسم ولي الأمر */}
                             <Typography variant="h6" sx={{
                                 fontWeight: 'bold',
                                 margin: "1rem 0 2rem",
@@ -146,12 +117,10 @@ const Section2 = () => {
                                 {parent.name}
                             </Typography>
 
-                            {/* تاريخ الإضافة */}
                             <Typography variant="body2" sx={{ color: '#586E75', marginBottom: 2 }}>
                                 <strong>تمت الإضافة:</strong> {parent.addedDate}
                             </Typography>
 
-                            {/* البريد الإلكتروني */}
                             <Box sx={{ marginBottom: 2 }}>
                                 <Typography sx={{ color: '#586E75', marginBottom: 1 }}>
                                     <strong>البريد الإلكتروني:</strong>
@@ -174,7 +143,6 @@ const Section2 = () => {
                                 </Box>
                             </Box>
 
-                            {/* رقم الهاتف */}
                             <Box sx={{ marginBottom: 2 }}>
                                 <Typography sx={{ color: '#586E75', marginBottom: 1 }}>
                                     <strong>رقم الهاتف:</strong>
@@ -227,6 +195,7 @@ const Section2 = () => {
 
                                 <Button
                                     variant="outlined"
+                                    onClick={() => handleOpenModal(parent)}
                                     sx={{
                                         borderColor: '#308A9F',
                                         color: '#308A9F',
@@ -246,6 +215,13 @@ const Section2 = () => {
                     </Grid>
                 ))}
             </Grid>
+
+            {/* النافذة المنبثقة */}
+            <ParentChildrenModal 
+                open={openModal} 
+                onClose={handleCloseModal} 
+                parent={selectedParent} 
+            />
         </Box>
     );
 };

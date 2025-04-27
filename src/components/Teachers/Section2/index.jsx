@@ -5,6 +5,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ChatIcon from '@mui/icons-material/Chat';
 import PersonIcon from '@mui/icons-material/Person';
+import { Link } from 'react-router-dom';
 
 const Section2 = () => {
     const teachers = [
@@ -179,7 +180,7 @@ const Section2 = () => {
                             </Box>
 
                             <Box sx={{ marginBottom: 2 }}>
-                                <Typography  sx={{ color: '#586E75', marginBottom: 1 }}>
+                                <Typography sx={{ color: '#586E75', marginBottom: 1 }}>
                                     <strong>رقم الهاتف:</strong>
                                 </Typography>
                                 <Box
@@ -209,7 +210,11 @@ const Section2 = () => {
                                 }}>
                                     {teacher.subject}
                                 </Typography>
+
+
                                 <Button
+                                    component={Link}
+                                    to="/dashboard/teacher/teacherManagement" // المسار الذي تريد الانتقال إليه
                                     variant="outlined"
                                     sx={{
                                         borderColor: '#308A9F',
@@ -221,6 +226,7 @@ const Section2 = () => {
                                         },
                                         fontSize: '14px',
                                         padding: '6px 12px',
+                                        textDecoration: 'none',
                                     }}
                                 >
                                     عرض التفاصيل
