@@ -21,6 +21,7 @@ import ResetPassword from "./auth/resetPassword/ResetPassword";
 import PasswordResetSuccess from "./auth/passwordResetSuccess/PasswordResetSuccess";
 import TeacherManagement from "./pages/teachers/teacherManagement";
 import StudentForm from "./components/Students/studentForAdd";
+import StudentManagement from "./pages/students/aboutStudent";
 
 
 
@@ -97,6 +98,12 @@ export const dashboardRoutes = [
     {
       path: '/dashboard/student/studentFormAdd',
       element: <StudentForm/>,
+    },
+
+    
+    {
+      path: '/dashboard/student/studentManagement',
+      element: <StudentManagement/>,
     },
 ]
 

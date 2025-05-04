@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
-import { Box, Paper, Typography, Button, Grid, IconButton } from '@mui/material';
+import {
+    Box, Paper, Typography, Button, Grid, IconButton, Menu, MenuItem
+} from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ChatIcon from '@mui/icons-material/Chat';
 import PersonIcon from '@mui/icons-material/Person';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useNavigate } from 'react-router-dom';
 import PaymentModal from '../PaymentModal';
 
 const Section2 = () => {
-    const [open, setOpen] = useState(false); 
+    const [open, setOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [menuStudentId, setMenuStudentId] = useState(null);
+    const navigate = useNavigate();
+
     const [students, setStudents] = useState([
         {
             id: 'AD9892433',
@@ -33,50 +43,7 @@ const Section2 = () => {
             avatar: '/Students/1.jpg',
             status: 'inactive',
         },
-        {
-            id: 'AD9892433',
-            name: 'Joann Michael',
-            address: 'الصف الخامس، الشعبة الأولى',
-            registrationNumber: '#12345',
-            gender: 'ذكر',
-            releaseDate: '10/05/2025',
-            email: 'Pateiprince9595@gmail.com',
-            avatar: '/Students/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'AD9892434',
-            name: 'John Doe',
-            address: 'الصف الرابع، الشعبة الثانية',
-            registrationNumber: '#12346',
-            gender: 'أنثى',
-            releaseDate: '10/06/2025',
-            email: 'johndoe@gmail.com',
-            avatar: '/Students/1.jpg',
-            status: 'inactive',
-        },
-        {
-            id: 'AD9892433',
-            name: 'Joann Michael',
-            address: 'الصف الخامس، الشعبة الأولى',
-            registrationNumber: '#12345',
-            gender: 'ذكر',
-            releaseDate: '10/05/2025',
-            email: 'Pateiprince9595@gmail.com',
-            avatar: '/Students/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'AD9892434',
-            name: 'John Doe',
-            address: 'الصف الرابع، الشعبة الثانية',
-            registrationNumber: '#12346',
-            gender: 'أنثى',
-            releaseDate: '10/06/2025',
-            email: 'johndoe@gmail.com',
-            avatar: '/Students/1.jpg',
-            status: 'inactive',
-        },
+        // بقية الطلاب...
     ]);
 
     const handleOpen = (student) => {
@@ -97,6 +64,23 @@ const Section2 = () => {
         );
     };
 
+    const handleMenuClick = (event, studentId) => {
+        setAnchorEl(event.currentTarget);
+        setMenuStudentId(studentId);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuStudentId(null);
+    };
+
+    // const handleViewDetails = (studentId) => {
+    const handleViewDetails = () => {
+        // navigate(`/students/${studentId}`);
+        navigate(`/dashboard/student/studentManagement`);
+        handleMenuClose();
+    };
+
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
@@ -113,9 +97,27 @@ const Section2 = () => {
                         }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <IconButton>
+                                    <IconButton onClick={(e) => handleMenuClick(e, student.id)}>
                                         <MoreVertIcon />
                                     </IconButton>
+                                    <Menu
+                                        anchorEl={anchorEl}
+                                        open={Boolean(anchorEl) && menuStudentId === student.id}
+                                        onClose={handleMenuClose}
+                                    >
+                                        <MenuItem onClick={() => handleViewDetails(student.id)}>
+                                            <VisibilityIcon fontSize="small" sx={{ color: 'primary.main', marginRight: 1 }} />
+                                            <Typography sx={{ color: 'primary.main' }}>عرض التفاصيل</Typography>
+                                        </MenuItem>
+                                        <MenuItem onClick={() => { console.log("تعديل", student.id); handleMenuClose(); }}>
+                                            <EditIcon fontSize="small" sx={{ color: '#FB8C00', marginRight: 1 }} />
+                                            <Typography sx={{ color: '#FB8C00' }}>تعديل</Typography>
+                                        </MenuItem>
+                                        <MenuItem onClick={() => { console.log("حذف", student.id); handleMenuClose(); }}>
+                                            <DeleteIcon fontSize="small" sx={{ color: 'error.main', marginRight: 1 }} />
+                                            <Typography sx={{ color: 'error.main' }}>حذف</Typography>
+                                        </MenuItem>
+                                    </Menu>
                                     <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
                                         {student.id}
                                     </Typography>
@@ -221,7 +223,7 @@ const Section2 = () => {
                                         fontSize: '14px',
                                         padding: '6px 12px',
                                     }}
-                                    onClick={() => handleOpen(student)} 
+                                    onClick={() => handleOpen(student)}
                                 >
                                     أضف الرسوم
                                 </Button>
@@ -239,11 +241,11 @@ const Section2 = () => {
                 ))}
             </Grid>
 
-            <PaymentModal 
-                open={open} 
-                handleClose={handleClose} 
-                student={selectedStudent} 
-                updateStudentStatus={updateStudentStatus} 
+            <PaymentModal
+                open={open}
+                handleClose={handleClose}
+                student={selectedStudent}
+                updateStudentStatus={updateStudentStatus}
             />
         </Box>
     );
