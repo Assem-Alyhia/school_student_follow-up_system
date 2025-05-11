@@ -3,97 +3,56 @@ import {
     Box,
     Typography,
     Paper,
-    useTheme,
-    Grid
+    Grid,
+    Avatar
 } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import GroupIcon from '@mui/icons-material/Group';
-import SchoolIcon from '@mui/icons-material/School';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 
 const UpcomingEvents = () => {
-    const theme = useTheme();
 
     const events = [
         {
             title: "اجتماع مع أولياء الأمور",
-            icon: <GroupIcon color="primary" />,
-            date: "04/04/2023"
+            date: "04/04/2025",
+            time: "04:00 مساءً",
+            icon: <GroupIcon sx={{ color: '#fff',   }} />
         },
         {
-            title: "اختماج مع أولياء الأمور",
-            icon: <AssignmentIcon color="primary" />,
-            date: "04/04/2023"
+            title: "اجتماع مع أولياء الأمور",
+            date: "04/04/2025",
+            time: "04:00 مساءً",
+            icon: <GroupIcon sx={{ color: '#fff' }} />
         },
         {
-            title: "إرشاد",
-            icon: <SchoolIcon color="primary" />,
-            date: "04/04/2023"
+            title: "اجتماع مع أولياء الأمور",
+            date: "04/04/2025",
+            time: "04:00 مساءً",
+            icon: <GroupIcon sx={{ color: '#fff' }} />
         }
     ];
 
     return (
-        <Paper elevation={3} sx={{
-            width: '100%',
-            p: 3,
-            borderRadius: '12px',
-            direction: 'rtl'
-        }}>
-            {/* Header */}
-            <Typography variant="h6" sx={{
-                fontWeight: 'bold',
-                color: theme.palette.primary.main,
-                mb: 3,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-            }}>
-                <EventIcon color="primary" />
+        <Box sx={{ direction: 'rtl', p: 2 }}>
+            <Typography variant="h6" sx={{ color: '#22385F', fontWeight: 'bold', mb: 2 }}>
                 الأحداث القادمة
             </Typography>
-
-            {/* Events Grid */}
             <Grid container spacing={2}>
                 {events.map((event, index) => (
                     <Grid item xs={12} sm={4} key={index}>
-                        <Box sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            p: 2,
-                            border: '1px solid',
-                            borderColor: theme.palette.divider,
-                            borderRadius: '8px',
-                            height: '100%'
-                        }}>
-                            <Box sx={{
-                                color: theme.palette.primary.main,
-                                mb: 1,
-                                fontSize: '2.5rem'
-                            }}>
+                        <Paper sx={{ display: 'flex', alignItems: 'center', p: 2, borderRadius: 2, backgroundColor: '#ebebf3' }}>
+                            <Avatar sx={{ background: 'linear-gradient(180deg, #35AFBC, #308A9F, #22385F)', width: 56, height: 56, mr: 2  ,  ml:2 , borderRadius:"10px"}}>
                                 {event.icon}
+                            </Avatar>
+                            <Box>
+                                <Typography sx={{ color: '#22385F', fontWeight: 'bold' }}>{event.title}</Typography>
+                                <Typography variant="body2" sx={{ color: '#586E75' }}>{`${event.time} | ${event.date}`}</Typography>
                             </Box>
-                            <Typography variant="subtitle1" sx={{
-                                fontWeight: 'bold',
-                                mb: 0.5
-                            }}>
-                                {event.title}
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                                color: theme.palette.text.secondary,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5
-                            }}>
-                                <EventIcon fontSize="small" />
-                                {event.date}
-                            </Typography>
-                        </Box>
+                        </Paper>
                     </Grid>
                 ))}
             </Grid>
-        </Paper>
+        </Box>
     );
 };
 

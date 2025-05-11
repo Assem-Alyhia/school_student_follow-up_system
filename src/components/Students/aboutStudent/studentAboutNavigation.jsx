@@ -3,6 +3,7 @@ import { Box, Button, Paper, Typography } from '@mui/material';
 import StudentDetails from './studentDetails';
 import DailySchedule from './DailySchedule';
 import StudentFeesAboutTable from './studentFeesTable';
+import ExamResults from './ExamResults';
 
 
 const StudentNavigation = () => {
@@ -104,9 +105,7 @@ const StudentNavigation = () => {
 
                     )}
                     {activeTab === 'نتائج الامتحانات' && (
-                        // <ExamResults />
-                        <StudentDetails />
-
+                        <ExamResults />
                     )}
                 </Box>
             </Paper>

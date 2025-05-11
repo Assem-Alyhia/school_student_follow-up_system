@@ -1,8 +1,13 @@
-import Section1 from "../../components/Dashboard/Section1";
+import OverviewSection from "../../components/Dashboard/Section1";
+import DashboardWidgets from "../../components/Dashboard/Section2";
+import QuickAccessSection from "../../components/Dashboard/Section3";
+
 const Dashboard = () => {
     return ( 
         <>
-            <Section1/>
+            <OverviewSection/>
+            <DashboardWidgets/>
+            <QuickAccessSection/>
         </>
     );
 }
