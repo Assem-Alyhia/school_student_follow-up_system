@@ -1,10 +1,41 @@
-import { Box, Card, TextField, Button, Typography, InputAdornment, IconButton } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { useState } from "react";
+import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { resetPassword } from "../../api/authApi/passwordApi";
 
 function ResetPassword() {
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+
+    const token = searchParams.get("token") || "";
+    const email = searchParams.get("email") || "";
+
+    const [password, setPassword] = useState("");
+    const [passwordConfirmation, setPasswordConfirmation] = useState("");
+    const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!token || !email) {
+            setError("الرابط غير صالح أو مفقود.");
+        }
+    }, [token, email]);
+
+    const handleSubmit = async () => {
+        setError("");
+        setSuccessMessage("");
+        setLoading(true);
+        try {
+            await resetPassword(token, email, password, passwordConfirmation);
+            setSuccessMessage("تم تغيير كلمة المرور بنجاح. سيتم توجيهك لتسجيل الدخول...");
+            setTimeout(() => navigate("/login"), 3000);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <Box
@@ -37,47 +68,51 @@ function ResetPassword() {
                     <img src="/auth/1.png" alt="شعار المدرسة" style={{ width: 140 }} />
                 </Box>
 
-                <Typography variant="h5" fontWeight="bold" mb={2} sx={{ color: '#308A9F' }}>
-                    إعادة تعيين كلمة المرور
+                <Typography variant="h5" fontWeight="bold" mb={2} sx={{ color: "#308A9F" }}>
+                    تعيين كلمة المرور الجديدة
                 </Typography>
 
-                <Typography variant="body2" color="textSecondary" mb={3}>
-                    الرجاء إدخال كلمة المرور الجديدة
-                </Typography>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                {successMessage && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        {successMessage}
+                    </Alert>
+                )}
 
                 <TextField
                     label="كلمة المرور الجديدة"
-                    placeholder="أدخل كلمة المرور الجديدة"
                     variant="outlined"
                     fullWidth
-                    type={showPassword ? "text" : "password"}
-                    sx={{ mb: 2 }}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            </InputAdornment>
-                        ),
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    sx={{
+                        mb: 3,
+                        "& .MuiOutlinedInput-root": {
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        },
                     }}
                 />
 
                 <TextField
-                    label="تأكيد كلمة المرور"
-                    placeholder="أعد إدخال كلمة المرور الجديدة"
+                    label="تأكيد كلمة المرور الجديدة"
                     variant="outlined"
                     fullWidth
-                    type={showConfirmPassword ? "text" : "password"}
-                    sx={{ mb: 3 }}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
-                                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            </InputAdornment>
-                        ),
+                    type="password"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    sx={{
+                        mb: 3,
+                        "& .MuiOutlinedInput-root": {
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        },
                     }}
                 />
 
@@ -85,22 +120,18 @@ function ResetPassword() {
                     variant="contained"
                     fullWidth
                     sx={{
-                        background: 'linear-gradient(to right, #186384E3, #186384)',
+                        background: "linear-gradient(to right, #186384E3, #186384)",
                         color: "white",
                         mb: 2,
-                        '&:hover': {
-                            background: 'linear-gradient(to right, #186384, #186384E3)',
-                        }
+                        "&:hover": {
+                            background: "linear-gradient(to right, #186384, #186384E3)",
+                        },
                     }}
+                    onClick={handleSubmit}
+                    disabled={loading || !password || !passwordConfirmation}
                 >
-                    تأكيد كلمة المرور الجديدة
+                    {loading ? "جاري التغيير..." : "تغيير كلمة المرور"}
                 </Button>
-
-                <Typography variant="body2" color="textSecondary">
-                    <Button variant="text" sx={{ textTransform: "none", color: "#FF3939" }}>
-                        العودة إلى تسجيل الدخول
-                    </Button>
-                </Typography>
             </Card>
         </Box>
     );

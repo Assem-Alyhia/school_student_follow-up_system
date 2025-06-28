@@ -1,10 +1,40 @@
-
-import { Box, Card, TextField, Button, Typography, InputAdornment, IconButton } from "@mui/material";
+import {
+    Box,
+    Card,
+    TextField,
+    Button,
+    Typography,
+    InputAdornment,
+    IconButton,
+    Alert,
+    FormControlLabel,
+    Checkbox,
+    Link,
+} from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useState } from "react";
+import { login } from "../../api/authApi/LoginApi";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(false);
+    const [error, setError] = useState("");
+    const navigate = useNavigate();
+
+    const handleLogin = async () => {
+        try {
+            setError("");
+            const response = await login(email, password);
+            console.log("تم تسجيل الدخول:", response);
+            // هنا يمكنك التعامل مع rememberMe حسب المطلوب (مثلاً تخزين token أطول)
+            navigate("/dashboard");
+        } catch (err) {
+            setError(err.message || "فشل في تسجيل الدخول");
+        }
+    };
 
     return (
         <Box
@@ -26,11 +56,11 @@ function Login() {
                     textAlign: "center",
                     boxShadow: 5,
                     borderRadius: "16px",
-                    backgroundImage: "url('/auth/3.png')", 
+                    backgroundImage: "url('/auth/3.png')",
                     backgroundSize: "cover",
                     backgroundPosition: "center",
-                    backdropFilter: "blur(15px)", 
-                    border: "1px solid rgba(255, 255, 255, 0.3)", 
+                    backdropFilter: "blur(15px)",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
                 }}
             >
                 <Box sx={{ mb: 2 }}>
@@ -41,12 +71,20 @@ function Login() {
                     تسجيل الدخول
                 </Typography>
 
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
                 <TextField
-                    label="البريد الإلكتروني"
-                    placeholder="أدخل بريدك الإلكتروني"
+                    label="اسم المستخدم"
+                    placeholder="أدخل اسم المستخدم"
                     variant="outlined"
                     fullWidth
                     sx={{ mb: 2 }}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                 />
 
                 <TextField
@@ -56,10 +94,15 @@ function Login() {
                     fullWidth
                     type={showPassword ? "text" : "password"}
                     sx={{ mb: 2 }}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">
-                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                                <IconButton
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    edge="end"
+                                >
                                     {showPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>
@@ -67,17 +110,30 @@ function Login() {
                     }}
                 />
 
-                <Button variant="contained" fullWidth sx={{ bgcolor: "#1976D2", color: "white", mb: 1 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="تذكرني"
+                    />
+                    <Link href="/forgot-password" underline="hover" sx={{ cursor: "pointer" }}>
+                        هل نسيت كلمة المرور؟
+                    </Link>
+                </Box>
+
+                <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ bgcolor: "#1976D2", color: "white", mb: 1 }}
+                    onClick={handleLogin}
+                >
                     تسجيل الدخول
                 </Button>
-
-                <Typography variant="body2" color="textSecondary">
-                    <Button variant="text" sx={{ textTransform: "none", color: "#FF3939" }}>
-                        قم بإنشاء حساب
-                    </Button>
-                    {" "}  هل لديك حساب مسبقًا؟
-
-                </Typography>
             </Card>
         </Box>
     );

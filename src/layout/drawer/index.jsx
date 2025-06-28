@@ -17,8 +17,8 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import { Outlet, useLocation, Link } from 'react-router-dom';
-import SearchIcon from '@mui/icons-material/Search'; 
-import ChatIcon from '@mui/icons-material/Chat'; 
+import SearchIcon from '@mui/icons-material/Search';
+import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
@@ -38,6 +38,9 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useState } from 'react';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+
+import { useNavigate } from "react-router-dom";
+import { clearToken } from '../../api/authApi/tokenManager';
 const drawerWidth = 240;
 
 const openedMixin = (theme) => ({
@@ -123,7 +126,7 @@ const menuItems = [
 export default function MiniDrawer() {
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
-    const [anchorEl, setAnchorEl] = useState(null);
+    // const [anchorEl, setAnchorEl] = useState(null);
     const location = useLocation();
 
     const hideDrawerRoutes = ['/some-other-route'];
@@ -154,15 +157,30 @@ export default function MiniDrawer() {
         }));
     };
 
-    const handleLogout = () => {
-        window.location.href = '/login';
-    };
+
 
     const [userData, setUserData] = useState({
         userFirstName: 'عاصم',
         userLastName: 'اليحيى',
         userImage: '/userDashboard/Profile/Profile.png',
     });
+
+
+
+    const navigate = useNavigate();
+    const [anchorEl, setAnchorEl] = React.useState(null);
+
+    // const handleProfileMenuClose = () => {
+    //     setAnchorEl(null);
+    // };
+
+    const handleLogout = () => {
+        clearToken(); // مسح التوكن أو بيانات الجلسة
+        handleProfileMenuClose(); // إغلاق القائمة
+        navigate("/login"); // إعادة التوجيه لصفحة تسجيل الدخول
+    };
+
+
 
     return (
         <Box sx={{ display: 'flex', position: 'relative' }}>

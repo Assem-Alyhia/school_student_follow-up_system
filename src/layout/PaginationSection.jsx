@@ -1,42 +1,66 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Paper, Select, MenuItem, Typography, FormControl, InputLabel, Button, IconButton } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-const PaginationSection = () => {
-    const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+const PaginationSection = ({
+    page,
+    rowsPerPage,
+    total,
+    lastPage,
+    onPageChange,
+    onRowsPerPageChange
+}) => {
+    const from = (page - 1) * rowsPerPage + 1;
+    const to = Math.min(page * rowsPerPage, total);
 
-    const handleChangePage = (newPage) => {
-        setPage(newPage);
-    };
+    const getVisiblePageNumbers = () => {
+        const visiblePages = 5;
+        let start = Math.max(1, page - Math.floor(visiblePages / 2));
+        let end = start + visiblePages - 1;
 
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(event.target.value);
-        setPage(1); // Reset to the first page when changing rows per page
+        if (end > lastPage) {
+            end = lastPage;
+            start = Math.max(1, end - visiblePages + 1);
+        }
+
+        const pages = [];
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        return pages;
     };
 
     return (
-        <Box sx={{ padding: 3}}>
-            <Paper elevation={0} sx={{ padding: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 16px' }}>
+        <Box sx={{ padding: 3 }}>
+            <Paper elevation={0} sx={{
+                padding: 2,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                margin: '0 16px',
+                flexWrap: 'wrap'
+            }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Typography sx={{ marginRight: 2 }}>
-                        10-1 من 50
+                        {`${from}-${to} من ${total}`}
                     </Typography>
+
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <IconButton
-                            onClick={() => handleChangePage(page - 1)}
+                            onClick={() => onPageChange(page - 1)}
                             disabled={page === 1}
                             sx={{ color: '#35AFBC' }}
                         >
                             <ChevronLeftIcon />
                         </IconButton>
 
-                        {[1, 2, 3, 4, 5].map((number) => (
+                        {getVisiblePageNumbers().map((number) => (
                             <Button
                                 key={number}
                                 variant={page === number ? 'contained' : 'outlined'}
-                                onClick={() => handleChangePage(number)}
+                                onClick={() => onPageChange(number)}
                                 sx={{
                                     minWidth: '32px',
                                     padding: '6px 12px',
@@ -53,8 +77,8 @@ const PaginationSection = () => {
                         ))}
 
                         <IconButton
-                            onClick={() => handleChangePage(page + 1)}
-                            disabled={page === 5}
+                            onClick={() => onPageChange(page + 1)}
+                            disabled={page === lastPage}
                             sx={{ color: '#35AFBC' }}
                         >
                             <ChevronRightIcon />
@@ -69,7 +93,7 @@ const PaginationSection = () => {
                         <Select
                             labelId="rows-per-page-label"
                             value={rowsPerPage}
-                            onChange={handleChangeRowsPerPage}
+                            onChange={onRowsPerPageChange}
                             label="كل صفحة"
                             sx={{ width: '100px' }}
                         >

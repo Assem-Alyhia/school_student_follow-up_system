@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapDialog = ({ open, handleClose }) => {
-    const centerPosition = [22.5726, 88.3639]; // المركز الافتراضي للخريطة
+    const centerPosition = [22.5726, 88.3639]; 
 
     const handleReset = () => {
         console.log('تم الضغط على إعادة تعيين');
@@ -26,15 +26,12 @@ const MapDialog = ({ open, handleClose }) => {
 
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" sx={{ '& .MuiDialog-paper': { borderRadius: 4 } }}>
-            {/* رأس النافذة */}
             <DialogTitle sx={{ pb: 1 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-                    {/* كود المسار */}
                     <Button variant="contained" size="small" sx={{ bgcolor: '#308A9F', borderRadius: '8px', fontWeight: 'bold', fontSize: 14 }}>
                         GPS78994
                     </Button>
 
-                    {/* حالة التسليم */}
                     <Select
                         size="small"
                         defaultValue="delivered"
@@ -46,7 +43,6 @@ const MapDialog = ({ open, handleClose }) => {
                 </Stack>
             </DialogTitle>
 
-            {/* معلومات المسار */}
             <DialogContent dividers sx={{ pt: 0 }}>
                 <Box mb={2}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
@@ -55,9 +51,7 @@ const MapDialog = ({ open, handleClose }) => {
                         </Typography>
                     </Stack>
 
-                    {/* معلومات السائق والمشرف */}
                     <Stack direction="row" spacing={4} alignItems="center" mt={2}>
-                        {/* السائق */}
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Avatar alt="السائق" src="/driver-avatar.png" sx={{ width: 32, height: 32 }} />
                             <Box>
@@ -67,7 +61,6 @@ const MapDialog = ({ open, handleClose }) => {
                             </Box>
                         </Stack>
 
-                        {/* المشرف */}
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Avatar alt="المشرف" src="/supervisor-avatar.png" sx={{ width: 32, height: 32 }} />
                             <Box>
@@ -78,7 +71,6 @@ const MapDialog = ({ open, handleClose }) => {
                         </Stack>
                     </Stack>
 
-                    {/* معلومات نقطة الانطلاق وعدد الطلاب */}
                     <Stack direction="row" spacing={2} alignItems="center" mt={2}>
                         <Typography variant="body2" fontWeight="bold">
                             8930 - مجمع الفرقان
@@ -90,7 +82,6 @@ const MapDialog = ({ open, handleClose }) => {
                     </Stack>
                 </Box>
 
-                {/* الخريطة */}
                 <Box sx={{ height: 500, width: '100%', borderRadius: 2, overflow: 'hidden', mt: 2 }}>
                     <MapContainer center={centerPosition} zoom={13} style={{ height: '100%', width: '100%' }}>
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -99,7 +90,6 @@ const MapDialog = ({ open, handleClose }) => {
                 </Box>
             </DialogContent>
 
-            {/* الأزرار السفلية */}
             <DialogActions sx={{ justifyContent: 'space-between', p: 2 }}>
                 <Button variant="outlined" color="error" onClick={handleClose} sx={{ width: '150px' }}>
                     إلغاء

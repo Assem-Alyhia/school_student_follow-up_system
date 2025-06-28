@@ -1,10 +1,11 @@
 import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
 import { useState } from "react";
-import { Link } from "@mui/material";
-import { forgotPassword } from "../../api/authApi/passwordApi"; // تأكد من المسار
+import { changePassword } from "../../api/authApi/passwordApi";
 
-function ForgetPassword() {
-    const [email, setEmail] = useState("");
+function ChangePassword() {
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [password, setPassword] = useState("");
+    const [passwordConfirmation, setPasswordConfirmation] = useState("");
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [loading, setLoading] = useState(false);
@@ -14,8 +15,11 @@ function ForgetPassword() {
         setSuccessMessage("");
         setLoading(true);
         try {
-            await forgotPassword(email);
-            setSuccessMessage("تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.");
+            await changePassword(currentPassword, password, passwordConfirmation);
+            setSuccessMessage("تم تغيير كلمة المرور بنجاح.");
+            setCurrentPassword("");
+            setPassword("");
+            setPasswordConfirmation("");
         } catch (err) {
             setError(err.message);
         } finally {
@@ -55,11 +59,7 @@ function ForgetPassword() {
                 </Box>
 
                 <Typography variant="h5" fontWeight="bold" mb={2} sx={{ color: "#308A9F" }}>
-                    إعادة تعيين كلمة المرور
-                </Typography>
-
-                <Typography variant="body2" color="textSecondary" mb={3}>
-                    أدخل بريدك الإلكتروني لاستعادة كلمة المرور الخاصة بك
+                    تغيير كلمة المرور
                 </Typography>
 
                 {error && (
@@ -75,12 +75,44 @@ function ForgetPassword() {
                 )}
 
                 <TextField
-                    label="البريد الإلكتروني"
-                    placeholder="example@gmail.com"
+                    label="كلمة المرور الحالية"
                     variant="outlined"
                     fullWidth
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    sx={{
+                        mb: 3,
+                        "& .MuiOutlinedInput-root": {
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        },
+                    }}
+                />
+
+                <TextField
+                    label="كلمة المرور الجديدة"
+                    variant="outlined"
+                    fullWidth
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    sx={{
+                        mb: 3,
+                        "& .MuiOutlinedInput-root": {
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        },
+                    }}
+                />
+
+                <TextField
+                    label="تأكيد كلمة المرور الجديدة"
+                    variant="outlined"
+                    fullWidth
+                    type="password"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
                     sx={{
                         mb: 3,
                         "& .MuiOutlinedInput-root": {
@@ -102,30 +134,13 @@ function ForgetPassword() {
                         },
                     }}
                     onClick={handleSubmit}
-                    disabled={loading || !email}
+                    disabled={loading || !currentPassword || !password || !passwordConfirmation}
                 >
-                    {loading ? "جاري الإرسال..." : "متابعة"}
+                    {loading ? "جاري التغيير..." : "تغيير كلمة المرور"}
                 </Button>
-
-                <Typography variant="body2" color="textSecondary">
-                    <Link
-                        href="/login"
-                        underline="none"
-                        sx={{
-                            textTransform: "none",
-                            color: "#FF3939",
-                            cursor: "pointer",
-                            "&:hover": {
-                                textDecoration: "underline",
-                            },
-                        }}
-                    >
-                        العودة إلى تسجيل الدخول
-                    </Link>
-                </Typography>
             </Card>
         </Box>
     );
 }
 
-export default ForgetPassword;
+export default ChangePassword;
