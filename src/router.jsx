@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <PrivateRoute />, // حماية كل ما بداخل dashboard
+    element: <PrivateRoute />, 
     children: [
       {
         path: "",

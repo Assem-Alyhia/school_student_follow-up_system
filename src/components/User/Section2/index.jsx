@@ -11,13 +11,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllUsers } from '../../../api/Admin/Users/getAllUsers';
 import { deleteUser } from '../../../api/Admin/Users/deleteUser';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
-
+import SuccessAlert from '../../../layout/SuccessAlert';
 const Section2 = ({ page, rowsPerPage }) => {
     const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('prefix');
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
-
+    const [showSuccess, setShowSuccess] = useState(false);
     const queryClient = useQueryClient();
 
     const { data, isLoading, isError, error } = useQuery({
@@ -30,8 +30,11 @@ const Section2 = ({ page, rowsPerPage }) => {
         mutationFn: deleteUser,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users', page, rowsPerPage] });
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
         },
     });
+
 
     useEffect(() => {
         if (data?.data?.length > 0) {
@@ -119,10 +122,10 @@ const Section2 = ({ page, rowsPerPage }) => {
                                     </TableCell>
                                     <TableCell>
                                         <IconButton><EditIcon /></IconButton>
-                                        <IconButton onClick={() => handleDeleteClick(user.prefix)}>
+                                        <IconButton onClick={() => handleDeleteClick(user.id)}>
                                             <DeleteIcon />
                                         </IconButton>
-                                        <IconButton><VisibilityIcon /></IconButton>
+                                        {/* <IconButton><VisibilityIcon /></IconButton> */}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -138,6 +141,16 @@ const Section2 = ({ page, rowsPerPage }) => {
                 title="هل أنت متأكد بأنك تريد حذف المستخدم؟"
                 message="سيتم إزالة جميع البيانات المرتبطة به"
             />
+
+
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف المستخدم بنجاح!"
+                    message="تم حذف بيانات المستخدم من النظام."
+                    onClose={() => setShowSuccess(false)}
+                    type="error" // ✅ هذا السطر هو المفتاح لتغيير اللون والتصميم
+                />
+            )}
         </Box>
     );
 };
