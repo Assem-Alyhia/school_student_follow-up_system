@@ -148,7 +148,7 @@ const Section2 = ({ page, rowsPerPage }) => {
                     title="تم حذف المستخدم بنجاح!"
                     message="تم حذف بيانات المستخدم من النظام."
                     onClose={() => setShowSuccess(false)}
-                    type="error" // ✅ هذا السطر هو المفتاح لتغيير اللون والتصميم
+                    severity="error"
                 />
             )}
         </Box>

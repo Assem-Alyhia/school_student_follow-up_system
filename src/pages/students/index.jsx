@@ -6,7 +6,7 @@ const Students = () => {
     return ( 
         <>
             <Section1/>
-            <Section2/>
+            {/* <Section2/> */}
             <Section3/>
 
         </>

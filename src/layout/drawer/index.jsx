@@ -154,6 +154,7 @@ const menuItems = [
             { text: 'القوائم', icon: <PeopleIcon />, url: '/dashboard/users' },
         ]
     },
+    { text: 'الطلاب', icon: <PersonIcon />, url: '/dashboard/students' },
     { text: 'المعلمون', icon: <PersonIcon />, url: '/dashboard/teachers' },
     { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
     { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },

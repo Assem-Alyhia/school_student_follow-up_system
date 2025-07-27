@@ -40,7 +40,7 @@ const dashboardRoutes = [
   { path: "schoolTransportation", element: <SchoolTransportation /> },
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },
   { path: "student/studentFormAdd", element: <StudentForm /> },
-  { path: "student/studentManagement", element: <StudentManagement /> },
+  { path: "student/studentManagement/:id", element: <StudentManagement /> },
 ];
 
 export const router = createBrowserRouter([
