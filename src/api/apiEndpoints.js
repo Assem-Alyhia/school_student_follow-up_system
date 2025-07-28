@@ -1,4 +1,5 @@
 const apiEndpoints = {
+  // المصادقة
   login: "login",
   logout: "logout",
   register: "register",
@@ -13,7 +14,20 @@ const apiEndpoints = {
   // الطلاب
   getAllStudents: "admin/students",
   deleteStudent: (id) => `admin/students/${id}`,
-  getStudentById: 'admin/students'
+  getStudentById: "admin/students",
+  createStudent: "admin/students",
+
+  // أولياء الأمور
+  getAllParents: "admin/parents",
+
+  // الصفوف
+  getAllClassrooms: "admin/classrooms",
+
+  // المشرفين
+  getAllSupervisors: "admin/supervisors",
+
+  // الرسوم
+  getAllSchoolFees: "admin/school-fees",
 };
 
 export default apiEndpoints;

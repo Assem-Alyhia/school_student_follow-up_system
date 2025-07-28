@@ -72,7 +72,7 @@ const Section2 = ({ students }) => {
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
                 {students.map((student) => {
-                    const user = student.user;
+                    const user = student;
 
                     return (
                         <Grid item xs={12} sm={6} md={4} key={student.id}>
@@ -194,7 +194,7 @@ const Section2 = ({ students }) => {
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <EmailIcon sx={{ color: '#fff', marginRight: 1, fontSize: '16px' }} />
                                         <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px' }}>
-                                            {user.email}
+                                            {user.user.email}
                                         </Typography>
                                     </Box>
                                 </Box>

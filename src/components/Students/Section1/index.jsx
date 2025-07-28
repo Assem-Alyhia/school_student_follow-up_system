@@ -59,7 +59,7 @@ const Section1 = () => {
                                 marginRight: 2
                             }}
                         >
-                            إضافة مستخدم
+                            إضافة طالب
                         </Button>
 
                         <Button
