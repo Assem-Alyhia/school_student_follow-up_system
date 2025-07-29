@@ -5,10 +5,10 @@ import {
 import Autocomplete from '@mui/material/Autocomplete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { createStudent } from '../../../api/Admin/Students/createStudent';
-import { getAllParents } from '../../../api/Admin/Parents/getAllParents';
-import { getAllClassrooms } from '../../../api/Admin/Classrooms/getAllClassrooms';
-import { getAllSupervisors } from '../../../api/Admin/Supervisors/getAllSupervisors';
-import { getAllSchoolFees } from '../../../api/Admin/SchoolFees/getAllSchoolFees';
+import { getAllParentsNoPaginate } from '../../../api/Admin/Parents/getAllParentsNoPaginate';
+import { getAllClassroomsNoPaginate } from '../../../api/Admin/Classrooms/getAllClassroomsNoPaginate';
+import { getAllSupervisorsNoPaginate } from '../../../api/Admin/Supervisors/getAllSupervisorsNoPaginate';
+import { getAllSchoolFeesNoPaginate } from '../../../api/Admin/SchoolFees/getAllSchoolFeesNoPaginate';
 import { useNavigate } from 'react-router-dom';
 import SuccessAlert from '../../../layout/SuccessAlert';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -22,8 +22,8 @@ export default function StudentForm() {
         image: null, name: '', email: '', password: '', password_confirmation: '',
         parent_id: '', classroom_id: '', supervisor_id: '', gender: 'male',
         phone: '', enrollment_date: '', address: '', dob: '', student_status: 'in_school',
-        medical_info: '', school_fee_id: '', amount: '', discount: '',
-        discount_status: 'none', payment_status: 'pending', payment_number: '', paid_at: '',
+        medical_info: '', school_fee_id: '1', amount: '', discount: '',
+        discount_status: 'none', payment_status: 'pending', paid_at: '',
     });
 
     const [previewImage, setPreviewImage] = useState(null);
@@ -41,10 +41,10 @@ export default function StudentForm() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     useEffect(() => {
         const fetchData = async () => {
-            setParents(await getAllParents());
-            setClassrooms(await getAllClassrooms());
-            setSupervisors(await getAllSupervisors());
-            setSchoolFees(await getAllSchoolFees());
+            setParents(await getAllParentsNoPaginate());
+            setClassrooms(await getAllClassroomsNoPaginate());
+            setSupervisors(await getAllSupervisorsNoPaginate());
+            setSchoolFees(await getAllSchoolFeesNoPaginate());
         };
         fetchData();
     }, []);
@@ -267,7 +267,7 @@ export default function StudentForm() {
                             renderInput={(params) => <TextField {...params} label="حالة الدفع" margin="dense" />}
                         />
 
-                        <TextField fullWidth name="payment_number" label="رقم الدفع" value={formData.payment_number} onChange={handleChange} margin="dense" />
+                        {/* <TextField fullWidth name="payment_number" label="رقم الدفع" value={formData.payment_number} onChange={handleChange} margin="dense" /> */}
                         <TextField fullWidth name="paid_at" label="تاريخ الدفع" type="date" InputLabelProps={{ shrink: true }} value={formData.paid_at} onChange={handleChange} margin="dense" />
                     </Paper>
 
