@@ -1,34 +1,95 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Paper, Typography, Button, Grid, IconButton } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import ChatIcon from '@mui/icons-material/Chat';
-import PersonIcon from '@mui/icons-material/Person';
-import { Link } from 'react-router-dom';
-import { getAllTeachers } from '../../../api/Admin/Teachers/getAllTeachers'; // تأكد من وجود هذا الملف وتصديره
+import {
+    Box, Paper, Typography, Button, Grid, IconButton, Menu, MenuItem
+} from '@mui/material';
+import {
+    MoreVert as MoreVertIcon,
+    Email as EmailIcon,
+    Phone as PhoneIcon,
+    Chat as ChatIcon,
+    Person as PersonIcon,
+    Visibility as VisibilityIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon
+} from '@mui/icons-material';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { deleteTeacher } from '../../../api/Admin/Teachers/deleteTeacher';
+import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
+import SuccessAlert from '../../../layout/SuccessAlert';
+import { getAllTeachers } from '../../../api/Admin/Teachers/getAllTeachers';
 
 const Section2 = () => {
     const [teachers, setTeachers] = useState([]);
+    const [selectedTeacher, setSelectedTeacher] = useState(null);
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuTeacherId, setMenuTeacherId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         const fetchTeachers = async () => {
             try {
-                const response = await getAllTeachers(); // يمكن لاحقاً تمرير page/perPage هنا
+                const response = await getAllTeachers();
                 setTeachers(response?.data || []);
             } catch (error) {
                 console.error('خطأ في جلب المعلمين:', error.message);
             }
         };
-
         fetchTeachers();
     }, []);
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteTeacher,
+        onMutate: async (teacherId) => {
+            setIsDeleting(true);
+            // تحديث واجهة المستخدم فوراً قبل اكتمال الطلب
+            setTeachers(prev => prev.filter(teacher => teacher.id !== teacherId));
+            return { previousTeachers: teachers };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['teachers']);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+        },
+        onError: (err, teacherId, context) => {
+            // استعادة الحالة السابقة في حالة الخطأ
+            setTeachers(context.previousTeachers);
+            console.error('فشل في حذف المعلم:', err.message);
+        },
+        onSettled: () => {
+            setIsDeleting(false);
+        }
+    });
+
+    const handleMenuClick = (event, teacherId) => {
+        setMenuAnchorEl(event.currentTarget);
+        setMenuTeacherId(teacherId);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuTeacherId(null);
+    };
+
+    const handleDelete = (id) => {
+        setSelectedTeacher(id);
+        setOpenDeleteModal(true);
+    };
+
+    const confirmDelete = () => {
+        deleteMutation.mutate(selectedTeacher);
+        setOpenDeleteModal(false);
+    };
 
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
-                {teachers.map((teacher, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
+                {teachers.map((teacher) => (
+                    <Grid item xs={12} sm={6} md={4} key={teacher.id}>
                         <Paper elevation={3} sx={{
                             padding: 2,
                             height: '100%',
@@ -40,9 +101,40 @@ const Section2 = () => {
                         }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <IconButton>
+                                    <IconButton onClick={(e) => handleMenuClick(e, teacher.id)}>
                                         <MoreVertIcon />
                                     </IconButton>
+                                    <Menu
+                                        anchorEl={menuAnchorEl}
+                                        open={Boolean(menuAnchorEl) && menuTeacherId === teacher.id}
+                                        onClose={handleMenuClose}
+                                    >
+                                        <MenuItem
+                                            onClick={() => {
+                                                navigate(`/dashboard/teacher/teacherManagement/${teacher.id}`);
+                                                handleMenuClose();
+                                            }}
+                                        >
+                                            <VisibilityIcon fontSize="small" sx={{ color: 'primary.main', marginRight: 1 }} />
+                                            <Typography sx={{ color: 'primary.main' }}>عرض التفاصيل</Typography>
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() => {
+                                                navigate(`/dashboard/teacher/updateTeacher/${teacher.id}`);
+                                                handleMenuClose();
+                                            }}
+                                        >
+                                            <EditIcon fontSize="small" sx={{ color: '#FB8C00', marginRight: 1 }} />
+                                            <Typography sx={{ color: '#FB8C00' }}>تعديل</Typography>
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() => { handleDelete(teacher.id); handleMenuClose(); }}
+                                            disabled={isDeleting}
+                                        >
+                                            <DeleteIcon fontSize="small" sx={{ color: 'error.main', marginRight: 1 }} />
+                                            <Typography sx={{ color: 'error.main' }}>حذف</Typography>
+                                        </MenuItem>
+                                    </Menu>
                                     <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
                                         {teacher.id || '---'}
                                     </Typography>
@@ -113,7 +205,7 @@ const Section2 = () => {
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <EmailIcon sx={{ color: '#fff', marginRight: 1, fontSize: '16px' }} />
                                         <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px' }}>
-                                            {teacher.email}
+                                            {teacher.user?.email}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -153,7 +245,7 @@ const Section2 = () => {
 
                                 <Button
                                     component={Link}
-                                    to={`/dashboard/teacher/teacherManagement`}
+                                    to={`/dashboard/teacher/teacherManagement/${teacher.id}`}
                                     variant="outlined"
                                     sx={{
                                         borderColor: '#308A9F',
@@ -175,6 +267,24 @@ const Section2 = () => {
                     </Grid>
                 ))}
             </Grid>
+
+            <ConfirmDeleteModal
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="هل أنت متأكد من حذف المعلم؟"
+                message="سيتم حذف بيانات المعلم من النظام."
+                isLoading={isDeleting}
+            />
+
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف المعلم بنجاح!"
+                    message="تمت إزالة بيانات المعلم من النظام."
+                    severity="error"
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </Box>
     );
 };

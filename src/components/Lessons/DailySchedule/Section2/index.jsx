@@ -60,7 +60,7 @@ const DailySchedule = () => {
                                                     WebkitTextFillColor: 'transparent'
                                                 }}>{scheduleData[day][rowIndex].subject}</Typography>
                                                 <Typography variant="body2" sx={{ color: '#8F929C' }}>{scheduleData[day][rowIndex].time}</Typography>
-                                                <Typography sx={{ backgroundColor:'#D9D9D9' , padding:'0.5rem 1rem ' ,borderRadius:'8px', margin:"1rem 0 0 0"}}>
+                                                <Typography sx={{ backgroundColor: '#D9D9D9', padding: '0.5rem 1rem ', borderRadius: '8px', margin: "1rem 0 0 0" }}>
                                                     <Typography sx={{
                                                         fontWeight: 'bold',
                                                         background: 'linear-gradient(0deg, #308A9F, #005F6B)',

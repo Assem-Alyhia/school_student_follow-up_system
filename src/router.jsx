@@ -26,6 +26,7 @@ import StudentForm from "./components/Students/studentForAdd";
 import StudentManagement from "./pages/students/aboutStudent";
 import Fees from "./pages/Fees";
 import Reports from "./pages/Reports";
+import StudentEditForm from "./components/Students/updateStudent";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -45,6 +46,7 @@ const dashboardRoutes = [
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },
   { path: "student/studentFormAdd", element: <StudentForm /> },
   { path: "student/studentManagement/:id", element: <StudentManagement /> },
+  { path: "student/updateStudent/:id", element: <StudentEditForm /> },
 ];
 
 export const router = createBrowserRouter([

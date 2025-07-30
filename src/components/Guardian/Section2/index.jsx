@@ -15,6 +15,7 @@ import ParentChildrenModal from '../parentChildrenModal/ParentChildrenModal';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
 import { deleteParent } from '../../../api/Admin/Parents/deleteParent';
+import { getParentById } from '../../../api/Admin/Parents/getParentById';
 
 const Section2 = ({ parents = [], setParents }) => {
     const [selectedParent, setSelectedParent] = useState(null);
@@ -34,10 +35,17 @@ const Section2 = ({ parents = [], setParents }) => {
         setMenuParent(null);
     };
 
-    const handleOpenModal = (parent) => {
-        setSelectedParent(parent);
-        setOpenModal(true);
-    };
+
+const handleOpenModal = async (parentId) => {
+  try {
+    const fullParent = await getParentById(parentId);
+    setSelectedParent(fullParent); 
+    setOpenModal(true);
+  } catch (err) {
+    console.error("خطأ في جلب بيانات ولي الأمر", err);
+  }
+};
+
 
     const handleEdit = (parent) => {
         console.log('تعديل:', parent);
@@ -73,7 +81,6 @@ const Section2 = ({ parents = [], setParents }) => {
             setMenuParent(null);
         }
     };
-
 
     const handleCloseModal = () => {
         setSelectedParent(null);
@@ -195,7 +202,7 @@ const Section2 = ({ parents = [], setParents }) => {
 
                                 <Button
                                     variant="outlined"
-                                    onClick={() => handleOpenModal(parent)}
+                                    onClick={() => handleOpenModal(parent.id)}
                                     sx={{
                                         borderColor: '#308A9F',
                                         color: '#308A9F',

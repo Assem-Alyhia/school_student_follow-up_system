@@ -14,12 +14,14 @@ const apiEndpoints = {
   // الطلاب
   getAllStudents: "admin/students",
   deleteStudent: (id) => `admin/students/${id}`,
+  updateStudent: (id) => `admin/students/${id}`,
   getStudentById: "admin/students",
   createStudent: "admin/students",
   getStudentPaymentById: (id) => `admin/payments/${id}`,
   getScheduleById: (id) => `admin/schedules/${id}`,
   // أولياء الأمور
   getAllParents: "admin/parents",
+  getParentById: (id) => `admin/parents/${id}`,
   deleteParent: (id) => `admin/parents/${id}`,
   getAllParentsNoPaginate: "admin/parents/get-all",
   // الصفوف
@@ -35,6 +37,10 @@ const apiEndpoints = {
   // المعلمون
   getAllTeachers: "admin/teachers",
   getAllTeachersNoPaginate: "admin/teachers/get-all",
+  deleteTeacher: (id) => `admin/teachers/${id}`,
+
+  // المراحل الدراسية
+  getLevelsStats: "admin/levels/home",
 };
 
 export default apiEndpoints;
