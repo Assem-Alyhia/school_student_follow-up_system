@@ -160,10 +160,10 @@ const menuItems = [
     { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },
     { text: 'الدروس', icon: <AssignmentIcon />, url: '/dashboard/lessons' },
     { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
-    { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/attendance' },
-    { text: 'النقل المدرسي', icon: <ReportIcon />, url: '/dashboard/transportation' },
-    { text: 'الشؤون المالية', icon: <AttachMoneyIcon />, url: '/dashboard/finance' },
-    { text: 'الإعدادات', icon: <SettingsIcon />, url: '/dashboard/settings' },
+    { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/studentsAttending' },
+    { text: 'النقل المدرسي', icon: <ReportIcon />, url: '/dashboard/schoolTransportation' },
+    { text: 'الشؤون المالية', icon: <AttachMoneyIcon />, url: '/dashboard/fees' },
+    { text: 'التقارير', icon: <SettingsIcon />, url: '/dashboard/reports' },
 ];
 
 export default function MiniDrawer() {

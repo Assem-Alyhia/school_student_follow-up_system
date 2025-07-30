@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Paper, Typography, Button, Grid, IconButton } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EmailIcon from '@mui/icons-material/Email';
@@ -6,82 +6,23 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import ChatIcon from '@mui/icons-material/Chat';
 import PersonIcon from '@mui/icons-material/Person';
 import { Link } from 'react-router-dom';
+import { getAllTeachers } from '../../../api/Admin/Teachers/getAllTeachers'; // تأكد من وجود هذا الملف وتصديره
 
 const Section2 = () => {
-    const teachers = [
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-    ];
+    const [teachers, setTeachers] = useState([]);
+
+    useEffect(() => {
+        const fetchTeachers = async () => {
+            try {
+                const response = await getAllTeachers(); // يمكن لاحقاً تمرير page/perPage هنا
+                setTeachers(response?.data || []);
+            } catch (error) {
+                console.error('خطأ في جلب المعلمين:', error.message);
+            }
+        };
+
+        fetchTeachers();
+    }, []);
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -103,7 +44,7 @@ const Section2 = () => {
                                         <MoreVertIcon />
                                     </IconButton>
                                     <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
-                                        {teacher.id}
+                                        {teacher.id || '---'}
                                     </Typography>
                                 </Box>
                                 <IconButton>
@@ -126,7 +67,7 @@ const Section2 = () => {
                             >
                                 <Box
                                     component="img"
-                                    src={teacher.avatar}
+                                    src={teacher.avatar || '/Teachers/default.jpg'}
                                     sx={{
                                         width: '100%',
                                         height: '100%',
@@ -147,7 +88,6 @@ const Section2 = () => {
                                 />
                             </Box>
 
-                            {/* اسم المعلم */}
                             <Typography variant="h6" sx={{
                                 fontWeight: 'bold',
                                 margin: "1rem 0 2rem",
@@ -208,13 +148,12 @@ const Section2 = () => {
                                     padding: '.4rem 1rem',
                                     borderRadius: '4px',
                                 }}>
-                                    {teacher.subject}
+                                    {teacher.subject || '---'}
                                 </Typography>
-
 
                                 <Button
                                     component={Link}
-                                    to="/dashboard/teacher/teacherManagement" // المسار الذي تريد الانتقال إليه
+                                    to={`/dashboard/teacher/teacherManagement`}
                                     variant="outlined"
                                     sx={{
                                         borderColor: '#308A9F',

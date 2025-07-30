@@ -24,6 +24,8 @@ import SchoolTransportation from "./pages/schoolTransportation";
 import TeacherManagement from "./pages/teachers/teacherManagement";
 import StudentForm from "./components/Students/studentForAdd";
 import StudentManagement from "./pages/students/aboutStudent";
+import Fees from "./pages/Fees";
+import Reports from "./pages/Reports";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -36,6 +38,8 @@ const dashboardRoutes = [
   { path: "academicStages", element: <AcademicStages /> },
   { path: "lessons", element: <Lessons /> },
   { path: "grades", element: <Grades /> },
+  { path: "fees", element: <Fees /> },
+  { path: "reports", element: <Reports /> },
   { path: "studentsAttending", element: <StudentsAttending /> },
   { path: "schoolTransportation", element: <SchoolTransportation /> },
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },

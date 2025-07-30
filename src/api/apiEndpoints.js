@@ -31,6 +31,10 @@ const apiEndpoints = {
   // الرسوم
   getAllSchoolFees: "admin/school-fees",
   getAllSchoolFeesNoPaginate: "admin/school-fees/get-all",
+
+  // المعلمون
+  getAllTeachers: "admin/teachers",
+  getAllTeachersNoPaginate: "admin/teachers/get-all",
 };
 
 export default apiEndpoints;

@@ -135,7 +135,7 @@ const Section2 = ({ students }) => {
                                 }}>
                                     <Box
                                         component="img"
-                                        src={user.user.image || '/Students/default.jpg'}
+                                        src={user.user.image}
                                         sx={{
                                             width: '100%',
                                             height: '100%',

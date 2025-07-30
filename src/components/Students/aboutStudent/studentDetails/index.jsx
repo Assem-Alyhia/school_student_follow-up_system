@@ -52,39 +52,38 @@ const StudentDetails = () => {
                         <Button fullWidth variant="outlined" sx={{ color: '#308A9F', borderColor: '#308A9F', mt: 1, mb: 2 }}>أضف الرسوم</Button>
                     </Paper>
 
-                    {/* ثابت: العنوان */}
+                    {/* العنوان */}
                     <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>العنوان</Typography></Box>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={1}>
                                 <Grid item xs={6}><Typography sx={{ color: '#586E75' }}>المدينة</Typography></Grid>
-                                <Grid item xs={6}><Typography sx={{ color: '#308A9F' }}>إعزاز</Typography></Grid>
+                                <Grid item xs={6}><Typography sx={{ color: '#308A9F' }}>{studentData.address?.split('\n')[1] || '---'}</Typography></Grid>
                                 <Grid item xs={6}><Typography sx={{ color: '#586E75' }}>العنوان</Typography></Grid>
-                                <Grid item xs={6}><Typography sx={{ color: '#308A9F' }}>{studentData.address || '---'}</Typography></Grid>
+                                <Grid item xs={6}><Typography sx={{ color: '#308A9F' }}>{studentData.address?.split('\n')[0] || '---'}</Typography></Grid>
                             </Grid>
                         </Box>
                     </Paper>
 
-                    {/* ثابت: الأخوة */}
-                    <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
-                        <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>معلومات الأخوة</Typography></Box>
-                        <Box sx={{ p: 2 }}>
-                            {[
-                                { name: 'أحمد غصون', grade: 'الصف الثالث', avatar: '/Students/sibling1.png' },
-                                { name: 'ليلى غصون', grade: 'الصف الرابع', avatar: '/Students/sibling2.png' }
-                            ].map((sibling, index) => (
-                                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar src={sibling.avatar} sx={{ width: 50, height: 50, ml: 1 }} />
-                                    <Box>
-                                        <Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>{sibling.name}</Typography>
-                                        <Typography sx={{ color: '#586E75' }}>{sibling.grade}</Typography>
+                    {/* الأخوة */}
+                    {studentData.siblings?.length > 0 && (
+                        <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
+                            <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>معلومات الأخوة</Typography></Box>
+                            <Box sx={{ p: 2 }}>
+                                {studentData.siblings.map((sibling, index) => (
+                                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                        <Avatar src={`/Students/sibling${index + 1}.png`} sx={{ width: 50, height: 50, ml: 1 }} />
+                                        <Box>
+                                            <Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>{sibling.name}</Typography>
+                                            <Typography sx={{ color: '#586E75' }}>{sibling.gender || '---'}</Typography>
+                                        </Box>
                                     </Box>
-                                </Box>
-                            ))}
-                        </Box>
-                    </Paper>
+                                ))}
+                            </Box>
+                        </Paper>
+                    )}
 
-                    {/* ثابت: الإشراف والنقل */}
+                    {/* الإشراف والنقل */}
                     <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>الإشراف والنقل</Typography></Box>
                         <Box sx={{ p: 2 }}>
@@ -118,15 +117,15 @@ const StudentDetails = () => {
                         </Box>
                         <Box sx={{ padding: ' 1rem 2rem' }}>
                             {[{
-                                name: studentData.parent?.name || '---',
-                                phone: studentData.parent?.phone || '---',
-                                email: studentData.user?.email || '---',
+                                name: studentData.parent.user?.name || '---',
+                                phone: studentData.parent.user?.phone || '---',
+                                email: studentData.parent.user?.email || '---',
                                 avatar: '/Students/father.png',
                                 role: 'الأب'
                             }, {
-                                name: 'أم غصون',
-                                phone: '+963 999 123 456',
-                                email: 'mom@example.com',
+                                name: 'أم ' + studentData.parent.user?.name.split(' ')[0],
+                                phone: studentData.parent.user?.phone || '---',
+                                email: studentData.parent.user?.email || '---',
                                 avatar: '/Students/mother.png',
                                 role: 'الأم'
                             }].map((parent, i) => (
@@ -147,7 +146,7 @@ const StudentDetails = () => {
                         </Box>
                     </Paper>
 
-                    {/* ثابت: المستندات */}
+                    {/* المستندات */}
                     <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}><Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>المستندات</Typography></Box>
                         <Box sx={{ p: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -157,7 +156,7 @@ const StudentDetails = () => {
                         </Box>
                     </Paper>
 
-                    {/* ثابت: المدرسة السابقة */}
+                    {/* المدرسة السابقة */}
                     <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}><Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل المدرسة السابقة</Typography></Box>
                         <Box sx={{ p: 4 }}>
@@ -187,7 +186,7 @@ const StudentDetails = () => {
                         </Box>
                     </Paper>
 
-                    {/* ثابت: النقل */}
+                    {/* النقل */}
                     <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}>
                             <Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل النقل</Typography>
