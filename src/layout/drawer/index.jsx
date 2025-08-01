@@ -150,7 +150,7 @@ const menuItems = [
         url: '/dashboard/users',
         children: [
             { text: 'الأدوار', icon: <PeopleIcon />, url: '/dashboard/users/roles' },
-            { text: 'الصلاحيات', icon: <PeopleIcon />, url: '/dashboard/users/roles/selectRoles' },
+            { text: 'الصلاحيات', icon: <PeopleIcon />, url: '/dashboard/users/permissions' },
             { text: 'القوائم', icon: <PeopleIcon />, url: '/dashboard/users' },
         ]
     },
@@ -158,6 +158,7 @@ const menuItems = [
     { text: 'المعلمون', icon: <PersonIcon />, url: '/dashboard/teachers' },
     { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
     { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },
+    { text: 'الصفوف الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/classes' },
     { text: 'الدروس', icon: <AssignmentIcon />, url: '/dashboard/lessons' },
     { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
     { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/studentsAttending' },

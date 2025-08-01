@@ -6,7 +6,6 @@ export const createStudent = async (studentData) => {
   try {
     const formData = new FormData();
 
-    // إضافة كل البيانات المطلوبة
     for (const key in studentData) {
       if (studentData[key] !== null && studentData[key] !== undefined)
         formData.append(key, studentData[key]);

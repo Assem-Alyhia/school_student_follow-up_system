@@ -12,7 +12,6 @@ import PrivateRoute from "./auth/privateRoute/PrivateRoute";
 import Dashboard from './pages/dashboard';
 import User from "./pages/user";
 import Roles from "./pages/user/roles";
-import SelectRoles from "./pages/user/selectRoles";
 import Students from "./pages/students";
 import Teachers from "./pages/teachers";
 import Guardian from "./pages/guardian";
@@ -27,12 +26,16 @@ import StudentManagement from "./pages/students/aboutStudent";
 import Fees from "./pages/Fees";
 import Reports from "./pages/Reports";
 import StudentEditForm from "./components/Students/updateStudent";
+import Classes from "./pages/Classes";
+import Permissions from "./pages/user/permissions";
+import _AddRolse from './pages/user/roles/addRolse/index';
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
   { path: "users", element: <User /> },
   { path: "users/roles", element: <Roles /> },
-  { path: "users/roles/selectRoles", element: <SelectRoles /> },
+  { path: "users/rolse/addRolse", element: <_AddRolse/> },
+  { path: "users/permissions", element: <Permissions /> },
   { path: "students", element: <Students /> },
   { path: "teachers", element: <Teachers /> },
   { path: "guardian", element: <Guardian /> },
@@ -41,6 +44,7 @@ const dashboardRoutes = [
   { path: "grades", element: <Grades /> },
   { path: "fees", element: <Fees /> },
   { path: "reports", element: <Reports /> },
+  { path: "classes", element: <Classes /> },
   { path: "studentsAttending", element: <StudentsAttending /> },
   { path: "schoolTransportation", element: <SchoolTransportation /> },
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },
@@ -57,7 +61,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <PrivateRoute />, 
+    element: <PrivateRoute />,
     children: [
       {
         path: "",

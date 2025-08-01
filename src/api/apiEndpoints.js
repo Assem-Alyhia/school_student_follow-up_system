@@ -27,6 +27,8 @@ const apiEndpoints = {
   // الصفوف
   getAllClassrooms: "admin/classrooms",
   getAllClassroomsNoPaginate: "admin/classrooms/get-all",
+  getClassroomById: (id) => `admin/classrooms/${id}`,
+  deleteClassroom: (id) => `admin/classrooms/${id}`,
   // المشرفين
   getAllSupervisors: "admin/supervisors",
   getAllSupervisorsNoPaginate: "admin/supervisors/get-all",
@@ -41,6 +43,20 @@ const apiEndpoints = {
 
   // المراحل الدراسية
   getLevelsStats: "admin/levels/home",
+
+  //الادوار
+  getAllRoles: "/admin/roles",
+  createRole: "admin/roles",
+  getRoleById: (id) => `admin/roles/${id}`,
+  updateRole: (id) => `admin/roles/${id}`,
+  deleteRole: (id) => `admin/roles/${id}`,
+
+  // الصلاحيات
+  getPermissionById: (id) => `admin/permissions/${id}`,
+  getAllPermissions: "admin/permissions",
+  createPermission: "admin/permissions",
+  deletePermission: (id) => `admin/permissions/${id}`,
+  updatePermission: (id) => `admin/permissions/${id}`,
 };
 
 export default apiEndpoints;
