@@ -9,6 +9,7 @@ const apiEndpoints = {
 
   // المستخدمون
   getAllUsers: "admin/users",
+  getUserById: (id) => `admin/users/${id}`,
   deleteUser: (id) => `admin/users/${id}`,
 
   // الطلاب

@@ -12,9 +12,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllRoles } from '../../../../api/Admin/Roles/getAllRoles';
+import { deleteRole } from '../../../../api/Admin/Roles/deleteRole';
 import { useNavigate } from 'react-router-dom';
+
+import SuccessAlert from './../../../../layout/SuccessAlert';
+import ConfirmDeleteModal from './../../../../layout/ConfirmDeleteModal';
 
 const Section2 = () => {
     const { data, isLoading, isError, error } = useQuery({
@@ -22,9 +26,23 @@ const Section2 = () => {
         queryFn: getAllRoles,
     });
 
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
+
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedRoleId, setSelectedRoleId] = useState(null);
-    const navigate = useNavigate();
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    const mutation = useMutation({
+        mutationFn: deleteRole,
+        onSuccess: () => {
+            setShowSuccess(true);
+            queryClient.invalidateQueries(['roles']);
+            setTimeout(() => setShowSuccess(false), 3000);
+        },
+        onError: (err) => alert("فشل الحذف: " + err.message),
+    });
 
     const handleMenuOpen = (event, roleId) => {
         setAnchorEl(event.currentTarget);
@@ -33,23 +51,24 @@ const Section2 = () => {
 
     const handleMenuClose = () => {
         setAnchorEl(null);
-        setSelectedRoleId(null);
     };
 
-    const handleView = () => {
-        navigate(`/dashboard/users/rolse/view/${selectedRoleId}`);
-        handleMenuClose();
-    };
 
     const handleEdit = () => {
-        navigate(`/dashboard/users/rolse/edit/${selectedRoleId}`);
+        navigate(`/dashboard/users/rolse/editRolse/${selectedRoleId}`);
         handleMenuClose();
     };
 
     const handleDelete = () => {
-        // نفذ الحذف هنا أو افتح Dialog للتأكيد
-        console.log('احذف الدور:', selectedRoleId);
+        setOpenDeleteModal(true);
         handleMenuClose();
+    };
+
+    const confirmDelete = () => {
+        if (selectedRoleId) {
+            mutation.mutate(selectedRoleId);
+            setOpenDeleteModal(false);
+        }
     };
 
     if (isLoading) return <Typography>جاري تحميل الأدوار...</Typography>;
@@ -165,10 +184,6 @@ const Section2 = () => {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={handleView}>
-                    <VisibilityIcon sx={{ color: '#1976d2', fontSize: 20, mr: 1 }} />
-                    <Typography sx={{ color: '#1976d2' }}>عرض التفاصيل</Typography>
-                </MenuItem>
                 <MenuItem onClick={handleEdit}>
                     <EditIcon sx={{ color: '#ff9800', fontSize: 20, mr: 1 }} />
                     <Typography sx={{ color: '#ff9800' }}>تعديل</Typography>
@@ -178,6 +193,24 @@ const Section2 = () => {
                     <Typography sx={{ color: '#f44336' }}>حذف</Typography>
                 </MenuItem>
             </Menu>
+
+            <ConfirmDeleteModal
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="هل أنت متأكد من حذف الدور؟"
+                message="سيتم حذف هذا الدور وجميع صلاحياته المرتبطة من النظام."
+            />
+
+            {/* تنبيه النجاح */}
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف الدور بنجاح!"
+                    message="تمت إزالة بيانات الدور من النظام."
+                    severity="error"
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </Box>
     );
 };

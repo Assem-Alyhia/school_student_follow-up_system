@@ -29,11 +29,17 @@ import StudentEditForm from "./components/Students/updateStudent";
 import Classes from "./pages/Classes";
 import Permissions from "./pages/user/permissions";
 import _AddRolse from './pages/user/roles/addRolse/index';
+import UpdateRole from "./components/User/Roles/updateRole";
+import UserProfile from "./components/ProfilePage";
+import SettingNavigation from "./components/UsersSettings/settingNavigation";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
   { path: "users", element: <User /> },
+  { path: "users/usersProfile", element: <UserProfile /> },
+  { path: "users/usersSettings", element: <SettingNavigation /> },
   { path: "users/roles", element: <Roles /> },
+  { path: "users/rolse/editRolse/:id", element: <UpdateRole /> },
   { path: "users/rolse/addRolse", element: <_AddRolse/> },
   { path: "users/permissions", element: <Permissions /> },
   { path: "students", element: <Students /> },

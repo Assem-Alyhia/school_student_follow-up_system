@@ -1,8 +1,8 @@
 // api/Admin/Roles/deleteRole.js
-import api from "../../api";
+import axiosInstance from '../../axiosInstance';
 import apiEndpoints from "../../apiEndpoints";
 
 export const deleteRole = async (id) => {
-  const response = await api.delete(apiEndpoints.deleteRole(id));
+  const response = await axiosInstance.delete(apiEndpoints.deleteRole(id));
   return response.data;
 };

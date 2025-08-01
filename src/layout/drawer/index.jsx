@@ -261,19 +261,70 @@ export default function MiniDrawer() {
                                 anchorEl={anchorEl}
                                 open={Boolean(anchorEl)}
                                 onClose={handleProfileMenuClose}
+                                PaperProps={{
+                                    sx: {
+                                        width: 250,
+                                        borderRadius: 2,
+                                        p: 2,
+                                        boxShadow: 4,
+                                        mt: 1.5
+                                    },
+                                }}
+                                anchorOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'right',
+                                }}
+                                transformOrigin={{
+                                    vertical: 'top',
+                                    horizontal: 'right',
+                                }}
                             >
-                                <MenuItem onClick={handleProfileMenuClose} sx={{ width: '12rem', opacity: '.7' }}>
-                                    <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        <PersonIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                                {/* ✅ معلومات المستخدم */}
+                                <Box sx={{ textAlign: 'center', mb: 1 }}>
+                                    <img
+                                        src={ '/default-avatar.png'}
+                                        alt="Avatar"
+                                        style={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: '50%',
+                                            objectFit: 'cover',
+                                            marginBottom: 8
+                                        }}
+                                    />
+                                    <Typography fontWeight="bold" fontSize="1rem">
+                                        عاصم اليحيى
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        aasem-alyhia@gmail.com
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
+
+                                {/* ✅ الروابط */}
+                                <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
+                                    <Link to="/dashboard/users/usersProfile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                        <PersonIcon sx={{ mr: 1 }} />
                                         الملف الشخصي
                                     </Link>
                                 </MenuItem>
-                                <hr style={{ width: '85%', margin: 'auto', opacity: '.6', border: '1.2px solid #ccc' }} />
-                                <MenuItem onClick={handleLogout} sx={{ width: '12rem', opacity: '.7' }}>
-                                    <ExitToAppIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+
+                                <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
+                                    <Link to="/dashboard/users/usersSettings" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                        <SettingsIcon sx={{ mr: 1 }} />
+                                        الإعدادات
+                                    </Link>
+                                </MenuItem>
+
+                                <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
+
+                                <MenuItem onClick={handleLogout} sx={{ color: 'red', px: 2 }}>
+                                    <ExitToAppIcon sx={{ mr: 1 }} />
                                     تسجيل الخروج
                                 </MenuItem>
                             </Menu>
+
                         </Toolbar>
                     </AppBar>
 

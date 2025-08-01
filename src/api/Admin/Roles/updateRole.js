@@ -1,8 +1,8 @@
 // api/Admin/Roles/updateRole.js
-import api from "../../api";
+import axiosInstance from "../../axiosInstance";
 import apiEndpoints from "../../apiEndpoints";
 
-export const updateRole = async ({ id, updatedData }) => {
-  const response = await api.put(apiEndpoints.updateRole(id), updatedData);
+export const updateRole = async (id, payload) => {
+  const response = await axiosInstance.put(apiEndpoints.updateRole(id), payload);
   return response.data;
 };

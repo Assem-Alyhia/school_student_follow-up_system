@@ -21,11 +21,11 @@ export default function StudentEditForm() {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        image: null, name: '', email: '', password: '', password_confirmation: '',
+        image: null, name: '', email: '', password: null, password_confirmation: null,
         parent_id: '', classroom_id: '', supervisor_id: '', gender: 'male',
         phone: '', enrollment_date: '', address: '', dob: '', student_status: 'in_school',
-        medical_info: '', school_fee_id: '1', amount: '', discount: '',
-        discount_status: 'none', payment_status: 'pending', paid_at: '',
+        medical_info: '', school_fee_id: '1', amount: null, discount: null,
+        discount_status: 'none', payment_status: null, paid_at: '',
     });
 
     const [previewImage, setPreviewImage] = useState(null);
