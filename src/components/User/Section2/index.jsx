@@ -12,6 +12,7 @@ import { getAllUsers } from '../../../api/Admin/Users/getAllUsers';
 import { deleteUser } from '../../../api/Admin/Users/deleteUser';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
+import { Link } from 'react-router-dom';
 const Section2 = ({ page, rowsPerPage }) => {
     const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('prefix');
@@ -121,7 +122,9 @@ const Section2 = ({ page, rowsPerPage }) => {
                                         <Typography sx={{ color: getStatusColor('نشط') }}>نشط</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <IconButton><EditIcon /></IconButton>
+                                        <IconButton component={Link} to={`/dashboard/users/updateUser/${user.id}`}>
+                                            <EditIcon />
+                                        </IconButton>
                                         <IconButton onClick={() => handleDeleteClick(user.id)}>
                                             <DeleteIcon />
                                         </IconButton>

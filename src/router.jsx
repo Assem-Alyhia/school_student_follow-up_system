@@ -32,12 +32,14 @@ import _AddRolse from './pages/user/roles/addRolse/index';
 import UpdateRole from "./components/User/Roles/updateRole";
 import UserProfile from "./components/ProfilePage";
 import SettingNavigation from "./components/UsersSettings/settingNavigation";
+import UpdateUser from "./components/User/UpdateUser";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
   { path: "users", element: <User /> },
-  { path: "users/usersProfile", element: <UserProfile /> },
-  { path: "users/usersSettings", element: <SettingNavigation /> },
+  { path: "users/usersProfile/:id", element: <UserProfile /> },
+  { path: "users/usersSettings/:id", element: <SettingNavigation /> },
+  { path: "users/updateUser/:id", element: <UpdateUser /> },
   { path: "users/roles", element: <Roles /> },
   { path: "users/rolse/editRolse/:id", element: <UpdateRole /> },
   { path: "users/rolse/addRolse", element: <_AddRolse/> },

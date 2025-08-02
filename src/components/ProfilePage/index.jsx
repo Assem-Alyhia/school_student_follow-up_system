@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Paper,
@@ -9,27 +9,27 @@ import {
     Switch,
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
-
+import { useParams } from 'react-router-dom';
+import { getUserById } from './../../api/Admin/Users/getUserById';
+import { Avatar } from '@mui/material';
 const UserProfile = () => {
+    const { id } = useParams();
     const [isAvailable, setIsAvailable] = useState(false);
-
-    const user = {
-        image: '/avatar.jpg',
-        name: 'عاصم محمد اليحيى',
-        status: 'نشط',
-        birthDate: '01/07/2001',
-        gender: 'أنثى',
-        address: '',
-        email: 'aasem@gmail.com',
-        passwordChangedSince: 'شهرين',
-        language: 'العربية - متحدث أصلي',
-        rate: '$28',
-        hoursPerWeek: '32 ساعة',
-        specializations: ['إداري', 'وظائف'],
-        bio: `We're open to partnerships, guest posts, and more. Join us to share your insights and grow your audience.`,
-    };
-
+    const [user, setUser] = useState(null);
     const mainColor = '#2ea394';
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await getUserById(id);
+                setUser(response.data);
+            } catch (err) {
+                console.error('Error fetching user:', err);
+            }
+        };
+
+        if (id) fetchUser();
+    }, [id]);
 
     const Row = ({ label, value }) => (
         <>
@@ -56,6 +56,22 @@ const UserProfile = () => {
         </>
     );
 
+    const profileData = {
+        image: user?.image || '/avatar.jpg',
+        name: user?.name || '---',
+        status: 'نشط',
+        birthDate: '01/07/2001',
+        gender: 'أنثى',
+        address: '',
+        email: user?.email || '---@gmail.com',
+        passwordChangedSince: 'شهرين',
+        language: 'العربية - متحدث أصلي',
+        rate: '$28',
+        hoursPerWeek: '32 ساعة',
+        specializations: ['إداري', 'وظائف'],
+        bio: `We're open to partnerships, guest posts, and more. Join us to share your insights and grow your audience.`,
+    };
+
     return (
         <Box sx={{ p: 3, direction: 'rtl', bgcolor: '#f8f9fa' }}>
             <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
@@ -64,30 +80,37 @@ const UserProfile = () => {
                 </Typography>
 
                 <Box display="flex" alignItems="center" mb={2}>
-                    <Box
-                        component="img"
-                        src={user.image}
-                        alt="Profile"
+                    <Avatar
+                        alt={profileData.name}
+                        src={profileData.image && profileData.image !== '' ? profileData.image : undefined}
                         sx={{
                             width: 60,
                             height: 60,
-                            borderRadius: '50%',
-                            objectFit: 'cover',
                             ml: 2,
-                            border: `2px solid ${mainColor}`,
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            bgcolor: '#ccc',
                         }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                        صورة 150x150px JPEG, PNG
-                    </Typography>
+                    >
+                        {(!profileData.image || profileData.image === '') && profileData.name?.charAt(0)}
+                    </Avatar>
+                    <Box>
+                        <Typography variant="h5" color="text.secondary" display="block">
+                            {profileData.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" display="block">
+                            {profileData.email}
+                        </Typography>
+                    </Box>
+
                 </Box>
                 <Divider sx={{ my: 1.5 }} />
 
-                <Row label="الاسم" value={user.name} />
-                <Row label="النشاط" value={<Chip label={user.status} color="success" size="small" />} />
-                <Row label="تاريخ الميلاد" value={user.birthDate} />
-                <Row label="الجنس" value={user.gender} />
-                <Row label="العنوان" value={user.address || 'ليس لديك عنوان بعد'} />
+                <Row label="الاسم" value={profileData.name} />
+                <Row label="النشاط" value={<Chip label={profileData.status} color="success" size="small" />} />
+                <Row label="تاريخ الميلاد" value={profileData.birthDate} />
+                <Row label="الجنس" value={profileData.gender} />
+                <Row label="العنوان" value={profileData.address || 'ليس لديك عنوان بعد'} />
 
                 <Box mt={2}>
                     <Typography variant="body2" sx={{ color: mainColor, cursor: 'pointer' }}>
@@ -100,8 +123,8 @@ const UserProfile = () => {
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
                     معلومات تسجيل الدخول
                 </Typography>
-                <Row label="البريد الإلكتروني" value={user.email} />
-                <Row label="كلمة المرور" value={`تم تغيير كلمة المرور آخر مرة منذ ${user.passwordChangedSince}`} />
+                <Row label="البريد الإلكتروني" value={profileData.email} />
+                <Row label="كلمة المرور" value={`تم تغيير كلمة المرور آخر مرة منذ ${profileData.passwordChangedSince}`} />
             </Paper>
 
             <Paper sx={{ p: 3, borderRadius: 3 }} elevation={1}>
@@ -122,14 +145,14 @@ const UserProfile = () => {
                 </Box>
                 <Divider sx={{ mb: 1 }} />
 
-                <Row label="اللغة" value={user.language} />
-                <Row label="المعدل بالساعة" value={user.rate} />
-                <Row label="ساعات العمل" value={user.hoursPerWeek} />
+                <Row label="اللغة" value={profileData.language} />
+                <Row label="المعدل بالساعة" value={profileData.rate} />
+                <Row label="ساعات العمل" value={profileData.hoursPerWeek} />
                 <Row
                     label="الاختصاص"
                     value={
                         <Box>
-                            {user.specializations.map((spec, idx) => (
+                            {profileData.specializations.map((spec, idx) => (
                                 <Chip
                                     key={idx}
                                     label={spec}
@@ -140,7 +163,7 @@ const UserProfile = () => {
                         </Box>
                     }
                 />
-                <Row label="" value={user.bio} />
+                <Row label="" value={profileData.bio} />
             </Paper>
         </Box>
     );

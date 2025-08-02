@@ -37,11 +37,13 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { Collapse } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import { clearToken } from '../../api/authApi/tokenManager';
+import Cookies from "js-cookie";
+import { getUserById } from '../../api/Admin/Users/getUserById';
 
 const drawerWidth = 240;
 
@@ -208,11 +210,28 @@ export default function MiniDrawer() {
         navigate("/login");
     };
 
-    const [userData, _setUserData] = useState({
-        userFirstName: 'عاصم',
-        userLastName: 'اليحيى',
-        userImage: '/userDashboard/Profile/Profile.png',
-    });
+    // const [userData, _setUserData] = useState({
+    //     userFirstName: 'عاصم',
+    //     userLastName: 'اليحيى',
+    //     userImage: '/userDashboard/Profile/Profile.png',
+    // });
+
+    const [userData, setUserData] = useState(null);
+    const userId = Cookies.get("UserId");
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                if (!userId) return;
+                const response = await getUserById(userId);
+                setUserData(response.data);
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+            }
+        };
+
+        fetchUserData();
+    }, [userId]);
 
     return (
         <Box sx={{ display: 'flex', position: 'relative' }}>
@@ -249,9 +268,9 @@ export default function MiniDrawer() {
 
                             <IconButton onClick={handleProfileMenuOpen} sx={{ color: '#fff' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar src={userData.userImage} />
+                                    <Avatar src={userData?.image || '/default-avatar.png'} />
                                     <Typography sx={{ marginLeft: 1, color: '#fff' }}>
-                                        {`${userData.userFirstName} ${userData.userLastName}`}
+                                        {userData?.name || 'المستخدم'}
                                     </Typography>
                                     <ExpandMoreIcon sx={{ color: '#fff', marginLeft: 1 }} />
                                 </Box>
@@ -281,37 +300,57 @@ export default function MiniDrawer() {
                             >
                                 {/* ✅ معلومات المستخدم */}
                                 <Box sx={{ textAlign: 'center', mb: 1 }}>
-                                    <img
-                                        src={ '/default-avatar.png'}
-                                        alt="Avatar"
-                                        style={{
+                                    <Avatar
+                                        alt={userData?.name}
+                                        src={userData?.image && userData.image !== '' ? userData.image : undefined}
+                                        sx={{
                                             width: 60,
                                             height: 60,
-                                            borderRadius: '50%',
-                                            objectFit: 'cover',
-                                            marginBottom: 8
+                                            margin: '0 auto 8px',
+                                            fontSize: '1rem',
+                                            fontWeight: 'bold',
+                                            bgcolor: '#ccc',
                                         }}
-                                    />
+                                    >
+                                        {(!userData?.image || userData.image === '') && userData?.name?.charAt(0)}
+                                    </Avatar>
                                     <Typography fontWeight="bold" fontSize="1rem">
-                                        عاصم اليحيى
+                                        {userData?.name || 'اسم المستخدم'}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        aasem-alyhia@gmail.com
+                                        {userData?.email || 'email@example.com'}
                                     </Typography>
+
                                 </Box>
 
                                 <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
 
                                 {/* ✅ الروابط */}
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
-                                    <Link to="/dashboard/users/usersProfile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                    <Link
+                                        to={`/dashboard/users/usersProfile/${userId}`}
+                                        style={{
+                                            textDecoration: 'none',
+                                            color: 'inherit',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
                                         <PersonIcon sx={{ mr: 1 }} />
                                         الملف الشخصي
                                     </Link>
                                 </MenuItem>
 
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
-                                    <Link to="/dashboard/users/usersSettings" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                    <Link
+                                        to={`/dashboard/users/usersSettings/${userId}`}
+                                        style={{
+                                            textDecoration: 'none',
+                                            color: 'inherit',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
                                         <SettingsIcon sx={{ mr: 1 }} />
                                         الإعدادات
                                     </Link>

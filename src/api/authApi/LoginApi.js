@@ -17,13 +17,14 @@ export const login = async (email, password) => {
     }
 
     const token = response.data.access_token;
-    if (!token) {
-      throw new Error("Token not found in response");
+    const userId = response.data.user.id; 
+
+    if (!token || !userId) {
+      throw new Error("Token or user ID not found in response");
     }
 
     setToken(token);
-    // لا يوجد userId في الرد الحالي، يمكن إضافته لاحقًا عند توفره
-    // Cookies.set("UserId", response.data.id);
+    Cookies.set("UserId", userId); 
 
     return response.data;
   } catch (error) {
