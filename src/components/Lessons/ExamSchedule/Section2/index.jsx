@@ -1,194 +1,232 @@
-import React, { useState } from 'react';
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, IconButton, Typography } from '@mui/material';
-import { visuallyHidden } from '@mui/utils';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import React, { useEffect, useState } from 'react';
+import {
+    Box, Typography, Paper, Grid,
+    IconButton, Select, MenuItem, FormControl,
+    useMediaQuery, useTheme
+} from '@mui/material';
+import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+
+import { getExamSchedule } from '../../../../api/Admin/ExamSchedule/ExamSchedule';
+import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
+import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
+
+const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const colors = ['#FF8A80', '#FFD180', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D', '#CFD8DC'];
 
 const ExamScheduleTable = () => {
-    const [order, setOrder] = useState('asc');
-    const [orderBy, setOrderBy] = useState('subject');
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-    const rows = [
-        { subject: 'اللغة الإلكترونية', examDate: '2025/05/13', startTime: '09:30 AM', endTime: '10:30 AM', duration: '1 ساعة', baseNumber: '01', maxScore: '40', minScore: '20' },
-        { subject: 'الغزيلاء', examDate: '2025/05/15', startTime: '09:30 AM', endTime: '11:30 AM', duration: '2 ساعة', baseNumber: '02', maxScore: '60', minScore: '30' },
-        { subject: 'الكيمياء', examDate: '2025/05/17', startTime: '09:30 AM', endTime: '11:30 AM', duration: '2 ساعة', baseNumber: '03', maxScore: '60', minScore: '30' },
-        { subject: 'العلوم', examDate: '2025/05/19', startTime: '09:30 AM', endTime: '11:30 AM', duration: '2 ساعة', baseNumber: '15', maxScore: '60', minScore: '30' },
-        { subject: 'اللغة العربية', examDate: '2025/05/21', startTime: '09:30 AM', endTime: '11:30 AM', duration: '2 ساعة', baseNumber: '01', maxScore: '20', minScore: '10' },
-        { subject: 'التربية الإسلامية', examDate: '2025/05/23', startTime: '09:30 AM', endTime: '10:30 AM', duration: '1 ساعة', baseNumber: '12', maxScore: '60', minScore: '30' },
-    ];
+    const today = new Date();
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+    const [selectedYearId, setSelectedYearId] = useState(null);
+    const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
 
-    const handleRequestSort = (property) => {
-        const isAsc = orderBy === property && order === 'asc';
-        setOrder(isAsc ? 'desc' : 'asc');
-        setOrderBy(property);
+    const [classrooms, setClassrooms] = useState([]);
+    const [academicYears, setAcademicYears] = useState([]);
+    const [selectedClassroom, setSelectedClassroom] = useState('');
+
+    const [events, setEvents] = useState([]);
+
+    const fetchInitialData = async () => {
+        try {
+            const [classroomRes, yearRes] = await Promise.all([
+                getAllClassrooms(1, 100),
+                getAllAcademicYears()
+            ]);
+            setClassrooms(classroomRes.data);
+            setAcademicYears(yearRes);
+
+            if (classroomRes.data.length) setSelectedClassroom(classroomRes.data[0].id);
+            if (yearRes.length) {
+                setSelectedYearId(yearRes[0].id);
+                const yearStart = new Date(yearRes[0].start_date).getFullYear();
+                setSelectedYearValue(yearStart);
+            }
+        } catch (err) {
+            console.error('فشل في جلب البيانات:', err.message);
+        }
     };
 
-    const sortedRows = rows.sort((a, b) => {
-        if (order === 'asc') {
-            return a[orderBy] > b[orderBy] ? 1 : -1;
-        } else {
-            return a[orderBy] < b[orderBy] ? 1 : -1;
+    const fetchExams = async () => {
+        if (!selectedClassroom || !selectedYearValue) return;
+        try {
+            const data = await getExamSchedule(selectedClassroom, selectedYearValue);
+            const parsed = data.map((item, i) => ({
+                id: item.id,
+                title: item.name,
+                date: new Date(item.date).getDate(),
+                month: new Date(item.date).getMonth(),
+                color: colors[i % colors.length],
+            }));
+            setEvents(parsed);
+        } catch (err) {
+            console.error('فشل في جلب الامتحانات:', err.message);
         }
-    });
+    };
+
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
+    useEffect(() => {
+        fetchExams();
+    }, [selectedClassroom, selectedYearValue]);
+
+    const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+    const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+    const generateCalendarWeeks = () => {
+        const daysInMonth = getDaysInMonth(selectedYearValue, selectedMonth);
+        const firstDay = getFirstDayOfMonth(selectedYearValue, selectedMonth);
+        const weeks = [];
+        let week = [];
+
+        for (let i = 0; i < firstDay; i++) week.push(null);
+        for (let day = 1; day <= daysInMonth; day++) {
+            week.push(day);
+            if (week.length === 7) {
+                weeks.push(week);
+                week = [];
+            }
+        }
+        if (week.length > 0) {
+            while (week.length < 7) week.push(null);
+            weeks.push(week);
+        }
+
+        while (weeks.length < 5) weeks.push(Array(7).fill(null));
+        return weeks;
+    };
+
+    const handlePrevMonth = () => {
+        if (selectedMonth === 0) {
+            setSelectedMonth(11);
+            setSelectedYearValue(prev => prev - 1);
+        } else {
+            setSelectedMonth(prev => prev - 1);
+        }
+    };
+
+    const handleNextMonth = () => {
+        if (selectedMonth === 11) {
+            setSelectedMonth(0);
+            setSelectedYearValue(prev => prev + 1);
+        } else {
+            setSelectedMonth(prev => prev + 1);
+        }
+    };
+
+    const handleToday = () => {
+        const now = new Date();
+        setSelectedYearValue(now.getFullYear());
+        setSelectedMonth(now.getMonth());
+    };
+
+    const handleYearChange = (id) => {
+        const selected = academicYears.find(y => y.id === id);
+        if (selected) {
+            setSelectedYearId(id);
+            const yearStart = new Date(selected.start_date).getFullYear();
+            setSelectedYearValue(yearStart);
+        }
+    };
+
+    const calendarWeeks = generateCalendarWeeks();
 
     return (
-        <Box sx={{ padding: 3 }}>
-            <Paper elevation={0} sx={{ padding: 2 }}>
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="جدول الامتحانات">
-                        <TableHead sx={{ backgroundColor: '#308A9F' }}>
-                            <TableRow>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'subject'}
-                                        direction={orderBy === 'subject' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('subject')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        اسم المادة
-                                        {orderBy === 'subject' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'examDate'}
-                                        direction={orderBy === 'examDate' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('examDate')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        موعد الامتحان
-                                        {orderBy === 'examDate' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'startTime'}
-                                        direction={orderBy === 'startTime' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('startTime')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        وقت البدء
-                                        {orderBy === 'startTime' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'endTime'}
-                                        direction={orderBy === 'endTime' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('endTime')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        وقت الانتهاء
-                                        {orderBy === 'endTime' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'duration'}
-                                        direction={orderBy === 'duration' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('duration')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        المدة
-                                        {orderBy === 'duration' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'baseNumber'}
-                                        direction={orderBy === 'baseNumber' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('baseNumber')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        رقم القاعدة
-                                        {orderBy === 'baseNumber' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'maxScore'}
-                                        direction={orderBy === 'maxScore' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('maxScore')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        الحد الأعلى للعلامة
-                                        {orderBy === 'maxScore' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell>
-                                    <TableSortLabel
-                                        active={orderBy === 'minScore'}
-                                        direction={orderBy === 'minScore' ? order : 'asc'}
-                                        onClick={() => handleRequestSort('minScore')}
-                                        sx={{ fontWeight: 'bold', color: '#fff' }}
-                                    >
-                                        الحد الأدنى للعلامة
-                                        {orderBy === 'minScore' ? (
-                                            <Box component="span" sx={visuallyHidden}>
-                                                {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                            </Box>
-                                        ) : null}
-                                    </TableSortLabel>
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 'bold', color: '#fff' }}>الإجراءات</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {sortedRows.map((row, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{row.subject}</TableCell>
-                                    <TableCell>{row.examDate}</TableCell>
-                                    <TableCell>{row.startTime}</TableCell>
-                                    <TableCell>{row.endTime}</TableCell>
-                                    <TableCell>{row.duration}</TableCell>
-                                    <TableCell>{row.baseNumber}</TableCell>
-                                    <TableCell>{row.maxScore}</TableCell>
-                                    <TableCell>{row.minScore}</TableCell>
-                                    <TableCell>
-                                        <IconButton aria-label="edit">
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton aria-label="delete">
-                                            <DeleteIcon />
-                                        </IconButton>
-                                        <IconButton aria-label="view">
-                                            <VisibilityIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
+        <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
+            <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                    <FormControl sx={{ minWidth: 180 }}>
+                        <Typography variant="caption" color="gray">اختر الصف</Typography>
+                        <Select
+                            size="small"
+                            value={selectedClassroom}
+                            onChange={(e) => setSelectedClassroom(e.target.value)}
+                        >
+                            {classrooms.map(cls => (
+                                <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>
                             ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                        </Select>
+                    </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
+
+                        <FormControl variant="standard" size="small">
+                            <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                                {arabicMonths.map((month, index) => (
+                                    <MenuItem key={index} value={index}>{month}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl variant="standard" size="small">
+                            <Select value={selectedYearId || ''} onChange={(e) => handleYearChange(e.target.value)}>
+                                {academicYears.map((yr) => (
+                                    <MenuItem key={yr.id} value={yr.id}>{yr.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <IconButton onClick={handleNextMonth}><ChevronLeft /></IconButton>
+                    </Box>
+
+                    <IconButton onClick={handleToday}><Today /></IconButton>
+                </Box>
+
+                <Grid container spacing={1} sx={{ mb: 1 }}>
+                    {arabicDays.map(day => (
+                        <Grid item xs key={day} sx={{ textAlign: 'center' }}>
+                            <Typography fontWeight="bold" color="#308A9F">{day}</Typography>
+                        </Grid>
+                    ))}
+                </Grid>
+
+                <Box>
+                    {calendarWeeks.map((week, i) => (
+                        <Grid container spacing={1} key={i}>
+                            {week.map((day, j) => {
+                                const dayEvents = events.filter(e => e.date === day && e.month === selectedMonth);
+                                return (
+                                    <Grid item xs key={j}>
+                                        <Box sx={{
+                                            border: day ? '1px solid #ddd' : 'none',
+                                            minHeight: isMobile ? '14vh' : '16vh',
+                                            bgcolor: '#fff',
+                                            p: 1,
+                                            borderRadius: 1
+                                        }}>
+                                            {day && (
+                                                <>
+                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
+                                                    <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
+                                                        {dayEvents.map((event, i) => (
+                                                            <Box key={i} sx={{
+                                                                bgcolor: event.color,
+                                                                p: 0.5,
+                                                                mb: 0.5,
+                                                                borderRadius: 1
+                                                            }}>
+                                                                <Typography variant="caption" sx={{ color: '#fff' }}>
+                                                                    {event.title}
+                                                                </Typography>
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Grid>
+                                );
+                            })}
+                        </Grid>
+                    ))}
+                </Box>
             </Paper>
         </Box>
     );

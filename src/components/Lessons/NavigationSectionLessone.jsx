@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { Box, Button, Paper, Typography } from '@mui/material';
 import Section1 from './DailySchedule/Section1';
-import DailyScheduleSection1 from './DailySchedule/Section2';
 import BreakAndHolidays from './DailySchedule/Section3';
 import ExamScheduleSection1 from './ExamSchedule/Section1/index';
 import ExamScheduleTable from './ExamSchedule/Section2';
 import PaginationSection from './../../layout/PaginationSection';
-import ArabicCalendar from './activityTables/Section2';
 import UpcomingEvents from './activityTables/Section3';
+import DailySchedule from './DailySchedule/Section2';
+import EventScheduleTable from './activityTables/Section2';
 
 const NavigationSectionLessone = () => {
-    const [activeButton, setActiveButton] = useState('الجدول اليومي'); 
+    const [activeButton, setActiveButton] = useState('الجدول اليومي');
 
     const handleButtonClick = (buttonName) => {
-        setActiveButton(buttonName); 
+        setActiveButton(buttonName);
     };
 
     return (
@@ -67,22 +67,22 @@ const NavigationSectionLessone = () => {
                     {activeButton === 'الجدول اليومي' && (
                         <Typography variant="body1">
                             <Section1 />
-                            <DailyScheduleSection1/>
-                            <BreakAndHolidays/>
+                            <DailySchedule/>
+                            <BreakAndHolidays />
                         </Typography>
                     )}
                     {activeButton === 'جدول الامتحانات' && (
                         <Typography variant="body1">
                             <ExamScheduleSection1 />
-                            <ExamScheduleTable/>
-                            <PaginationSection/>
+                            <ExamScheduleTable />
+                            <PaginationSection />
                         </Typography>
                     )}
                     {activeButton === 'النشاط' && (
                         <Typography variant="body1">
                             <Section1 />
-                            <ArabicCalendar/>
-                            <UpcomingEvents/>
+                            <EventScheduleTable />
+                            <UpcomingEvents />
                         </Typography>
                     )}
                 </Box>

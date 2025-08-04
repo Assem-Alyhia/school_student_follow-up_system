@@ -1,279 +1,235 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Box,
-    Typography,
-    IconButton,
-    Paper,
-    Grid,
-    MenuItem,
-    Select,
-    FormControl,
-    useTheme,
-    useMediaQuery
+    Box, Typography, Paper, Grid,
+    IconButton, Select, MenuItem, FormControl,
+    useMediaQuery, useTheme
 } from '@mui/material';
-import {
-    ChevronLeft,
-    ChevronRight,
-    Today
-} from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
 
-const ArabicCalendar = () => {
+import { getEventsSchedule } from '../../../../api/Admin/EventSchedule/getEventsSchedule';
+import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
+import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
+
+const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
+
+const EventScheduleTable = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
-    // Arabic day names
-    const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const arabicMonths = [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
+    const today = new Date();
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+    const [selectedYearId, setSelectedYearId] = useState(null);
+    const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
 
-    // Sample events data matching your image
-    const events = {
-        1: ['صدار الخريج'],
-        3: ['الأديب الأول', 'المكان الرابع الثلاثي'],
-        4: ['مقدمة إزالة التدريبية والكهربائية'],
-        5: [],
-        6: [],
-        7: [],
-        8: [],
-        9: [],
-        10: [],
-        12: [],
-        19: [],
-        26: [],
-        30: ['الأشقاء الأول، الفور'],
-        15: ['الجماع الأول، العمر'],
-        25: ['الأحمد أوليد، العمر']
+    const [classrooms, setClassrooms] = useState([]);
+    const [academicYears, setAcademicYears] = useState([]);
+    const [selectedClassroom, setSelectedClassroom] = useState('');
+
+    const [events, setEvents] = useState([]);
+
+    const fetchInitialData = async () => {
+        try {
+            const [classroomRes, yearRes] = await Promise.all([
+                getAllClassrooms(1, 100),
+                getAllAcademicYears()
+            ]);
+            setClassrooms(classroomRes.data);
+            setAcademicYears(yearRes);
+
+            if (classroomRes.data.length) setSelectedClassroom(classroomRes.data[0].id);
+            if (yearRes.length) {
+                setSelectedYearId(yearRes[0].id);
+                const yearStart = new Date(yearRes[0].start_date).getFullYear();
+                setSelectedYearValue(yearStart);
+            }
+        } catch (err) {
+            console.error('فشل في جلب البيانات:', err.message);
+        }
+    };
+    const fetchEvents = async () => {
+        if (!selectedClassroom || !selectedYearValue) return;
+        try {
+            const response = await getEventsSchedule(selectedClassroom, selectedYearValue);
+            const data = response.data; 
+
+            const parsed = data.map((item, i) => {
+                const eventDate = new Date(item.start_time);
+                return {
+                    id: item.id,
+                    title: item.title,
+                    date: eventDate.getDate(),
+                    month: eventDate.getMonth(),
+                    color: colors[i % colors.length],
+                };
+            });
+
+            setEvents(parsed);
+        } catch (err) {
+            console.error('فشل في جلب الأحداث:', err.message);
+        }
     };
 
-    // Generate years for dropdown
-    const years = Array.from({ length: 10 }, (_, i) => selectedYear - 5 + i);
 
-    // Get days in month
-    const getDaysInMonth = (year, month) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
 
-    // Get first day of month
-    const getFirstDayOfMonth = (year, month) => {
-        return new Date(year, month, 1).getDay();
-    };
+    useEffect(() => {
+        fetchEvents();
+    }, [selectedClassroom, selectedYearValue]);
 
-    // Generate calendar weeks (5 rows)
+    const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+    const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
     const generateCalendarWeeks = () => {
-        const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
-        const firstDayOfMonth = getFirstDayOfMonth(selectedYear, selectedMonth);
+        const daysInMonth = getDaysInMonth(selectedYearValue, selectedMonth);
+        const firstDay = getFirstDayOfMonth(selectedYearValue, selectedMonth);
         const weeks = [];
-        let currentWeek = [];
+        let week = [];
 
-        // Add empty cells for days before the first day of month
-        for (let i = 0; i < firstDayOfMonth; i++) {
-            currentWeek.push(null);
-        }
-
-        // Add days of month
-        for (let i = 1; i <= daysInMonth; i++) {
-            currentWeek.push(i);
-            if (currentWeek.length === 7) {
-                weeks.push(currentWeek);
-                currentWeek = [];
+        for (let i = 0; i < firstDay; i++) week.push(null);
+        for (let day = 1; day <= daysInMonth; day++) {
+            week.push(day);
+            if (week.length === 7) {
+                weeks.push(week);
+                week = [];
             }
         }
-
-        // Fill the last week with empty cells if needed
-        if (currentWeek.length > 0) {
-            while (currentWeek.length < 7) {
-                currentWeek.push(null);
-            }
-            weeks.push(currentWeek);
+        if (week.length > 0) {
+            while (week.length < 7) week.push(null);
+            weeks.push(week);
         }
 
-        // Ensure we have exactly 5 weeks (rows)
-        while (weeks.length < 5) {
-            weeks.push(Array(7).fill(null));
-        }
-
-        return weeks.slice(0, 5); // Return only 5 weeks
+        while (weeks.length < 5) weeks.push(Array(7).fill(null));
+        return weeks;
     };
 
     const handlePrevMonth = () => {
         if (selectedMonth === 0) {
             setSelectedMonth(11);
-            setSelectedYear(selectedYear - 1);
+            setSelectedYearValue(prev => prev - 1);
         } else {
-            setSelectedMonth(selectedMonth - 1);
+            setSelectedMonth(prev => prev - 1);
         }
     };
 
     const handleNextMonth = () => {
         if (selectedMonth === 11) {
             setSelectedMonth(0);
-            setSelectedYear(selectedYear + 1);
+            setSelectedYearValue(prev => prev + 1);
         } else {
-            setSelectedMonth(selectedMonth + 1);
+            setSelectedMonth(prev => prev + 1);
         }
     };
 
     const handleToday = () => {
-        const today = new Date();
-        setSelectedYear(today.getFullYear());
-        setSelectedMonth(today.getMonth());
+        const now = new Date();
+        setSelectedYearValue(now.getFullYear());
+        setSelectedMonth(now.getMonth());
+    };
+
+    const handleYearChange = (id) => {
+        const selected = academicYears.find(y => y.id === id);
+        if (selected) {
+            setSelectedYearId(id);
+            const yearStart = new Date(selected.start_date).getFullYear();
+            setSelectedYearValue(yearStart);
+        }
     };
 
     const calendarWeeks = generateCalendarWeeks();
 
-    // Colors for different event types
-    const eventColors = {
-        'صدار الخريج': '#FFD700',
-        'الأديب الأول': '#87CEEB',
-        'المكان الرابع الثلاثي': '#98FB98',
-        'مقدمة إزالة التدريبية والكهربائية': '#FFA07A',
-        'الأشقاء الأول، الفور': '#DDA0DD',
-        'الجماع الأول، العمر': '#FF6347',
-        'الأحمد أوليد، العمر': '#20B2AA'
-    };
-
     return (
-        <Box sx={{
-            width: '100%',
-            height: '120vh',
-            p: isMobile ? 1 : 3,
-            bgcolor: '#f5f7fa',
-            overflow: 'auto'
-        }}>
-            <Paper elevation={3} sx={{
-                width: '100%',
-                height: '100%',
-                p: isMobile ? 1 : 3,
-                direction: 'rtl',
-                bgcolor: 'white',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                {/* Calendar Header */}
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3
-                }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton onClick={handlePrevMonth} size="small" sx={{ color: '#308A9F' }}>
-                            <ChevronRight />
-                        </IconButton>
-
-                        <FormControl variant="standard" size="small">
-                            <Select
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                sx={{ minWidth: 120, color: '#22385F', fontWeight: 'bold' }}
-                            >
-                                {arabicMonths.map((month, index) => (
-                                    <MenuItem key={index} value={index}>
-                                        {month}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        <FormControl variant="standard" size="small">
-                            <Select
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(e.target.value)}
-                                sx={{ minWidth: 100, color: '#22385F', fontWeight: 'bold' }}
-                            >
-                                {years.map((year) => (
-                                    <MenuItem key={year} value={year}>
-                                        {year}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        <IconButton onClick={handleNextMonth} size="small" sx={{ color: '#308A9F' }}>
-                            <ChevronLeft />
-                        </IconButton>
-                    </Box>
-
-                    <IconButton onClick={handleToday} size="small" sx={{ color: '#308A9F' }}>
-                        <Today fontSize="small" />
-                    </IconButton>
+        <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
+            <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                    <FormControl sx={{ minWidth: 180 }}>
+                        <Typography variant="caption" color="gray">اختر الصف</Typography>
+                        <Select
+                            size="small"
+                            value={selectedClassroom}
+                            onChange={(e) => setSelectedClassroom(e.target.value)}
+                        >
+                            {classrooms.map(cls => (
+                                <MenuItem key={cls.id} value={cls.id}>{cls.name}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                 </Box>
 
-                {/* Day Names */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
+
+                        <FormControl variant="standard" size="small">
+                            <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                                {arabicMonths.map((month, index) => (
+                                    <MenuItem key={index} value={index}>{month}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl variant="standard" size="small">
+                            <Select value={selectedYearId || ''} onChange={(e) => handleYearChange(e.target.value)}>
+                                {academicYears.map((yr) => (
+                                    <MenuItem key={yr.id} value={yr.id}>{yr.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <IconButton onClick={handleNextMonth}><ChevronLeft /></IconButton>
+                    </Box>
+
+                    <IconButton onClick={handleToday}><Today /></IconButton>
+                </Box>
+
                 <Grid container spacing={1} sx={{ mb: 1 }}>
-                    {arabicDays.map((day) => (
+                    {arabicDays.map(day => (
                         <Grid item xs key={day} sx={{ textAlign: 'center' }}>
-                            <Typography variant="body1" fontWeight="bold" sx={{
-                                color: '#308A9F',
-                                fontSize: isMobile ? '0.8rem' : '1rem'
-                            }}>
-                                {day}
-                            </Typography>
+                            <Typography fontWeight="bold" color="#308A9F">{day}</Typography>
                         </Grid>
                     ))}
                 </Grid>
 
-                {/* Calendar Weeks */}
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                    {calendarWeeks.map((week, weekIndex) => (
-                        <Grid container key={weekIndex} spacing={1} sx={{ flexGrow: 1 }}>
-                            {week.map((day, dayIndex) => (
-                                <Grid item xs key={`${weekIndex}-${dayIndex}`} sx={{
-                                    minHeight: isMobile ? '16vh' : '18vh',
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}>
-                                    <Box
-                                        sx={{
+                <Box>
+                    {calendarWeeks.map((week, i) => (
+                        <Grid container spacing={1} key={i}>
+                            {week.map((day, j) => {
+                                const dayEvents = events.filter(e => e.date === day && e.month === selectedMonth);
+                                return (
+                                    <Grid item xs key={j}>
+                                        <Box sx={{
+                                            border: day ? '1px solid #ddd' : 'none',
+                                            minHeight: isMobile ? '14vh' : '16vh',
+                                            bgcolor: '#fff',
                                             p: 1,
-                                            borderRadius: 1,
-                                            bgcolor: day ? '#ffffff' : 'transparent',
-                                            border: day ? '1px solid #e0e0e0' : 'none',
-                                            height: '100%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            overflow: 'hidden'
-                                        }}
-                                    >
-                                        {day && (
-                                            <>
-                                                <Typography variant="body1" fontWeight="bold" sx={{
-                                                    color: '#22385F',
-                                                    alignSelf: 'flex-end',
-                                                    fontSize: isMobile ? '0.9rem' : '1.1rem'
-                                                }}>
-                                                    {day}
-                                                </Typography>
-
-                                                <Box sx={{
-                                                    mt: 1,
-                                                    flexGrow: 1,
-                                                    overflow: 'auto',
-                                                    '&::-webkit-scrollbar': { display: 'none' }
-                                                }}>
-                                                    {events[day]?.map((event, i) => (
-                                                        <Box key={i} sx={{
-                                                            bgcolor: eventColors[event] || '#f0f0f0',
-                                                            p: 0.5,
-                                                            mb: 0.5,
-                                                            borderRadius: '4px',
-                                                            fontSize: isMobile ? '0.65rem' : '0.75rem'
-                                                        }}>
-                                                            <Typography variant="caption" sx={{ color: '#000' }}>
-                                                                {event}
-                                                            </Typography>
-                                                        </Box>
-                                                    ))}
-                                                </Box>
-                                            </>
-                                        )}
-                                    </Box>
-                                </Grid>
-                            ))}
+                                            borderRadius: 1
+                                        }}>
+                                            {day && (
+                                                <>
+                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
+                                                    <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
+                                                        {dayEvents.map((event, i) => (
+                                                            <Box key={i} sx={{
+                                                                bgcolor: event.color,
+                                                                p: 0.5,
+                                                                mb: 0.5,
+                                                                borderRadius: 1
+                                                            }}>
+                                                                <Typography variant="caption" sx={{ color: '#fff' }}>
+                                                                    {event.title}
+                                                                </Typography>
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Grid>
+                                );
+                            })}
                         </Grid>
                     ))}
                 </Box>
@@ -282,4 +238,4 @@ const ArabicCalendar = () => {
     );
 };
 
-export default ArabicCalendar;
+export default EventScheduleTable;

@@ -58,6 +58,29 @@ const apiEndpoints = {
   createPermission: "admin/permissions",
   deletePermission: (id) => `admin/permissions/${id}`,
   updatePermission: (id) => `admin/permissions/${id}`,
+
+  // نتائج الامتحانات
+  getStudentExamResults: (studentId) =>
+    `admin/exam-results?student_id=${studentId}`,
+  getAllExamResults: "admin/exam-results",
+
+  // الدرجات
+  getAllGrades: "admin/grades",
+
+  // السنوات الدراسية
+  getAllAcademicYearsNoPaginate: "admin/academic-years/get-all",
+
+  //الجدول اليومي
+  getDailySchedule: (classroomId, year) =>
+    `admin/schedules/get-daily?classroom_id=${classroomId}&year=${year}`,
+
+  // جداول الامتحانات
+  getExamSchedule: (classroomId, year) =>
+    `admin/schedules/get-exams?classroom_id=${classroomId}&year=${year}`,
+
+  // جدول الاحداث
+  getEventsSchedule: (classroomId, year) =>
+    `admin/schedules/get-events?classroom_id=${classroomId}&year=${year}`,
 };
 
 export default apiEndpoints;
