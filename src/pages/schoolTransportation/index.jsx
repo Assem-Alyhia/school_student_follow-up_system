@@ -1,17 +1,25 @@
+import { useQuery } from "@tanstack/react-query";
 import Section1 from "../../components/SchoolTransportation/Section1";
 import Section2 from "../../components/SchoolTransportation/Section2";
-import Section3 from "../../components/SchoolTransportation/Section3";
 import Section4 from "../../components/SchoolTransportation/Section4";
+import { getAllBuses } from "../../api/Admin/Buses/getAllBuses";
 
 const SchoolTransportation = () => {
-    return ( 
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ['buses'],
+        queryFn: getAllBuses,
+    });
+
+    if (isLoading) return <div>جاري تحميل بيانات الباصات...</div>;
+    if (isError) return <div>حدث خطأ: {error.message}</div>;
+
+    return (
         <>
-            <Section1/>
-            <Section2/>
-            <Section3/>
-            <Section4/>
+            <Section1 buses={data?.data || []} />
+            <Section2 />
+            <Section4 />
         </>
     );
-}
+};
 
 export default SchoolTransportation;

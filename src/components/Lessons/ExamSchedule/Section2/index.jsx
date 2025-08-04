@@ -4,11 +4,12 @@ import {
     IconButton, Select, MenuItem, FormControl,
     useMediaQuery, useTheme
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, Delete } from '@mui/icons-material';
 
 import { getExamSchedule } from '../../../../api/Admin/ExamSchedule/ExamSchedule';
 import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
+import { deleteSchedule } from '../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -63,6 +64,15 @@ const ExamScheduleTable = () => {
             setEvents(parsed);
         } catch (err) {
             console.error('فشل في جلب الامتحانات:', err.message);
+        }
+    };
+
+    const handleDelete = async (eventId) => {
+        try {
+            await deleteSchedule(eventId);
+            setEvents((prev) => prev.filter((e) => e.id !== eventId));
+        } catch (error) {
+            console.error('فشل في حذف الحدث:', error.message);
         }
     };
 
@@ -210,11 +220,17 @@ const ExamScheduleTable = () => {
                                                                 bgcolor: event.color,
                                                                 p: 0.5,
                                                                 mb: 0.5,
-                                                                borderRadius: 1
+                                                                borderRadius: 1,
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center'
                                                             }}>
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
+                                                                <IconButton size="small" onClick={() => handleDelete(event.id)}>
+                                                                    <Delete sx={{ color: 'white', fontSize: '16px' }} />
+                                                                </IconButton>
                                                             </Box>
                                                         ))}
                                                     </Box>

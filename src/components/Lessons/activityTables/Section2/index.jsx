@@ -4,11 +4,12 @@ import {
     IconButton, Select, MenuItem, FormControl,
     useMediaQuery, useTheme
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
 
 import { getEventsSchedule } from '../../../../api/Admin/EventSchedule/getEventsSchedule';
 import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
+import { deleteSchedule } from '../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -48,11 +49,12 @@ const EventScheduleTable = () => {
             console.error('فشل في جلب البيانات:', err.message);
         }
     };
+
     const fetchEvents = async () => {
         if (!selectedClassroom || !selectedYearValue) return;
         try {
             const response = await getEventsSchedule(selectedClassroom, selectedYearValue);
-            const data = response.data; 
+            const data = response.data;
 
             const parsed = data.map((item, i) => {
                 const eventDate = new Date(item.start_time);
@@ -71,6 +73,14 @@ const EventScheduleTable = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        try {
+            await deleteSchedule(id);
+            setEvents(prev => prev.filter(event => event.id !== id));
+        } catch (error) {
+            console.error('فشل في حذف الحدث:', error.message);
+        }
+    };
 
     useEffect(() => {
         fetchInitialData();
@@ -213,6 +223,9 @@ const EventScheduleTable = () => {
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event, i) => (
                                                             <Box key={i} sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
                                                                 bgcolor: event.color,
                                                                 p: 0.5,
                                                                 mb: 0.5,
@@ -221,6 +234,9 @@ const EventScheduleTable = () => {
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
+                                                                <IconButton size="small" onClick={() => handleDelete(event.id)}>
+                                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
+                                                                </IconButton>
                                                             </Box>
                                                         ))}
                                                     </Box>

@@ -4,11 +4,12 @@ import {
     IconButton, Select, MenuItem, FormControl,
     useMediaQuery, useTheme
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
 
 import { getDailySchedule } from '../../../../api/Admin/DailySchedule/getDailySchedule';
 import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
+import { deleteSchedule } from '../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -20,7 +21,7 @@ const DailySchedule = () => {
 
     const today = new Date();
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-    const [selectedYearId, setSelectedYearId] = useState(null); 
+    const [selectedYearId, setSelectedYearId] = useState(null);
     const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
 
     const [classrooms, setClassrooms] = useState([]);
@@ -63,6 +64,15 @@ const DailySchedule = () => {
             setEvents(parsed);
         } catch (err) {
             console.error('فشل في جلب الجدول:', err.message);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        try {
+            await deleteSchedule(id);
+            setEvents(prev => prev.filter(event => event.id !== id));
+        } catch (error) {
+            console.error('فشل في حذف الحدث:', error.message);
         }
     };
 
@@ -156,7 +166,6 @@ const DailySchedule = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
-
                         <FormControl variant="standard" size="small">
                             <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
                                 {arabicMonths.map((month, index) => (
@@ -164,7 +173,6 @@ const DailySchedule = () => {
                                 ))}
                             </Select>
                         </FormControl>
-
                         <FormControl variant="standard" size="small">
                             <Select value={selectedYearId || ''} onChange={(e) => handleYearChange(e.target.value)}>
                                 {academicYears.map((yr) => (
@@ -172,10 +180,8 @@ const DailySchedule = () => {
                                 ))}
                             </Select>
                         </FormControl>
-
                         <IconButton onClick={handleNextMonth}><ChevronLeft /></IconButton>
                     </Box>
-
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
@@ -203,12 +209,13 @@ const DailySchedule = () => {
                                         }}>
                                             {day && (
                                                 <>
-                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">
-                                                        {day}
-                                                    </Typography>
+                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event, i) => (
                                                             <Box key={i} sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
                                                                 bgcolor: event.color,
                                                                 p: 0.5,
                                                                 mb: 0.5,
@@ -217,6 +224,9 @@ const DailySchedule = () => {
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
+                                                                <IconButton size="small" onClick={() => handleDelete(event.id)}>
+                                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
+                                                                </IconButton>
                                                             </Box>
                                                         ))}
                                                     </Box>

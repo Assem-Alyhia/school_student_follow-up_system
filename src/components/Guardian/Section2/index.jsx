@@ -36,15 +36,23 @@ const Section2 = ({ parents = [], setParents }) => {
     };
 
 
-const handleOpenModal = async (parentId) => {
-  try {
-    const fullParent = await getParentById(parentId);
-    setSelectedParent(fullParent); 
-    setOpenModal(true);
-  } catch (err) {
-    console.error("خطأ في جلب بيانات ولي الأمر", err);
-  }
-};
+    const handleOpenModal = async (parentId) => {
+        try {
+            const response = await getParentById(parentId);
+
+            const fullParent = response?.data?.parent ?? response?.data ?? response;
+
+            if (!fullParent?.id) {
+                console.error("بيانات ولي الأمر غير كاملة:", fullParent);
+                return;
+            }
+
+            setSelectedParent(fullParent);
+            setOpenModal(true);
+        } catch (err) {
+            console.error("خطأ في جلب بيانات ولي الأمر", err);
+        }
+    };
 
 
     const handleEdit = (parent) => {

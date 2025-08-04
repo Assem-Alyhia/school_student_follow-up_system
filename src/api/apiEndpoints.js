@@ -81,6 +81,10 @@ const apiEndpoints = {
   // جدول الاحداث
   getEventsSchedule: (classroomId, year) =>
     `admin/schedules/get-events?classroom_id=${classroomId}&year=${year}`,
+  deleteSchedule: (id) => `admin/schedules/${id}`,
+
+  //جدول الباصات
+  getAllBuses: "admin/buses",
 };
 
 export default apiEndpoints;
