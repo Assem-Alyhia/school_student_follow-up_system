@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
 import { getStudentById } from './../../../../../api/Admin/Students/getStudentById';
+import { useNavigate } from 'react-router-dom'; // ✅ مضاف
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -14,6 +15,7 @@ const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8'
 const DailyScheduleAbout = ({ studentId }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const navigate = useNavigate(); // ✅ مضاف
 
     const today = new Date();
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
@@ -146,12 +148,17 @@ const DailyScheduleAbout = ({ studentId }) => {
                                                     <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event, i) => (
-                                                            <Box key={i} sx={{
-                                                                bgcolor: event.color,
-                                                                p: 0.5,
-                                                                mb: 0.5,
-                                                                borderRadius: 1
-                                                            }}>
+                                                            <Box
+                                                                key={i}
+                                                                sx={{
+                                                                    bgcolor: event.color,
+                                                                    p: 0.5,
+                                                                    mb: 0.5,
+                                                                    borderRadius: 1,
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                onClick={() => navigate(`/dashboard/student-schedule-details/${studentId}/${selectedYearValue}/${selectedMonth + 1}/${day}`)} // ✅ تحويل لرابط
+                                                            >
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>

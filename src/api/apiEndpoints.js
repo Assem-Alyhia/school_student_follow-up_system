@@ -90,6 +90,14 @@ const apiEndpoints = {
 
   // المواقع
   getSupervisorLocation: (supervisorId) => `admin/locations/${supervisorId}`,
+
+  // المدفوعات
+  getAllPayments: "admin/payments",
+  getAllPaymentsNoPaginate: "admin/payments/get-all",
+  getPaymentById: (id) => `admin/payments/${id}`,
+  createPayment: "admin/payments",
+  updatePayment: (id) => `admin/payments/${id}`,
+  deletePayment: (id) => `admin/payments/${id}`,
 };
 
 export default apiEndpoints;

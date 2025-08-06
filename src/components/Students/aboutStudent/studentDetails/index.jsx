@@ -8,7 +8,6 @@ import {
     Button,
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getStudentById } from '../../../../api/Admin/Students/getStudentById';
 
@@ -25,7 +24,7 @@ const StudentDetails = () => {
         }
     }, [id]);
 
-    const handlePrint = () => window.print();
+    const _handlePrint = () => window.print();
 
     if (!studentData) return <Typography sx={{ padding: 5 }}>جاري تحميل البيانات...</Typography>;
 
@@ -33,7 +32,6 @@ const StudentDetails = () => {
         <Box sx={{ padding: 2, direction: 'rtl', backgroundColor: '#f5f6fa' }}>
             <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
-                    {/* Sidebar */}
                     <Paper elevation={3} sx={{ padding: 3, textAlign: 'center', border: '1px solid #308A9F', borderRadius: 2 }}>
                         <Box sx={{ position: 'relative', width: 100, height: 100, margin: 'auto', mb: 3 }}>
                             <Avatar src={studentData.user?.image || '/Students/default.jpg'} sx={{ width: '100%', height: '100%', borderRadius: 2 }} />
@@ -52,7 +50,6 @@ const StudentDetails = () => {
                         <Button fullWidth variant="outlined" sx={{ color: '#308A9F', borderColor: '#308A9F', mt: 1, mb: 2 }}>أضف الرسوم</Button>
                     </Paper>
 
-                    {/* العنوان */}
                     <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>العنوان</Typography></Box>
                         <Box sx={{ p: 2 }}>
@@ -65,7 +62,6 @@ const StudentDetails = () => {
                         </Box>
                     </Paper>
 
-                    {/* الأخوة */}
                     {studentData.siblings?.length > 0 && (
                         <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
                             <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>معلومات الأخوة</Typography></Box>
@@ -83,7 +79,6 @@ const StudentDetails = () => {
                         </Paper>
                     )}
 
-                    {/* الإشراف والنقل */}
                     <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>الإشراف والنقل</Typography></Box>
                         <Box sx={{ p: 2 }}>
@@ -108,85 +103,30 @@ const StudentDetails = () => {
                     </Paper>
                 </Grid>
 
-                {/* باقي القسم الرئيسي */}
                 <Grid item xs={12} md={8}>
-                    {/* أولياء الأمور */}
-                    <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2, padding: '0 0 3rem' }}>
+                    <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}>
-                            <Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل أولياء الأمور</Typography>
+                            <Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل ولي الأمر</Typography>
                         </Box>
                         <Box sx={{ padding: ' 1rem 2rem' }}>
-                            {[{
-                                name: studentData.parent.user?.name || '---',
-                                phone: studentData.parent.user?.phone || '---',
-                                email: studentData.parent.user?.email || '---',
-                                avatar: '/Students/father.png',
-                                role: 'الأب'
-                            }, {
-                                name: 'أم ' + studentData.parent.user?.name.split(' ')[0],
-                                phone: studentData.parent.user?.phone || '---',
-                                email: studentData.parent.user?.email || '---',
-                                avatar: '/Students/mother.png',
-                                role: 'الأم'
-                            }].map((parent, i) => (
-                                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                    <Avatar src={parent.avatar} sx={{ width: 80, height: 80, borderRadius: 2 }} />
-                                    <Box sx={{ margin: '1rem 0' }}>
-                                        <Typography sx={{ color: '#586E75' }}>
-                                            <strong style={{ color: '#308A9F' }}>رقم الهاتف:</strong> {parent.phone}
-                                        </Typography>
-                                        <Typography sx={{ color: '#586E75' }}>
-                                            <strong style={{ color: '#308A9F' }}>البريد الإلكتروني:</strong> {parent.email}
-                                        </Typography>
-                                        <Typography sx={{ color: '#22385F', fontWeight: 'bold' }}>{parent.name}</Typography>
-                                        <Typography sx={{ color: '#586E75' }}>{parent.role}</Typography>
-                                    </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                <Avatar src="/Students/father.png" sx={{ width: 80, height: 80, borderRadius: 2 }} />
+                                <Box sx={{ margin: '1rem 0' }}>
+                                    <Typography sx={{ color: '#586E75' }}>
+                                        <strong style={{ color: '#308A9F' }}>رقم الهاتف:</strong> {studentData.parent.user?.phone || '---'}
+                                    </Typography>
+                                    <Typography sx={{ color: '#586E75' }}>
+                                        <strong style={{ color: '#308A9F' }}>البريد الإلكتروني:</strong> {studentData.parent.user?.email || '---'}
+                                    </Typography>
+                                    <Typography sx={{ color: '#22385F', fontWeight: 'bold' }}>
+                                        {studentData.parent.user?.name || '---'}
+                                    </Typography>
+                                    <Typography sx={{ color: '#586E75' }}>ولي الأمر</Typography>
                                 </Box>
-                            ))}
+                            </Box>
                         </Box>
                     </Paper>
 
-                    {/* المستندات */}
-                    <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
-                        <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}><Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>المستندات</Typography></Box>
-                        <Box sx={{ p: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Button variant="contained" sx={{ background: gradientColor, color: '#fff' }} onClick={handlePrint}>تنزيل</Button>
-                            <Typography sx={{ fontWeight: 'bold', color: '#308A9F' }}>BirthCertificate.pdf</Typography>
-                            <PictureAsPdfIcon sx={{ color: '#f44336', fontSize: '2rem' }} />
-                        </Box>
-                    </Paper>
-
-                    {/* المدرسة السابقة */}
-                    <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
-                        <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}><Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل المدرسة السابقة</Typography></Box>
-                        <Box sx={{ p: 4 }}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={6}><Typography sx={{ color: '#586E75' }}>اسم المدرسة السابقة</Typography><Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>مدرسة الأوائل</Typography></Grid>
-                                <Grid item xs={6}><Typography sx={{ color: '#586E75' }}>عنوان المدرسة</Typography><Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>شارع القصور، حي القصور، حلب، سوريا</Typography></Grid>
-                            </Grid>
-                        </Box>
-                    </Paper>
-
-                    {/* السجل الطبي */}
-                    <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2, mb: 2 }}>
-                        <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}>
-                            <Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>السجل الطبي</Typography>
-                        </Box>
-                        <Box sx={{ p: 4 }}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={6}>
-                                    <Typography sx={{ color: '#586E75' }}>الأمراض المزمنة</Typography>
-                                    <Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>{studentData.medical_info || '---'}</Typography>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Typography sx={{ color: '#586E75' }}>الوصفة الطبية</Typography>
-                                    <Typography sx={{ color: '#308A9F', fontWeight: 'bold' }}>بخاخ الربو (Ventolin) مرتين يومياً</Typography>
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    </Paper>
-
-                    {/* النقل */}
                     <Paper sx={{ border: '1px solid #308A9F', borderRadius: 2 }}>
                         <Box sx={{ backgroundColor: '#e0e0e0', p: 2 }}>
                             <Typography fontWeight="bold" sx={{ textAlign: 'center', color: '#308A9F' }}>تفاصيل النقل</Typography>

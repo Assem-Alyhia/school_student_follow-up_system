@@ -42,7 +42,6 @@ import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { Collapse } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import { clearToken } from '../../api/authApi/tokenManager';
-import Cookies from "js-cookie";
 import { getUserById } from '../../api/Admin/Users/getUserById';
 
 const drawerWidth = 240;
@@ -217,8 +216,7 @@ export default function MiniDrawer() {
     // });
 
     const [userData, setUserData] = useState(null);
-    const userId = Cookies.get("UserId");
-
+    const userId = localStorage.getItem("UserId");
     useEffect(() => {
         const fetchUserData = async () => {
             try {

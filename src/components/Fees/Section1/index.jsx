@@ -1,21 +1,65 @@
-import React, { useState } from 'react';
-import { Box, Typography, Paper, Grid, MenuItem, Select, FormControl } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+    Box, Typography, Paper, Grid, MenuItem, Select, FormControl
+} from '@mui/material';
+import {
+    LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer
+} from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { getAllPaymentsNoPaginate } from '../../../api/Admin/Payments/getAllPaymentsNoPaginate';
 
 const Section1 = () => {
-    const [selectedYear, setSelectedYear] = useState('2025');
+    const { data: payments = [], isLoading } = useQuery({
+        queryKey: ['allPayments'],
+        queryFn: getAllPaymentsNoPaginate,
+    });
 
-    const handleYearChange = (event) => {
-        setSelectedYear(event.target.value);
-    };
+    const statistics = useMemo(() => {
+        const stats = {};
 
-    const chartData = [
-        { year: 2021, paid: 90, unpaid: 120 },
-        { year: 2022, paid: 100, unpaid: 150 },
-        { year: 2023, paid: 160, unpaid: 180 },
-        { year: 2024, paid: 110, unpaid: 170 },
-        { year: 2025, paid: 130, unpaid: 160 },
-    ];
+        payments.forEach(payment => {
+            const paidAt = payment?.paid_at;
+            const status = payment?.status;
+
+            if (!paidAt || !status) return;
+
+            const year = new Date(paidAt).getFullYear();
+            const isPaid = status === 'completed';
+
+            if (!stats[year]) {
+                stats[year] = { paid: 0, unpaid: 0 };
+            }
+
+            if (isPaid) {
+                stats[year].paid += 1;
+            } else {
+                stats[year].unpaid += 1;
+            }
+        });
+
+        return stats;
+    }, [payments]);
+
+    const years = Object.keys(statistics).sort((a, b) => b - a);
+    const [selectedYear, setSelectedYear] = useState(years[0] || new Date().getFullYear());
+
+    // Sync selected year with available data
+    useEffect(() => {
+        if (years.length > 0 && !years.includes(selectedYear)) {
+            setSelectedYear(years[0]);
+        }
+    }, [years]);
+
+    const chartData = years.map(year => ({
+        year: Number(year),
+        ...statistics[year]
+    }));
+
+    const selectedYearStats = statistics[selectedYear] || { paid: 0, unpaid: 0 };
+
+    if (isLoading) {
+        return <Typography sx={{ p: 3 }}>جاري تحميل البيانات...</Typography>;
+    }
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -28,7 +72,7 @@ const Section1 = () => {
                             <FormControl size="small">
                                 <Select
                                     value={selectedYear}
-                                    onChange={handleYearChange}
+                                    onChange={(e) => setSelectedYear(e.target.value)}
                                     sx={{
                                         fontWeight: 'bold',
                                         borderRadius: 2,
@@ -42,11 +86,9 @@ const Section1 = () => {
                                         }
                                     }}
                                 >
-                                    <MenuItem value="2025">2025</MenuItem>
-                                    <MenuItem value="2024">2024</MenuItem>
-                                    <MenuItem value="2023">2023</MenuItem>
-                                    <MenuItem value="2022">2022</MenuItem>
-                                    <MenuItem value="2021">2021</MenuItem>
+                                    {years.map(year => (
+                                        <MenuItem key={year} value={year}>{year}</MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
                         </Box>
@@ -57,7 +99,7 @@ const Section1 = () => {
                                     ● مدفوع
                                 </Typography>
                                 <Typography fontWeight="bold" fontSize="18px" color="#22385F">
-                                    1,335
+                                    {selectedYearStats.paid}
                                 </Typography>
                             </Box>
                         </Box>
@@ -68,7 +110,7 @@ const Section1 = () => {
                                     ● غير مدفوع
                                 </Typography>
                                 <Typography fontWeight="bold" fontSize="18px" color="#22385F">
-                                    1,335
+                                    {selectedYearStats.unpaid}
                                 </Typography>
                             </Box>
                         </Box>
@@ -80,40 +122,16 @@ const Section1 = () => {
                     <Paper sx={{ padding: 2, borderRadius: 3, boxShadow: 3, height: '100%' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography fontWeight="bold" color="#22385F">الرسوم</Typography>
-                            <FormControl size="small">
-                                <Select
-                                    value={selectedYear}
-                                    onChange={handleYearChange}
-                                    sx={{
-                                        fontWeight: 'bold',
-                                        borderRadius: 2,
-                                        color: '#308A9F',
-                                        fontSize: '13px',
-                                        px: 1,
-                                        minWidth: 90,
-                                        borderColor: '#308A9F',
-                                        '& .MuiOutlinedInput-notchedOutline': {
-                                            borderColor: '#308A9F'
-                                        }
-                                    }}
-                                >
-                                    <MenuItem value="2025">2025</MenuItem>
-                                    <MenuItem value="2024">2024</MenuItem>
-                                    <MenuItem value="2023">2023</MenuItem>
-                                    <MenuItem value="2022">2022</MenuItem>
-                                    <MenuItem value="2021">2021</MenuItem>
-                                </Select>
-                            </FormControl>
                         </Box>
 
                         <Box sx={{ height: 250 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData}>
                                     <XAxis dataKey="year" reversed />
-                                    <YAxis />
+                                    <YAxis allowDecimals={false} />
                                     <Tooltip />
-                                    <Line type="monotone" dataKey="unpaid" stroke="#FF7043" strokeWidth={3} name="المبالغ المستحقة" dot />
-                                    <Line type="monotone" dataKey="paid" stroke="#5C6BC0" strokeWidth={3} name="المبالغ المسددة" dot />
+                                    <Line type="monotone" dataKey="unpaid" stroke="#FF7043" strokeWidth={3} name="غير مدفوع" dot />
+                                    <Line type="monotone" dataKey="paid" stroke="#5C6BC0" strokeWidth={3} name="مدفوع" dot />
                                 </LineChart>
                             </ResponsiveContainer>
                         </Box>

@@ -17,14 +17,15 @@ export const login = async (email, password) => {
     }
 
     const token = response.data.access_token;
-    const userId = response.data.user.id; 
+    const userId = response.data.user.id;
 
     if (!token || !userId) {
       throw new Error("Token or user ID not found in response");
     }
 
     setToken(token);
-    Cookies.set("UserId", userId); 
+    localStorage.setItem("UserId", userId); // تخزين دائم
+    Cookies.set("UserId", userId); // اختياري، يمكن حذفه إذا لم يُستخدم
 
     return response.data;
   } catch (error) {
@@ -32,4 +33,13 @@ export const login = async (email, password) => {
       error.response?.data?.message || error.message || "Login failed"
     );
   }
+};
+
+export const logout = () => {
+  // حذف التوكن
+  setToken(null);
+
+  // حذف UserId من كل الأماكن
+  localStorage.removeItem("UserId");
+  Cookies.remove("UserId");
 };

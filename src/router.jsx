@@ -33,9 +33,11 @@ import UpdateRole from "./components/User/Roles/updateRole";
 import UserProfile from "./components/ProfilePage";
 import SettingNavigation from "./components/UsersSettings/settingNavigation";
 import UpdateUser from "./components/User/UpdateUser";
+import StudentScheduleDetails from "./components/Students/aboutStudent/StudentScheduleDetails/StudentScheduleDetails";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
+  { path: "student-schedule-details/:studentId/:year/:month/:day", element: <StudentScheduleDetails    /> },
   { path: "users", element: <User /> },
   { path: "users/usersProfile/:id", element: <UserProfile /> },
   { path: "users/usersSettings/:id", element: <SettingNavigation /> },
