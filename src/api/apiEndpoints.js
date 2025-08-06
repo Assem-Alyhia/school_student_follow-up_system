@@ -33,6 +33,7 @@ const apiEndpoints = {
   // المشرفين
   getAllSupervisors: "admin/supervisors",
   getAllSupervisorsNoPaginate: "admin/supervisors/get-all",
+  getSupervisorById: (id) => `admin/supervisors/${id}`,
   // الرسوم
   getAllSchoolFees: "admin/school-fees",
   getAllSchoolFeesNoPaginate: "admin/school-fees/get-all",
@@ -85,6 +86,10 @@ const apiEndpoints = {
 
   //جدول الباصات
   getAllBuses: "admin/buses",
+  deleteBus: (id) => `admin/buses/${id}`,
+
+  // المواقع
+  getSupervisorLocation: (supervisorId) => `admin/locations/${supervisorId}`,
 };
 
 export default apiEndpoints;

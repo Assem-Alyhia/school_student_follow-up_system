@@ -104,12 +104,12 @@ const Section2 = ({ students }) => {
                                                 <VisibilityIcon fontSize="small" sx={{ color: 'primary.main', marginRight: 1 }} />
                                                 <Typography sx={{ color: 'primary.main' }}>عرض التفاصيل</Typography>
                                             </MenuItem>
-                                            <MenuItem 
-                                            onClick={() => {
+                                            <MenuItem
+                                                onClick={() => {
                                                     navigate(`/dashboard/student/updateStudent/${student.id}`);
                                                     handleMenuClose();
                                                 }}
-                                                >
+                                            >
                                                 <EditIcon fontSize="small" sx={{ color: '#FB8C00', marginRight: 1 }} />
                                                 <Typography sx={{ color: '#FB8C00' }}>تعديل</Typography>
                                             </MenuItem>
