@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Button, Paper, Typography } from '@mui/material';
-import Section1 from './DailySchedule/Section1';
-import BreakAndHolidays from './DailySchedule/Section3';
-import ExamScheduleSection1 from './ExamSchedule/Section1/index';
-import ExamScheduleTable from './ExamSchedule/Section2';
-import PaginationSection from './../../layout/PaginationSection';
-import UpcomingEvents from './activityTables/Section3';
-import DailySchedule from './DailySchedule/Section2';
-import EventScheduleTable from './activityTables/Section2';
+import NavigationDailySchedule from './DailySchedule/NavigationDailySchedule';
+import NavigationExamSchedule from './ExamSchedule/NavigationDailySchedule';
+import NavigationActivityTables from './activityTables/NavigationaAtivityTables';
 
 const NavigationSectionLessone = () => {
     const [activeButton, setActiveButton] = useState('الجدول اليومي');
@@ -66,23 +61,17 @@ const NavigationSectionLessone = () => {
                 <Box sx={{ mt: 3 }}>
                     {activeButton === 'الجدول اليومي' && (
                         <Typography variant="body1">
-                            <Section1 />
-                            <DailySchedule/>
-                            <BreakAndHolidays />
+                            <NavigationDailySchedule/>
                         </Typography>
                     )}
                     {activeButton === 'جدول الامتحانات' && (
                         <Typography variant="body1">
-                            <ExamScheduleSection1 />
-                            <ExamScheduleTable />
-                            <PaginationSection />
+                            <NavigationExamSchedule/>
                         </Typography>
                     )}
                     {activeButton === 'النشاط' && (
                         <Typography variant="body1">
-                            <Section1 />
-                            <EventScheduleTable />
-                            <UpcomingEvents />
+                            <NavigationActivityTables/>
                         </Typography>
                     )}
                 </Box>

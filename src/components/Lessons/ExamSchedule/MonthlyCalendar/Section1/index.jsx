@@ -4,18 +4,18 @@ import {
     IconButton, Select, MenuItem, FormControl,
     useMediaQuery, useTheme
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, Delete } from '@mui/icons-material';
 
-import { getEventsSchedule } from '../../../../api/Admin/EventSchedule/getEventsSchedule';
-import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
-import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
-import { deleteSchedule } from '../../../../api/Admin/Schedules/deleteSchedule';
+import { getExamSchedule } from '../../../../../api/Admin/ExamSchedule/ExamSchedule';
+import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
+import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
+import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
+const colors = ['#FF8A80', '#FFD180', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D', '#CFD8DC'];
 
-const EventScheduleTable = () => {
+const ExamMonthlyCalendar = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -50,33 +50,27 @@ const EventScheduleTable = () => {
         }
     };
 
-    const fetchEvents = async () => {
+    const fetchExams = async () => {
         if (!selectedClassroom || !selectedYearValue) return;
         try {
-            const response = await getEventsSchedule(selectedClassroom, selectedYearValue);
-            const data = response.data;
-
-            const parsed = data.map((item, i) => {
-                const eventDate = new Date(item.start_time);
-                return {
-                    id: item.id,
-                    title: item.title,
-                    date: eventDate.getDate(),
-                    month: eventDate.getMonth(),
-                    color: colors[i % colors.length],
-                };
-            });
-
+            const data = await getExamSchedule(selectedClassroom, selectedYearValue);
+            const parsed = data.map((item, i) => ({
+                id: item.id,
+                title: item.name,
+                date: new Date(item.date).getDate(),
+                month: new Date(item.date).getMonth(),
+                color: colors[i % colors.length],
+            }));
             setEvents(parsed);
         } catch (err) {
-            console.error('فشل في جلب الأحداث:', err.message);
+            console.error('فشل في جلب الامتحانات:', err.message);
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (eventId) => {
         try {
-            await deleteSchedule(id);
-            setEvents(prev => prev.filter(event => event.id !== id));
+            await deleteSchedule(eventId);
+            setEvents((prev) => prev.filter((e) => e.id !== eventId));
         } catch (error) {
             console.error('فشل في حذف الحدث:', error.message);
         }
@@ -87,7 +81,7 @@ const EventScheduleTable = () => {
     }, []);
 
     useEffect(() => {
-        fetchEvents();
+        fetchExams();
     }, [selectedClassroom, selectedYearValue]);
 
     const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
@@ -223,19 +217,19 @@ const EventScheduleTable = () => {
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event, i) => (
                                                             <Box key={i} sx={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
                                                                 bgcolor: event.color,
                                                                 p: 0.5,
                                                                 mb: 0.5,
-                                                                borderRadius: 1
+                                                                borderRadius: 1,
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center'
                                                             }}>
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
                                                                 <IconButton size="small" onClick={() => handleDelete(event.id)}>
-                                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
+                                                                    <Delete sx={{ color: 'white', fontSize: '16px' }} />
                                                                 </IconButton>
                                                             </Box>
                                                         ))}
@@ -254,4 +248,4 @@ const EventScheduleTable = () => {
     );
 };
 
-export default EventScheduleTable;
+export default ExamMonthlyCalendar;

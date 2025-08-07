@@ -6,10 +6,10 @@ import {
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
 
-import { getDailySchedule } from '../../../../api/Admin/DailySchedule/getDailySchedule';
-import { getAllClassrooms } from '../../../../api/Admin/Classrooms/getAllClassrooms';
-import { getAllAcademicYears } from '../../../../api/Admin/AcademicYears/getAllAcademicYears';
-import { deleteSchedule } from '../../../../api/Admin/Schedules/deleteSchedule';
+import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
+import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
+import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
+import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
