@@ -78,29 +78,6 @@ const StudentDetails = () => {
                             </Box>
                         </Paper>
                     )}
-
-                    <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 }}>
-                        <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>الإشراف والنقل</Typography></Box>
-                        <Box sx={{ p: 2 }}>
-                            {[{
-                                label: 'المشرفة',
-                                name: studentData.supervisor?.name || '---',
-                                avatar: '/Students/supervisor.png'
-                            }, {
-                                label: 'السائق',
-                                name: 'أبو محمد',
-                                avatar: '/Students/driver.png'
-                            }].map((person, i) => (
-                                <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar src={person.avatar} sx={{ width: 50, height: 50, ml: 1 }} />
-                                    <Box>
-                                        <Typography sx={{ color: '#308A9F' }}>{person.label}</Typography>
-                                        <Typography sx={{ color: '#22385F', fontWeight: 'bold' }}>{person.name}</Typography>
-                                    </Box>
-                                </Box>
-                            ))}
-                        </Box>
-                    </Paper>
                 </Grid>
 
                 <Grid item xs={12} md={8}>
@@ -124,6 +101,29 @@ const StudentDetails = () => {
                                     <Typography sx={{ color: '#586E75' }}>ولي الأمر</Typography>
                                 </Box>
                             </Box>
+                        </Box>
+                    </Paper>
+
+                    <Paper sx={{ border: '1px solid #308A9F', mt: 2, borderRadius: 2 ,mb:2 }}>
+                        <Box sx={{ backgroundColor: '#e0e0e0', p: 1.5 }}><Typography fontWeight="bold" sx={{ color: '#308A9F', textAlign: 'center' }}>الإشراف والنقل</Typography></Box>
+                        <Box sx={{ p: 2 }}>
+                            {[{
+                                label: 'المشرفة',
+                                name: studentData.supervisor?.name || '---',
+                                avatar: '/Students/supervisor.png'
+                            }, {
+                                label: 'السائق',
+                                name: 'أبو محمد',
+                                avatar: '/Students/driver.png'
+                            }].map((person, i) => (
+                                <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    <Avatar src={person.avatar} sx={{ width: 50, height: 50, ml: 1 }} />
+                                    <Box>
+                                        <Typography sx={{ color: '#308A9F' }}>{person.label}</Typography>
+                                        <Typography sx={{ color: '#22385F', fontWeight: 'bold' }}>{person.name}</Typography>
+                                    </Box>
+                                </Box>
+                            ))}
                         </Box>
                     </Paper>
 

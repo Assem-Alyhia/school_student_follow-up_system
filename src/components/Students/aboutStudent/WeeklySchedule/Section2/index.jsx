@@ -105,14 +105,12 @@ const WeeklySchedule1 = ({ studentId }) => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
-                {/* عرض رقم الأسبوع */}
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                     <Typography fontWeight="bold" color="#22385F">
                         الأسبوع رقم {getWeekNumberInMonth(currentWeekStart)} من {arabicMonths[selectedMonth]}
                     </Typography>
                 </Box>
 
-                {/* التحكم بالشهر والتنقل */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevWeek}><ChevronRight /></IconButton>
@@ -131,7 +129,6 @@ const WeeklySchedule1 = ({ studentId }) => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
-                {/* عرض أيام الأسبوع مع الأحداث */}
                 <Grid container spacing={1}>
                     {weekDays.map((date, i) => {
                         if (date.getMonth() !== selectedMonth) return null;

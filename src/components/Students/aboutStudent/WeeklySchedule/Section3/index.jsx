@@ -5,7 +5,6 @@ const BreakAndHolidaysAbout = () => {
     return (
         <Paper sx={{ padding: 2, marginTop: 2 }}>
             <Grid container spacing={2} justifyContent="center">
-                {/* الاستراحة الأولى */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ backgroundColor: '#F5F5F5', textAlign: 'center', border: '1px solid #308A9F' }}>
                         <CardContent>
@@ -19,7 +18,6 @@ const BreakAndHolidaysAbout = () => {
                     </Card>
                 </Grid>
 
-                {/* الاستراحة الثانية */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ backgroundColor: '#F5F5F5', textAlign: 'center', border: '1px solid #308A9F' }}>
                         <CardContent>
@@ -33,7 +31,6 @@ const BreakAndHolidaysAbout = () => {
                     </Card>
                 </Grid>
 
-                {/* أيام العطلة */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ backgroundColor: '#F5F5F5', textAlign: 'center', border: '1px solid #308A9F' }}>
                         <CardContent>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Paper, Grid, FormControl, MenuItem, Select, useTheme, useMediaQuery
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { getStudentById } from '../../../../api/Admin/Students/getStudentById';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -11,6 +12,7 @@ const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8'
 const StudentDayTimeline = ({ studentId }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const navigate = useNavigate();
 
     const today = new Date();
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
@@ -43,18 +45,15 @@ const StudentDayTimeline = ({ studentId }) => {
 
     const getDateByWeekAndDay = (year, month, weekNumber, dayOfWeek) => {
         const firstDayOfMonth = new Date(year, month, 1);
-        const firstWeekDay = firstDayOfMonth.getDay(); // 0 (الأحد) ... 6 (السبت)
+        const firstWeekDay = firstDayOfMonth.getDay();
 
-        // حساب فرق الأيام لإيجاد أول أحد أو بداية الأسبوع داخل الشهر
         const offsetToWeekStart = (7 - firstWeekDay) % 7;
         const startOfFirstWeek = new Date(year, month, 1 + offsetToWeekStart);
 
-        // الآن نحسب تاريخ اليوم داخل الأسبوع المحدد
         const targetDate = new Date(startOfFirstWeek);
         targetDate.setDate(startOfFirstWeek.getDate() + (weekNumber - 1) * 7 + dayOfWeek);
         return targetDate;
     };
-
 
     const selectedDate = getDateByWeekAndDay(today.getFullYear(), selectedMonth, selectedWeek, selectedDay);
 
@@ -65,10 +64,13 @@ const StudentDayTimeline = ({ studentId }) => {
             e.start_time.getFullYear() === selectedDate.getFullYear()
     );
 
+    const handleEventClick = () => {
+        navigate(`/dashboard/student-schedule-details/${studentId}/${selectedDate.getFullYear()}/${selectedDate.getMonth() + 1}/${selectedDate.getDate()}`);
+    };
+
     return (
         <Box sx={{ p: isMobile ? 1 : 3 }}>
             <Paper sx={{ p: isMobile ? 1 : 3, direction: 'rtl' }}>
-                {/* الفلاتر */}
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                     <FormControl size="small" variant="outlined">
                         <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
@@ -95,12 +97,10 @@ const StudentDayTimeline = ({ studentId }) => {
                     </FormControl>
                 </Box>
 
-                {/* عرض اليوم المحدد */}
                 <Typography variant="h6" fontWeight="bold" color="#22385F" mb={2}>
                     {arabicDays[selectedDate.getDay()]} - {selectedDate.getDate()} {arabicMonths[selectedMonth]}
                 </Typography>
 
-                {/* الحصص */}
                 <Grid container spacing={2}>
                     {dayEvents.length === 0 && (
                         <Typography color="gray" textAlign="center" width="100%">
@@ -109,16 +109,22 @@ const StudentDayTimeline = ({ studentId }) => {
                     )}
                     {dayEvents.map((event, index) => (
                         <Grid item xs={12} key={index}>
-                            <Box sx={{
-                                bgcolor: event.color,
-                                p: 2,
-                                borderRadius: 2,
-                                color: '#fff',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap'
-                            }}>
+                            <Box
+                                sx={{
+                                    bgcolor: event.color,
+                                    p: 2,
+                                    borderRadius: 2,
+                                    color: '#fff',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    flexWrap: 'wrap',
+                                    cursor: 'pointer',
+                                    transition: '0.2s',
+                                    '&:hover': { opacity: 0.9 }
+                                }}
+                                onClick={() => handleEventClick(event)}
+                            >
                                 <Typography fontWeight="bold">{event.title}</Typography>
                                 <Typography fontSize="0.9rem">
                                     {event.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
