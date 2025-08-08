@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Grid, Button, IconButton, TextField, Paper } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add'; 
-import PrintIcon from '@mui/icons-material/Print'; 
-import SortIcon from '@mui/icons-material/Sort'; 
-import FilterListIcon from '@mui/icons-material/FilterList'; 
+import AddIcon from '@mui/icons-material/Add';
+import PrintIcon from '@mui/icons-material/Print';
+import SortIcon from '@mui/icons-material/Sort';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import AddUserModal from '../AddUserModal';
 
 const Section1 = () => {
+    const [openModal, setOpenModal] = useState(false);
+
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2 }}>
                 <Grid container spacing={2} alignItems="center">
+                    {/* أدوات الفرز والبحث */}
                     <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
                         <Button
                             variant="outlined"
@@ -34,27 +38,29 @@ const Section1 = () => {
                             InputProps={{
                                 startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: '20px' }} />,
                             }}
-                            sx={{ 
+                            sx={{
                                 flexGrow: 1,
                                 height: '40px',
                                 '& .MuiInputBase-root': {
-                                    height: '40px', 
-                                    fontSize: '14px', 
+                                    height: '40px',
+                                    fontSize: '14px',
                                     padding: '6px 12px',
                                 },
                             }}
                         />
                     </Grid>
 
+                    {/* أزرار الإضافة والتصدير والطباعة */}
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 marginRight: 2
                             }}
+                            onClick={() => setOpenModal(true)} // فتح الموديول
                         >
                             إضافة مستخدم
                         </Button>
@@ -62,8 +68,8 @@ const Section1 = () => {
                         <Button
                             variant="contained"
                             startIcon={<FileDownloadIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 marginRight: 2
                             }}
@@ -77,6 +83,9 @@ const Section1 = () => {
                     </Grid>
                 </Grid>
             </Paper>
+
+            {/* استدعاء الموديول */}
+            <AddUserModal open={openModal} onClose={() => setOpenModal(false)} />
         </Box>
     );
 };

@@ -128,7 +128,7 @@ const Section2 = ({ page, rowsPerPage }) => {
                                         <IconButton onClick={() => handleDeleteClick(user.id)}>
                                             <DeleteIcon />
                                         </IconButton>
-                                        {/* <IconButton><VisibilityIcon /></IconButton> */}
+                                        <IconButton><VisibilityIcon /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
