@@ -2,6 +2,7 @@ import  { useState } from 'react';
 import { Box, Button, Paper, Typography } from '@mui/material';
 import WeeklyExamSchedule from './WeeklyCalendar/Section1';
 import ExamMonthlyCalendar from './MonthlyCalendar/Section1';
+import DailyExamsCalendar from './DailyCalendar/Section1';
 
 
 const NavigationExamSchedule = () => {
@@ -85,7 +86,7 @@ const NavigationExamSchedule = () => {
                     )}
                     {activeButton === 'التقويم اليومي' && (
                         <Typography variant="body1">
-
+                            <DailyExamsCalendar/>
                         </Typography>
                     )}
                     {activeButton === 'اضافة حدث' && (

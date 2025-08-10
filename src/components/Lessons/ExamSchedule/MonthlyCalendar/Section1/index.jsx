@@ -4,16 +4,16 @@ import {
     IconButton, Select, MenuItem, FormControl,
     useMediaQuery, useTheme
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today, Delete } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
 
-import { getExamSchedule } from '../../../../../api/Admin/ExamSchedule/ExamSchedule';
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import { getExamSchedule } from './../../../../../api/Admin/ExamSchedule/ExamSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const colors = ['#FF8A80', '#FFD180', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D', '#CFD8DC'];
+const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
 const ExamMonthlyCalendar = () => {
     const theme = useTheme();
@@ -30,7 +30,7 @@ const ExamMonthlyCalendar = () => {
 
     const [events, setEvents] = useState([]);
 
-    const fetchInitialData = async () => {
+    const fetchClassroomsAndYears = async () => {
         try {
             const [classroomRes, yearRes] = await Promise.all([
                 getAllClassrooms(1, 100),
@@ -50,38 +50,40 @@ const ExamMonthlyCalendar = () => {
         }
     };
 
-    const fetchExams = async () => {
+    const fetchSchedule = async () => {
         if (!selectedClassroom || !selectedYearValue) return;
         try {
-            const data = await getExamSchedule(selectedClassroom, selectedYearValue);
-            const parsed = data.map((item, i) => ({
+            const res = await getExamSchedule(selectedClassroom, selectedYearValue);
+            const examList = Array.isArray(res.data) ? res.data : [];
+            const parsed = examList.map((item, i) => ({
                 id: item.id,
-                title: item.name,
-                date: new Date(item.date).getDate(),
-                month: new Date(item.date).getMonth(),
+                title: item.title,
+                date: new Date(item.start_time).getDate(),
+                month: new Date(item.start_time).getMonth(),
                 color: colors[i % colors.length],
             }));
             setEvents(parsed);
         } catch (err) {
-            console.error('فشل في جلب الامتحانات:', err.message);
+            console.error('فشل في جلب جدول الامتحانات:', err.message);
         }
     };
 
-    const handleDelete = async (eventId) => {
+
+    const handleDelete = async (id) => {
         try {
-            await deleteSchedule(eventId);
-            setEvents((prev) => prev.filter((e) => e.id !== eventId));
+            await deleteSchedule(id);
+            setEvents(prev => prev.filter(event => event.id !== id));
         } catch (error) {
             console.error('فشل في حذف الحدث:', error.message);
         }
     };
 
     useEffect(() => {
-        fetchInitialData();
+        fetchClassroomsAndYears();
     }, []);
 
     useEffect(() => {
-        fetchExams();
+        fetchSchedule();
     }, [selectedClassroom, selectedYearValue]);
 
     const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
@@ -166,7 +168,6 @@ const ExamMonthlyCalendar = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
-
                         <FormControl variant="standard" size="small">
                             <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
                                 {arabicMonths.map((month, index) => (
@@ -174,7 +175,6 @@ const ExamMonthlyCalendar = () => {
                                 ))}
                             </Select>
                         </FormControl>
-
                         <FormControl variant="standard" size="small">
                             <Select value={selectedYearId || ''} onChange={(e) => handleYearChange(e.target.value)}>
                                 {academicYears.map((yr) => (
@@ -182,10 +182,8 @@ const ExamMonthlyCalendar = () => {
                                 ))}
                             </Select>
                         </FormControl>
-
                         <IconButton onClick={handleNextMonth}><ChevronLeft /></IconButton>
                     </Box>
-
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
@@ -217,19 +215,19 @@ const ExamMonthlyCalendar = () => {
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event, i) => (
                                                             <Box key={i} sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
                                                                 bgcolor: event.color,
                                                                 p: 0.5,
                                                                 mb: 0.5,
-                                                                borderRadius: 1,
-                                                                display: 'flex',
-                                                                justifyContent: 'space-between',
-                                                                alignItems: 'center'
+                                                                borderRadius: 1
                                                             }}>
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
                                                                 <IconButton size="small" onClick={() => handleDelete(event.id)}>
-                                                                    <Delete sx={{ color: 'white', fontSize: '16px' }} />
+                                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
                                                                 </IconButton>
                                                             </Box>
                                                         ))}

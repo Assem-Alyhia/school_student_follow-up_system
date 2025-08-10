@@ -4,13 +4,21 @@ import {
     Modal,
     Paper,
     Typography,
-    Button,
-    Divider,
-    IconButton
+    IconButton,
+    Avatar,
+    TextField,
+    InputAdornment,
+    IconButton as MuiIconButton
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 
 const UserDetails = ({ open, onClose, user }) => {
+    const [showPassword, setShowPassword] = React.useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
+    const handleClickShowPassword = () => setShowPassword(!showPassword);
+    const handleClickShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
+
     return (
         <Modal
             open={open}
@@ -19,101 +27,197 @@ const UserDetails = ({ open, onClose, user }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backdropFilter: 'blur(3px)'
+                backdropFilter: 'blur(4px)'
             }}
         >
             <Paper
                 elevation={3}
                 sx={{
-                    width: '400px',
-                    maxWidth: '90%',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '1px solid #308A9F',
-                    position: 'relative'
+                    width: 400,
+                    maxWidth: '95%',
+                    padding: '40px 30px 30px 30px',
+                    borderRadius: '15px',
+                    position: 'relative',
+                    backgroundColor: '#fff',
+                    textAlign: 'center',
+                    fontFamily: 'Arial, sans-serif'
                 }}
             >
                 <IconButton
                     onClick={onClose}
                     sx={{
                         position: 'absolute',
-                        top: 8,
-                        left: 8,
+                        top: 15,
+                        left: 20,
                         color: '#308A9F'
                     }}
                 >
                     <CloseIcon />
                 </IconButton>
 
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography variant="h5" sx={{ color: '#308A9F', fontWeight: 'bold' }}>
-                        {user.name || 'Cody Fisher'}
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 15,
+                        right: 20,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1,
+                        userSelect: 'none',
+                    }}
+                >
+                    <Typography
+                        sx={{
+                            color: '#308A9F',
+                            border:'1px solid #308A9F',
+                            padding: '4px 14px',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            minWidth: '5rem',
+                            textAlign: 'center',
+                            fontFamily: 'Arial, sans-serif',
+                        }}
+                    >
+                        {user?.roles?.[0] || 'admin'}
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#586E75' }}>
-                        {user.email || 'cody.fisher@gmail.com'}
+                    <Typography
+                        sx={{
+                            border:'1px solid #FF5C5C',
+                            color: '#FF5C5C',
+                            padding: '4px 14px',
+                            borderRadius: '9px',
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            minWidth: '5rem',
+                            textAlign: 'center',
+                            fontFamily: 'Arial, sans-serif',
+                        }}
+                    >
+                        معلم
                     </Typography>
                 </Box>
 
-                <Divider sx={{ my: 2, borderColor: '#308A9F' }} />
-
-                <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" sx={{ color: '#308A9F', mb: 1 }}>
-                        المزيد:
+                <Box sx={{ mt: 4, mb: 2 }}>
+                    <Avatar
+                        src={user?.image || 'https://via.placeholder.com/80'}
+                        alt={user?.name}
+                        sx={{
+                            width: 80,
+                            height: 80,
+                            margin: 'auto',
+                            mb: 1,
+                            border: '2px solid #308A9F',
+                            bgcolor: '#B0B0B0',
+                            fontWeight: 'bold',
+                            fontSize: '2rem',
+                            color: 'white',
+                        }}
+                    >
+                        {!user?.image && user?.name ? user.name.charAt(0) : ''}
+                    </Avatar>
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: '#308A9F',
+                            fontWeight: 'bold',
+                            fontFamily: 'Arial, sans-serif'
+                        }}
+                    >
+                        {user?.name || 'Yasin'}
                     </Typography>
-
-                    <Box sx={{ pl: 2 }}>
-                        <Typography variant="subtitle2" sx={{ color: '#308A9F' }}>
-                            المرور:
-                        </Typography>
-                        <Box sx={{ pl: 2, mt: 1 }}>
-                            <Typography variant="body2" sx={{ color: '#586E75' }}>15/0</Typography>
-                            <Typography variant="body2" sx={{ color: '#586E75' }}>15/1</Typography>
-                            <Typography variant="body2" sx={{ color: '#586E75' }}>15/2</Typography>
-                        </Box>
-                    </Box>
+                    <Typography
+                        variant="body2"
+                        sx={{ color: '#A1A1A1', fontFamily: 'Arial, sans-serif', mt: 0.5 }}
+                    >
+                        {user?.email || 'yasin@vision.com'}
+                    </Typography>
                 </Box>
 
-                <Divider sx={{ my: 2, borderColor: '#308A9F' }} />
+                <Box sx={{ mt: 3, textAlign: 'right' }}>
+                    <Typography
+                        sx={{
+                            color: '#308A9F',
+                            fontWeight: 'bold',
+                            fontFamily: 'Arial, sans-serif',
+                            mb: 1
+                        }}
+                    >
+                        كلمة المرور:
+                    </Typography>
+                    <TextField
+                        type={showPassword ? 'text' : 'password'}
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        defaultValue={user?.password || '**********'}
+                        sx={{
+                            mb: 2,
+                            borderRadius: '15px',
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '15px',
+                                backgroundColor: '#E6F0FF',
+                                '& fieldset': {
+                                    borderColor: '#ccc',
+                                }
+                            }
+                        }}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <MuiIconButton
+                                        onClick={handleClickShowPassword}
+                                        edge="end"
+                                        size="small"
+                                    >
+                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                    </MuiIconButton>
+                                </InputAdornment>
+                            )
+                        }}
+                    />
 
-                <Box>
-                    <Typography variant="subtitle1" sx={{ color: '#308A9F', mb: 1 }}>
+                    <Typography
+                        sx={{
+                            color: '#308A9F',
+                            fontWeight: 'bold',
+                            fontFamily: 'Arial, sans-serif',
+                            mb: 1
+                        }}
+                    >
                         تأكيد كلمة المرور:
                     </Typography>
                     <TextField
-                        type="password"
-                        fullWidth
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        variant="outlined"
                         size="small"
+                        fullWidth
+                        defaultValue={user?.confirmPassword || '**********'}
                         sx={{
+                            borderRadius: '15px',
                             '& .MuiOutlinedInput-root': {
-                                '& fieldset': { borderColor: '#308A9F' },
-                                '&:hover fieldset': { borderColor: '#308A9F' }
+                                borderRadius: '15px',
+                                backgroundColor: '#E6F0FF',
+                                '& fieldset': {
+                                    borderColor: '#ccc',
+                                }
                             }
                         }}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <MuiIconButton
+                                        onClick={handleClickShowConfirmPassword}
+                                        edge="end"
+                                        size="small"
+                                    >
+                                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                    </MuiIconButton>
+                                </InputAdornment>
+                            )
+                        }}
                     />
-                </Box>
-
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                    <Button
-                        variant="contained"
-                        sx={{
-                            backgroundColor: '#308A9F',
-                            '&:hover': { backgroundColor: '#2a7a8c' },
-                            mr: 1
-                        }}
-                    >
-                        حفظ
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={onClose}
-                        sx={{
-                            borderColor: '#308A9F',
-                            color: '#308A9F',
-                            '&:hover': { borderColor: '#2a7a8c' }
-                        }}
-                    >
-                        إلغاء
-                    </Button>
                 </Box>
             </Paper>
         </Modal>

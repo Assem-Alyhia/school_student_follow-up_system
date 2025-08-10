@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Modal,
@@ -9,33 +9,47 @@ import {
     MenuItem,
     IconButton,
     Avatar,
-    Grid
+    Grid,
+    CircularProgress
 } from '@mui/material';
 import { Close as CloseIcon, Visibility, VisibilityOff } from '@mui/icons-material';
+import { createUser } from '../../../api/Admin/Users/createUser';
+import { getAllRoles } from '../../../api/Admin/Roles/getAllRoles';
 
 const AddUserModal = ({ open, onClose }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [rolesLoading, setRolesLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [roles, setRoles] = useState([]);
+
     const [userData, setUserData] = useState({
         name: '',
         email: '',
         password: '',
-        confirmPassword: '',
-        permission: '',
-        role: '',
+        password_confirmation: '',
+        roles: '',
         image: null
     });
 
-    const roles = [
-        { value: 'admin', label: 'مدير' },
-        { value: 'editor', label: 'محرر' },
-        { value: 'viewer', label: 'مشاهد' }
-    ];
+    useEffect(() => {
+        if (open) {
+            fetchRoles();
+        }
+    }, [open]);
 
-    const permissions = [
-        { value: 'full', label: 'كامل' },
-        { value: 'partial', label: 'جزئي' }
-    ];
+    const fetchRoles = async () => {
+        try {
+            setRolesLoading(true);
+            const rolesData = await getAllRoles();
+            setRoles(rolesData);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setRolesLoading(false);
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -45,7 +59,7 @@ const AddUserModal = ({ open, onClose }) => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setUserData((prev) => ({ ...prev, image: URL.createObjectURL(file) }));
+            setUserData((prev) => ({ ...prev, image: file }));
         }
     };
 
@@ -53,9 +67,36 @@ const AddUserModal = ({ open, onClose }) => {
         setUserData((prev) => ({ ...prev, image: null }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log(userData);
+        setError('');
+
+        // تحقق من تطابق كلمة المرور
+        if (userData.password !== userData.password_confirmation) {
+            setError('كلمتا المرور غير متطابقتين');
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            // تجهيز البيانات بالشكل المطلوب للـ backend
+            const payload = {
+                name: userData.name,
+                email: userData.email,
+                password: userData.password,
+                password_confirmation: userData.password_confirmation,
+                roles: [userData.roles], // إرسال كمصفوفة
+                image: userData.image
+            };
+
+            await createUser(payload);
+            onClose();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -70,7 +111,6 @@ const AddUserModal = ({ open, onClose }) => {
             }}
         >
             <Paper sx={{ borderRadius: '14px', width: '700px', p: 3 }}>
-                {/* العنوان */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                     <Typography sx={{ fontSize: '20px', fontWeight: 'bold', color: '#1E8796' }}>
                         أضف مستخدم
@@ -80,11 +120,13 @@ const AddUserModal = ({ open, onClose }) => {
                     </IconButton>
                 </Box>
 
+                {error && (
+                    <Typography sx={{ color: 'red', mb: 2, fontSize: '14px' }}>{error}</Typography>
+                )}
+
                 <Box component="form" onSubmit={handleSubmit}>
-                    {/* الصف الأول: اسم + ايميل + صورة */}
                     <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 3 }}>
                         <Grid item xs={8}>
-                            {/* اسم المستخدم */}
                             <Box sx={{ mb: 2 }}>
                                 <Typography sx={{ fontSize: '14px', mb: 0.5 }}>اسم المستخدم</Typography>
                                 <TextField
@@ -119,7 +161,7 @@ const AddUserModal = ({ open, onClose }) => {
                             {userData.image ? (
                                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
                                     <Avatar
-                                        src={userData.image}
+                                        src={URL.createObjectURL(userData.image)}
                                         sx={{ width: 100, height: 100, borderRadius: '8px' }}
                                     />
                                     <IconButton
@@ -185,8 +227,8 @@ const AddUserModal = ({ open, onClose }) => {
                                 size="small"
                                 placeholder="أدخل كلمة المرور مرة أخرى"
                                 type={showConfirmPassword ? 'text' : 'password'}
-                                name="confirmPassword"
-                                value={userData.confirmPassword}
+                                name="password_confirmation"
+                                value={userData.password_confirmation}
                                 onChange={handleChange}
                                 fullWidth
                                 InputProps={{
@@ -202,61 +244,37 @@ const AddUserModal = ({ open, onClose }) => {
                     </Grid>
 
                     <Grid container spacing={2} sx={{ mb: 3, mt: 3 }}>
-                        <Grid item xs={6}>
-                            <Typography sx={{ fontSize: '14px', mb: 0.5 }}>صلاحية المستخدم</Typography>
-                            <TextField
-                                size="small"
-                                select
-                                value={userData.permission}
-                                onChange={handleChange}
-                                name="permission"
-                                fullWidth
-                                displayEmpty
-                                InputProps={{
-                                    sx: { fontSize: '13px' }
-                                }}
-                            >
-                                <MenuItem value="" disabled>
-                                    اختر صلاحية المستخدم
-                                </MenuItem>
-                                {permissions.map((p) => (
-                                    <MenuItem key={p.value} value={p.value}>
-                                        {p.label}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={12}>
                             <Typography sx={{ fontSize: '14px', mb: 0.5 }}>دور المستخدم</Typography>
                             <TextField
+                                size="small"
+                                select
+                                value={userData.roles}
+                                onChange={handleChange}
+                                name="roles"
+                                fullWidth
+                                displayEmpty
                                 InputProps={{
                                     sx: { fontSize: '13px' }
                                 }}
-                                size="small"
-                                select
-                                value={userData.role}
-                                onChange={handleChange}
-                                name="role"
-                                fullWidth
-                                displayEmpty
                             >
                                 <MenuItem value="" disabled>
-                                    اختر دور المستخدم
+                                    {rolesLoading ? 'جاري التحميل...' : 'اختر دور المستخدم'}
                                 </MenuItem>
                                 {roles.map((r) => (
-                                    <MenuItem key={r.value} value={r.value}>
-                                        {r.label}
+                                    <MenuItem key={r.id} value={r.id}>
+                                        {r.name}
                                     </MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
                     </Grid>
 
-                    {/* الأزرار */}
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 7 }}>
                         <Button
                             type="submit"
                             fullWidth
+                            disabled={loading}
                             sx={{
                                 maxWidth: '30%',
                                 background: 'linear-gradient(to right, #00C6FF, #002952)',
@@ -264,7 +282,7 @@ const AddUserModal = ({ open, onClose }) => {
                                 '&:hover': { opacity: 0.9 }
                             }}
                         >
-                            أضف مستخدم جديد
+                            {loading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'أضف مستخدم جديد'}
                         </Button>
                         <Button
                             fullWidth

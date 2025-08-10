@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, TableSortLabel, IconButton, Typography, Avatar, CircularProgress
+    TableHead, TableRow, TableSortLabel, IconButton, Typography,
+    Avatar, CircularProgress
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,15 +11,23 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllUsers } from '../../../api/Admin/Users/getAllUsers';
 import { deleteUser } from '../../../api/Admin/Users/deleteUser';
+import { getUserById } from '../../../api/Admin/Users/getUserById';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
 import { Link } from 'react-router-dom';
+import UserDetails from '../UserDetails';
+
 const Section2 = ({ page, rowsPerPage }) => {
     const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('prefix');
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    const [openViewModal, setOpenViewModal] = useState(false);
+    const [viewUserData, setViewUserData] = useState(null);
+    const [_loadingUser, setLoadingUser] = useState(false);
+
     const queryClient = useQueryClient();
 
     const { data, isLoading, isError, error } = useQuery({
@@ -35,13 +44,6 @@ const Section2 = ({ page, rowsPerPage }) => {
             setTimeout(() => setShowSuccess(false), 3000);
         },
     });
-
-
-    useEffect(() => {
-        if (data?.data?.length > 0) {
-            console.log("👤 أول مستخدم:", data.data[0]);
-        }
-    }, [data]);
 
     const handleRequestSort = (property) => {
         const isAsc = orderBy === property && order === 'asc';
@@ -67,6 +69,19 @@ const Section2 = ({ page, rowsPerPage }) => {
             deleteMutation.mutate(selectedUserId);
         }
         setOpenDeleteModal(false);
+    };
+
+    const handleViewClick = async (id) => {
+        setLoadingUser(true);
+        setOpenViewModal(true);
+        try {
+            const res = await getUserById(id);
+            setViewUserData(res.data); // ✅ تمرير البيانات الصحيحة
+        } catch (err) {
+            console.error("❌ فشل في جلب بيانات المستخدم", err);
+        } finally {
+            setLoadingUser(false);
+        }
     };
 
     if (isLoading) return <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>;
@@ -128,7 +143,9 @@ const Section2 = ({ page, rowsPerPage }) => {
                                         <IconButton onClick={() => handleDeleteClick(user.id)}>
                                             <DeleteIcon />
                                         </IconButton>
-                                        <IconButton><VisibilityIcon /></IconButton>
+                                        <IconButton onClick={() => handleViewClick(user.id)}>
+                                            <VisibilityIcon />
+                                        </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -137,6 +154,13 @@ const Section2 = ({ page, rowsPerPage }) => {
                 </TableContainer>
             </Paper>
 
+            {/* ✅ مكون عرض بيانات المستخدم */}
+            <UserDetails
+                open={openViewModal}
+                onClose={() => setOpenViewModal(false)}
+                user={viewUserData}
+            />
+
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}
@@ -144,7 +168,6 @@ const Section2 = ({ page, rowsPerPage }) => {
                 title="هل أنت متأكد بأنك تريد حذف المستخدم؟"
                 message="سيتم إزالة جميع البيانات المرتبطة به"
             />
-
 
             {showSuccess && (
                 <SuccessAlert

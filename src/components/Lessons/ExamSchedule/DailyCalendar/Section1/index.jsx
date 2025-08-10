@@ -9,13 +9,13 @@ import { useNavigate } from 'react-router-dom';
 
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
-import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
+import { getExamSchedule } from '../../../../../api/Admin/ExamSchedule/ExamSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
-const DailyCalendar = () => {
+const DailyExamsCalendar = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
@@ -25,7 +25,7 @@ const DailyCalendar = () => {
     const [selectedYearId, setSelectedYearId] = useState(null);
     const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
     const [selectedClassroom, setSelectedClassroom] = useState('');
-    const [events, setEvents] = useState([]);
+    const [exams, setExams] = useState([]);
     const [classrooms, setClassrooms] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [currentDate, setCurrentDate] = useState(today);
@@ -50,25 +50,29 @@ const DailyCalendar = () => {
         }
     };
 
-    const fetchSchedule = async () => {
+    const fetchExams = async () => {
         if (!selectedClassroom || !selectedYearValue) return;
 
         try {
-            const data = await getDailySchedule(selectedClassroom, selectedYearValue);
-            if (!Array.isArray(data)) {
-                console.error('البيانات المستلمة ليست قائمة:', data);
+            const res = await getExamSchedule(selectedClassroom, selectedYearValue); 
+            const examsArray = res.data;
+
+            if (!Array.isArray(examsArray)) {
+                console.error('البيانات المستلمة ليست قائمة:', examsArray);
                 return;
             }
-            const parsed = data.map((item, i) => ({
+
+            const parsed = examsArray.map((item, i) => ({
                 id: item.id,
                 title: item.title,
                 start_time: new Date(item.start_time),
                 end_time: new Date(item.end_time),
                 color: colors[i % colors.length],
             }));
-            setEvents(parsed);
+            setExams(parsed);
+
         } catch (err) {
-            console.error('فشل في جلب الجدول:', err.message);
+            console.error('فشل في جلب جدول الامتحانات:', err.message);
         }
     };
 
@@ -76,7 +80,6 @@ const DailyCalendar = () => {
         const days = [];
         const startOfWeek = new Date(date);
         startOfWeek.setDate(date.getDate() - date.getDay());
-
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
             day.setDate(startOfWeek.getDate() + i);
@@ -118,7 +121,7 @@ const DailyCalendar = () => {
     }, []);
 
     useEffect(() => {
-        fetchSchedule();
+        fetchExams();
     }, [selectedClassroom, selectedYearValue]);
 
     useEffect(() => {
@@ -126,7 +129,7 @@ const DailyCalendar = () => {
     }, [currentDate]);
 
     const weekDays = getWeekDays(currentDate);
-    const dayEvents = events.filter(
+    const dayExams = exams.filter(
         e => e.start_time.getDate() === currentDate.getDate() &&
             e.start_time.getMonth() === currentDate.getMonth() &&
             e.start_time.getFullYear() === currentDate.getFullYear()
@@ -135,7 +138,7 @@ const DailyCalendar = () => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
-                {/* Filters */}
+                {/* الفلاتر */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                     <FormControl sx={{ minWidth: 150 }}>
                         <Typography variant="caption" color="gray">اختر الصف</Typography>
@@ -163,7 +166,6 @@ const DailyCalendar = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Month Selector */}
                     <FormControl sx={{ minWidth: 120 }}>
                         <Typography variant="caption" color="gray">اختر الشهر</Typography>
                         <Select
@@ -181,7 +183,6 @@ const DailyCalendar = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Week Selector */}
                     <FormControl sx={{ minWidth: 120 }}>
                         <Typography variant="caption" color="gray">اختر الأسبوع</Typography>
                         <Select
@@ -202,7 +203,6 @@ const DailyCalendar = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Day Selector */}
                     <FormControl sx={{ minWidth: 120 }}>
                         <Typography variant="caption" color="gray">اختر اليوم</Typography>
                         <Select
@@ -221,7 +221,7 @@ const DailyCalendar = () => {
                     </FormControl>
                 </Box>
 
-                {/* Day Navigation */}
+                {/* أزرار التنقل */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevDay}><ChevronRight /></IconButton>
@@ -233,7 +233,7 @@ const DailyCalendar = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
-                {/* Weekly Calendar Header */}
+                {/* عناوين أيام الأسبوع */}
                 <Grid container spacing={1} sx={{ mb: 2 }}>
                     {weekDays.map((date, i) => (
                         <Grid item xs key={i} sx={{ textAlign: 'center' }}>
@@ -247,7 +247,7 @@ const DailyCalendar = () => {
                     ))}
                 </Grid>
 
-                {/* Day Events */}
+                {/* عرض الامتحانات */}
                 <Box sx={{
                     border: '1px solid #ddd',
                     minHeight: '50vh',
@@ -255,17 +255,17 @@ const DailyCalendar = () => {
                     p: 2,
                     borderRadius: 1
                 }}>
-                    {dayEvents.length === 0 ? (
+                    {dayExams.length === 0 ? (
                         <Typography color="gray" textAlign="center">
-                            لا توجد أحداث في هذا اليوم
+                            لا توجد امتحانات في هذا اليوم
                         </Typography>
                     ) : (
                         <Grid container spacing={2}>
-                            {dayEvents.map((event, i) => (
+                            {dayExams.map((exam, i) => (
                                 <Grid item xs={12} key={i}>
                                     <Box
                                         sx={{
-                                            bgcolor: event.color,
+                                            bgcolor: exam.color,
                                             p: 2,
                                             borderRadius: 2,
                                             color: '#fff',
@@ -277,11 +277,11 @@ const DailyCalendar = () => {
                                             transition: '0.2s',
                                             '&:hover': { opacity: 0.9 }
                                         }}
-                                        onClick={() => navigate(`/dashboard/student-schedule-details/${selectedClassroom}/${event.start_time.getFullYear()}/${event.start_time.getMonth() + 1}/${event.start_time.getDate()}`)}
+                                        onClick={() => navigate(`/dashboard/exam-details/${exam.id}`)}
                                     >
-                                        <Typography fontWeight="bold">{event.title}</Typography>
+                                        <Typography fontWeight="bold">{exam.title}</Typography>
                                         <Typography fontSize="0.9rem">
-                                            {event.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {exam.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {exam.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </Typography>
                                     </Box>
                                 </Grid>
@@ -294,4 +294,4 @@ const DailyCalendar = () => {
     );
 };
 
-export default DailyCalendar;
+export default DailyExamsCalendar;

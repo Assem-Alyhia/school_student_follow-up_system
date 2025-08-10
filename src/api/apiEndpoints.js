@@ -12,6 +12,7 @@ const apiEndpoints = {
   getUserById: (id) => `admin/users/${id}`,
   deleteUser: (id) => `admin/users/${id}`,
   updateUser: (id) => `admin/users/${id}`,
+  createUser: "admin/users",
   // الطلاب
   getAllStudents: "admin/students",
   deleteStudent: (id) => `admin/students/${id}`,
