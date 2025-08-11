@@ -29,7 +29,7 @@ const AddUserModal = ({ open, onClose }) => {
         email: '',
         password: '',
         password_confirmation: '',
-        roles: '',
+        role: '', // تعديل: بدل roles استخدم role مباشرة
         image: null
     });
 
@@ -71,7 +71,6 @@ const AddUserModal = ({ open, onClose }) => {
         e.preventDefault();
         setError('');
 
-        // تحقق من تطابق كلمة المرور
         if (userData.password !== userData.password_confirmation) {
             setError('كلمتا المرور غير متطابقتين');
             return;
@@ -80,13 +79,12 @@ const AddUserModal = ({ open, onClose }) => {
         try {
             setLoading(true);
 
-            // تجهيز البيانات بالشكل المطلوب للـ backend
             const payload = {
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
                 password_confirmation: userData.password_confirmation,
-                roles: [userData.roles], // إرسال كمصفوفة
+                role: userData.role, // إرسال ID أو الاسم حسب ما يتوقعه الـ backend
                 image: userData.image
             };
 
@@ -249,9 +247,9 @@ const AddUserModal = ({ open, onClose }) => {
                             <TextField
                                 size="small"
                                 select
-                                value={userData.roles}
+                                value={userData.role} // تعديل هنا
                                 onChange={handleChange}
-                                name="roles"
+                                name="role" // تعديل هنا
                                 fullWidth
                                 displayEmpty
                                 InputProps={{

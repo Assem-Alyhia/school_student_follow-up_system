@@ -2,6 +2,8 @@ import  { useState } from 'react';
 import { Box, Button, Paper, Typography } from '@mui/material';
 import EventScheduleTable from './MonthlyCalendar/Section2';
 import UpcomingEvents from './MonthlyCalendar/Section3';
+import WeeklyEventsCalendar from './WeeklyCalendar/Section1';
+import DailyEventsCalendar from './DailyCalendar/Section1';
 
 
 
@@ -82,12 +84,12 @@ const NavigationActivityTables = () => {
                     )}
                     {activeButton === 'التقويم الاسبوعي' && (
                         <Typography variant="body1">
-
+                            <WeeklyEventsCalendar/>
                         </Typography>
                     )}
                     {activeButton === 'التقويم اليومي' && (
                         <Typography variant="body1">
-
+                            <DailyEventsCalendar/>
                         </Typography>
                     )}
                     {activeButton === 'اضافة حدث' && (
