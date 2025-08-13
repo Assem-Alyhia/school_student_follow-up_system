@@ -8,30 +8,44 @@ import Section2 from "../Section2";
 const Section3 = () => {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [search, setSearch] = useState("");
 
     const { data, isLoading, isError, error } = useQuery({
-        queryKey: ['payments', page, rowsPerPage],
-        queryFn: () => getAllPayments(page, rowsPerPage),
+        queryKey: ["payments", { page, rowsPerPage, search }],
+        queryFn: () =>
+            getAllPayments({
+                page,
+                perPage: rowsPerPage,
+                search: search || "",
+            }),
         keepPreviousData: true,
     });
 
-    if (isLoading) return <div>جاري التحميل...</div>;
-    if (isError) return <div>خطأ: {error.message}</div>;
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    const total = data?.meta?.total || 0;
+
+    if (isLoading && !data) return <div>جاري التحميل...</div>;
+    if (isError) return <div>خطأ: {error?.message || "حدث خطأ"} </div>;
 
     return (
         <>
-            <Section2 payments={data?.data || []} />
+            <Section2
+                payments={rows}
+                onSearchChange={(value) => {
+                    setSearch(value);
+                    setPage(1);
+                }}
+            />
 
             <PaginationSection
+                sx={{ direction: "ltr" }}
                 page={page}
                 rowsPerPage={rowsPerPage}
-                total={data?.meta?.total || 0}
-                lastPage={data?.meta?.last_page || 1}
+                total={total}
+                lastPage={data?.meta?.last_page || Math.ceil(total / rowsPerPage) || 1}
                 onPageChange={(newPage) => setPage(newPage)}
                 onRowsPerPageChange={(event) => {
-                    const newPerPage = Number(event.target.value);
-                    console.log("تغيير عدد الصفوف:", newPerPage);
-                    setRowsPerPage(newPerPage);
+                    setRowsPerPage(Number(event.target.value));
                     setPage(1);
                 }}
             />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, TableSortLabel, IconButton
@@ -15,8 +15,20 @@ import SuccessAlert from '../../../layout/SuccessAlert';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteBus } from '../../../api/Admin/Buses/deleteBus';
 
+const HEAD_CELLS = [
+    { key: 'id', label: 'المعرف', sortable: true },
+    { key: 'driver_name', label: 'اسم السائق', sortable: true },
+    { key: 'driver_number', label: 'رقم السائق', sortable: true },
+    { key: 'capacity', label: 'السعة', sortable: true },
+    { key: 'bus_type', label: 'نوع الباص', sortable: true },
+    { key: 'status', label: 'الحالة', sortable: true },
+    { key: 'supervisor', label: 'المشرف', sortable: true }, 
+    { key: 'created_at', label: 'تاريخ الإضافة', sortable: true },
+    { key: 'actions', label: 'الإجراءات', sortable: false },
+];
+
 const Section3 = ({ buses = [] }) => {
-    const [order, setOrder] = useState('asc');
+    const [order, setOrder] = useState('asc'); 
     const [orderBy, setOrderBy] = useState('id');
     const [openMapDialog, setOpenMapDialog] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
@@ -36,38 +48,74 @@ const Section3 = ({ buses = [] }) => {
         },
     });
 
-    const handleRequestSort = (property) => {
+    const handleRequestSort = useCallback((property) => {
+        const column = HEAD_CELLS.find(c => c.key === property);
+        if (!column?.sortable) return;
+
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
         setOrderBy(property);
-    };
+    }, [order, orderBy]);
 
-    const getStatusColor = (status) => {
-        return status === 'active' ? 'green' : 'red';
-    };
+    const getStatusColor = useCallback((status) => (
+        status === 'active' ? 'green' : 'red'
+    ), []);
 
-    const handleOpenMap = (row) => {
+    const handleOpenMap = useCallback((row) => {
         setSelectedRow(row);
         setOpenMapDialog(true);
-    };
+    }, []);
 
-    const handleDeleteClick = (bus) => {
+    const handleDeleteClick = useCallback((bus) => {
         setBusToDelete(bus);
         setOpenDeleteModal(true);
-    };
+    }, []);
 
-    const confirmDelete = () => {
+    const confirmDelete = useCallback(() => {
+        if (!busToDelete?.id) return;
         deleteMutation.mutate(busToDelete.id);
         setOpenDeleteModal(false);
-    };
+    }, [busToDelete, deleteMutation]);
 
-    const sortedRows = [...buses].sort((a, b) => {
-        if (order === 'asc') {
-            return a[orderBy] > b[orderBy] ? 1 : -1;
-        } else {
-            return a[orderBy] < b[orderBy] ? 1 : -1;
+    const dateFormatter = useMemo(() => new Intl.DateTimeFormat('ar-EG'), []);
+
+    const comparator = useCallback((a, b) => {
+        let av, bv;
+
+        switch (orderBy) {
+            case 'supervisor':
+                av = a?.supervisor?.name || '';
+                bv = b?.supervisor?.name || '';
+                break;
+            case 'created_at':
+                av = a?.created_at ? Date.parse(a.created_at) : 0;
+                bv = b?.created_at ? Date.parse(b.created_at) : 0;
+                break;
+            default:
+                av = a?.[orderBy];
+                bv = b?.[orderBy];
         }
-    });
+
+        const typeA = typeof av;
+        const typeB = typeof bv;
+
+        if (typeA === 'string') av = av.toLowerCase();
+        if (typeB === 'string') bv = bv.toLowerCase();
+
+        if (av == null && bv == null) return 0;
+        if (av == null) return order === 'asc' ? -1 : 1;
+        if (bv == null) return order === 'asc' ? 1 : -1;
+
+        if (av < bv) return order === 'asc' ? -1 : 1;
+        if (av > bv) return order === 'asc' ? 1 : -1;
+        return 0;
+    }, [order, orderBy]);
+
+    const sortedRows = useMemo(() => {
+        const clone = Array.isArray(buses) ? [...buses] : [];
+        clone.sort(comparator);
+        return clone;
+    }, [buses, comparator]);
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -76,35 +124,30 @@ const Section3 = ({ buses = [] }) => {
                     <Table>
                         <TableHead sx={{ backgroundColor: '#308A9F' }}>
                             <TableRow>
-                                {['id', 'driver_name', 'driver_number', 'capacity', 'bus_type', 'status', 'supervisor', 'created_at', 'actions'].map((headCell) => (
-                                    <TableCell key={headCell} sx={{ fontSize: '0.75rem', color: '#fff' }}>
-                                        <TableSortLabel
-                                            active={orderBy === headCell}
-                                            direction={orderBy === headCell ? order : 'asc'}
-                                            onClick={() => handleRequestSort(headCell)}
-                                            sx={{ fontWeight: 'bold', color: '#fff', fontSize: '0.75rem' }}
-                                        >
-                                            {{
-                                                id: 'المعرف',
-                                                driver_name: 'اسم السائق',
-                                                driver_number: 'رقم السائق',
-                                                capacity: 'السعة',
-                                                bus_type: 'نوع الباص',
-                                                status: 'الحالة',
-                                                supervisor: 'المشرف',
-                                                created_at: 'تاريخ الإضافة',
-                                                actions: 'الإجراءات',
-                                            }[headCell]}
-                                            {orderBy === headCell && (
-                                                <Box component="span" sx={visuallyHidden}>
-                                                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                                </Box>
-                                            )}
-                                        </TableSortLabel>
+                                {HEAD_CELLS.map((cell) => (
+                                    <TableCell key={cell.key} sx={{ fontSize: '0.75rem', color: '#fff' }}>
+                                        {cell.sortable ? (
+                                            <TableSortLabel
+                                                active={orderBy === cell.key}
+                                                direction={orderBy === cell.key ? order : 'asc'}
+                                                onClick={() => handleRequestSort(cell.key)}
+                                                sx={{ fontWeight: 'bold', color: '#fff', fontSize: '0.75rem' }}
+                                            >
+                                                {cell.label}
+                                                {orderBy === cell.key && (
+                                                    <Box component="span" sx={visuallyHidden}>
+                                                        {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                                                    </Box>
+                                                )}
+                                            </TableSortLabel>
+                                        ) : (
+                                            <span style={{ fontWeight: 'bold' }}>{cell.label}</span>
+                                        )}
                                     </TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
+
                         <TableBody>
                             {sortedRows.map((row) => (
                                 <TableRow key={row.id}>
@@ -117,7 +160,9 @@ const Section3 = ({ buses = [] }) => {
                                         {row.status === 'active' ? 'نشط' : 'غير نشط'}
                                     </TableCell>
                                     <TableCell sx={{ fontSize: '0.75rem' }}>{row.supervisor?.name || '-'}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{new Date(row.created_at).toLocaleDateString()}</TableCell>
+                                    <TableCell sx={{ fontSize: '0.75rem' }}>
+                                        {row.created_at ? dateFormatter.format(new Date(row.created_at)) : '-'}
+                                    </TableCell>
                                     <TableCell sx={{ fontSize: '0.75rem' }}>
                                         <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
                                         <IconButton size="small" onClick={() => handleDeleteClick(row)}>
@@ -131,6 +176,7 @@ const Section3 = ({ buses = [] }) => {
                                 </TableRow>
                             ))}
                         </TableBody>
+
                     </Table>
                 </TableContainer>
             </Paper>
@@ -139,8 +185,8 @@ const Section3 = ({ buses = [] }) => {
                 <MapDialog
                     open={openMapDialog}
                     handleClose={() => setOpenMapDialog(false)}
-                    supervisorId={selectedRow?.supervisor?.id} // ✅ تمرير ID المشرف
-                    data={selectedRow} // إن أردت تمرير معلومات إضافية
+                    supervisorId={selectedRow?.supervisor?.id}
+                    data={selectedRow}
                 />
             )}
 

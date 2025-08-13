@@ -21,6 +21,7 @@ const apiEndpoints = {
   createStudent: "admin/students",
   getStudentPaymentById: (id) => `admin/payments/${id}`,
   getScheduleById: (id) => `admin/schedules/${id}`,
+  getAllStudentsNoPaginate: "/admin/students/get-all",
   // أولياء الأمور
   getAllParents: "admin/parents",
   getParentById: (id) => `admin/parents/${id}`,
@@ -87,6 +88,7 @@ const apiEndpoints = {
 
   //جدول الباصات
   getAllBuses: "admin/buses",
+  createBus: "admin/buses",
   deleteBus: (id) => `admin/buses/${id}`,
 
   // المواقع

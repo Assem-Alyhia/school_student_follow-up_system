@@ -6,7 +6,7 @@ export const getAllAcademicYears = async () => {
     const response = await axiosInstance.get(
       apiEndpoints.getAllAcademicYearsNoPaginate
     );
-    return response.data.data; // حسب ما يرجعه السيرفر
+    return response.data.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || error.message);
   }

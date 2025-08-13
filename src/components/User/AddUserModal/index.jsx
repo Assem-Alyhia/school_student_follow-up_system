@@ -22,6 +22,7 @@ const AddUserModal = ({ open, onClose }) => {
     const [loading, setLoading] = useState(false);
     const [rolesLoading, setRolesLoading] = useState(false);
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const [roles, setRoles] = useState([]);
 
     const [userData, setUserData] = useState({
@@ -29,23 +30,21 @@ const AddUserModal = ({ open, onClose }) => {
         email: '',
         password: '',
         password_confirmation: '',
-        role: '', // تعديل: بدل roles استخدم role مباشرة
+        role: '',   
         image: null
     });
 
     useEffect(() => {
-        if (open) {
-            fetchRoles();
-        }
+        if (open) fetchRoles();
     }, [open]);
 
     const fetchRoles = async () => {
         try {
             setRolesLoading(true);
-            const rolesData = await getAllRoles();
-            setRoles(rolesData);
+            const rolesData = await getAllRoles(); 
+            setRoles(rolesData || []);
         } catch (err) {
-            setError(err.message);
+            setError(err?.response?.data?.message || err.message || 'تعذر تحميل الأدوار');
         } finally {
             setRolesLoading(false);
         }
@@ -57,10 +56,8 @@ const AddUserModal = ({ open, onClose }) => {
     };
 
     const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setUserData((prev) => ({ ...prev, image: file }));
-        }
+        const file = e.target.files?.[0];
+        if (file) setUserData((prev) => ({ ...prev, image: file }));
     };
 
     const removeImage = () => {
@@ -70,6 +67,7 @@ const AddUserModal = ({ open, onClose }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setFieldErrors({});
 
         if (userData.password !== userData.password_confirmation) {
             setError('كلمتا المرور غير متطابقتين');
@@ -79,19 +77,19 @@ const AddUserModal = ({ open, onClose }) => {
         try {
             setLoading(true);
 
-            const payload = {
+            await createUser({
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
                 password_confirmation: userData.password_confirmation,
-                role: userData.role, // إرسال ID أو الاسم حسب ما يتوقعه الـ backend
+                role: userData.role,     
                 image: userData.image
-            };
+            });
 
-            await createUser(payload);
             onClose();
         } catch (err) {
-            setError(err.message);
+            setFieldErrors(err?.details || {});
+            setError(err.message || 'حدث خطأ غير متوقع');
         } finally {
             setLoading(false);
         }
@@ -101,26 +99,17 @@ const AddUserModal = ({ open, onClose }) => {
         <Modal
             open={open}
             onClose={onClose}
-            sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                direction: 'rtl'
-            }}
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl' }}
         >
             <Paper sx={{ borderRadius: '14px', width: '700px', p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                     <Typography sx={{ fontSize: '20px', fontWeight: 'bold', color: '#1E8796' }}>
                         أضف مستخدم
                     </Typography>
-                    <IconButton onClick={onClose}>
-                        <CloseIcon />
-                    </IconButton>
+                    <IconButton onClick={onClose}><CloseIcon /></IconButton>
                 </Box>
 
-                {error && (
-                    <Typography sx={{ color: 'red', mb: 2, fontSize: '14px' }}>{error}</Typography>
-                )}
+                {error && <Typography sx={{ color: 'red', mb: 2, fontSize: '14px' }}>{error}</Typography>}
 
                 <Box component="form" onSubmit={handleSubmit}>
                     <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 3 }}>
@@ -134,9 +123,9 @@ const AddUserModal = ({ open, onClose }) => {
                                     value={userData.name}
                                     onChange={handleChange}
                                     fullWidth
-                                    InputProps={{
-                                        sx: { fontSize: '13px' }
-                                    }}
+                                    error={Boolean(fieldErrors?.name)}
+                                    helperText={fieldErrors?.name?.[0] || ''}
+                                    InputProps={{ sx: { fontSize: '13px' } }}
                                 />
                             </Box>
                             <Box sx={{ mt: 3 }}>
@@ -148,12 +137,13 @@ const AddUserModal = ({ open, onClose }) => {
                                     value={userData.email}
                                     onChange={handleChange}
                                     fullWidth
-                                    InputProps={{
-                                        sx: { fontSize: '13px' }
-                                    }}
+                                    error={Boolean(fieldErrors?.email)}
+                                    helperText={fieldErrors?.email?.[0] || ''}
+                                    InputProps={{ sx: { fontSize: '13px' } }}
                                 />
                             </Box>
                         </Grid>
+
                         <Grid item xs={4} sx={{ textAlign: 'center' }}>
                             <Typography sx={{ fontSize: '14px', mb: 0.5 }}>صورة المستخدم</Typography>
                             {userData.image ? (
@@ -164,13 +154,7 @@ const AddUserModal = ({ open, onClose }) => {
                                     />
                                     <IconButton
                                         onClick={removeImage}
-                                        sx={{
-                                            position: 'absolute',
-                                            top: '-8px',
-                                            right: '-8px',
-                                            backgroundColor: '#fff',
-                                            boxShadow: 1
-                                        }}
+                                        sx={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#fff', boxShadow: 1 }}
                                         size="small"
                                     >
                                         <CloseIcon fontSize="small" />
@@ -180,13 +164,7 @@ const AddUserModal = ({ open, onClose }) => {
                                 <Button
                                     component="label"
                                     variant="outlined"
-                                    sx={{
-                                        width: 100,
-                                        height: 100,
-                                        borderRadius: '8px',
-                                        borderColor: '#ccc',
-                                        fontSize: '12px'
-                                    }}
+                                    sx={{ width: 100, height: 100, borderRadius: '8px', borderColor: '#ccc', fontSize: '12px' }}
                                 >
                                     اختر صورة
                                     <input hidden type="file" accept="image/*" onChange={handleImageChange} />
@@ -209,6 +187,8 @@ const AddUserModal = ({ open, onClose }) => {
                                 value={userData.password}
                                 onChange={handleChange}
                                 fullWidth
+                                error={Boolean(fieldErrors?.password)}
+                                helperText={fieldErrors?.password?.[0] || ''}
                                 InputProps={{
                                     sx: { fontSize: '13px' },
                                     endAdornment: (
@@ -219,6 +199,7 @@ const AddUserModal = ({ open, onClose }) => {
                                 }}
                             />
                         </Grid>
+
                         <Grid item xs={6}>
                             <Typography sx={{ fontSize: '14px', mb: 0.5 }}>تأكيد كلمة المرور</Typography>
                             <TextField
@@ -229,6 +210,8 @@ const AddUserModal = ({ open, onClose }) => {
                                 value={userData.password_confirmation}
                                 onChange={handleChange}
                                 fullWidth
+                                error={Boolean(fieldErrors?.password_confirmation)}
+                                helperText={fieldErrors?.password_confirmation?.[0] || ''}
                                 InputProps={{
                                     sx: { fontSize: '13px' },
                                     endAdornment: (
@@ -247,20 +230,22 @@ const AddUserModal = ({ open, onClose }) => {
                             <TextField
                                 size="small"
                                 select
-                                value={userData.role} // تعديل هنا
+                                name="role"
+                                value={userData.role}
                                 onChange={handleChange}
-                                name="role" // تعديل هنا
                                 fullWidth
                                 displayEmpty
-                                InputProps={{
-                                    sx: { fontSize: '13px' }
-                                }}
+                                error={Boolean(fieldErrors?.role)}
+                                helperText={fieldErrors?.role?.[0] || ''}
+                                InputProps={{ sx: { fontSize: '13px' } }}
                             >
                                 <MenuItem value="" disabled>
                                     {rolesLoading ? 'جاري التحميل...' : 'اختر دور المستخدم'}
                                 </MenuItem>
                                 {roles.map((r) => (
-                                    <MenuItem key={r.id} value={r.id}>
+                                    // إذا كان الـ backend يتحقق بالاسم: أبقِ value = r.name
+                                    // إذا يتحقق بالـ id: غيّرها إلى r.id
+                                    <MenuItem key={r.id} value={r.name}>
                                         {r.name}
                                     </MenuItem>
                                 ))}
@@ -284,12 +269,7 @@ const AddUserModal = ({ open, onClose }) => {
                         </Button>
                         <Button
                             fullWidth
-                            sx={{
-                                maxWidth: '30%',
-                                backgroundColor: '#f5f5f5',
-                                color: '#333',
-                                '&:hover': { backgroundColor: '#e0e0e0' }
-                            }}
+                            sx={{ maxWidth: '30%', backgroundColor: '#f5f5f5', color: '#333', '&:hover': { backgroundColor: '#e0e0e0' } }}
                             onClick={onClose}
                         >
                             إلغاء

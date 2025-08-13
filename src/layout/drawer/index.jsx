@@ -209,11 +209,6 @@ export default function MiniDrawer() {
         navigate("/login");
     };
 
-    // const [userData, _setUserData] = useState({
-    //     userFirstName: 'عاصم',
-    //     userLastName: 'اليحيى',
-    //     userImage: '/userDashboard/Profile/Profile.png',
-    // });
 
     const [userData, setUserData] = useState(null);
     const userId = localStorage.getItem("UserId");
@@ -296,7 +291,6 @@ export default function MiniDrawer() {
                                     horizontal: 'right',
                                 }}
                             >
-                                {/* ✅ معلومات المستخدم */}
                                 <Box sx={{ textAlign: 'center', mb: 1 }}>
                                     <Avatar
                                         alt={userData?.name}
@@ -323,7 +317,6 @@ export default function MiniDrawer() {
 
                                 <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
 
-                                {/* ✅ الروابط */}
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
                                     <Link
                                         to={`/dashboard/users/usersProfile/${userId}`}

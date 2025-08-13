@@ -1,13 +1,25 @@
-import React from 'react';
-import { Box, Grid, Button, IconButton, TextField, Paper } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add'; 
-import PrintIcon from '@mui/icons-material/Print'; 
-import SortIcon from '@mui/icons-material/Sort'; 
-import FilterListIcon from '@mui/icons-material/FilterList'; 
+import React, { useState } from 'react';
+import {
+    Box, Paper, Grid, Button, IconButton, TextField
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import PrintIcon from '@mui/icons-material/Print';
+import SortIcon from '@mui/icons-material/Sort';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import AddBusDialog from '../AddBus';
 
 const Section2 = () => {
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+
+    const handleOpen = () => {
+        console.log('فتح الموديول'); 
+        setOpenAddDialog(true);
+    };
+
+    const handleClose = () => setOpenAddDialog(false);
+
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2 }}>
@@ -16,7 +28,7 @@ const Section2 = () => {
                         <Button
                             variant="outlined"
                             startIcon={<SortIcon />}
-                            sx={{ marginRight: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
+                            sx={{ mr: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
                         >
                             ترتيب
                         </Button>
@@ -24,7 +36,7 @@ const Section2 = () => {
                         <Button
                             variant="outlined"
                             startIcon={<FilterListIcon />}
-                            sx={{ marginRight: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
+                            sx={{ mr: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
                         >
                             فلترة
                         </Button>
@@ -32,29 +44,32 @@ const Section2 = () => {
                         <TextField
                             placeholder="بحث..."
                             InputProps={{
-                                startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: '20px' }} />,
+                                startAdornment: (
+                                    <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />
+                                ),
                             }}
-                            sx={{ 
+                            sx={{
                                 flexGrow: 1,
-                                height: '40px',
-                                '& .MuiInputBase-root': {
-                                    height: '40px', 
-                                    fontSize: '14px', 
-                                    padding: '6px 12px',
-                                },
+                                '& .MuiInputBase-root': { height: 40, fontSize: 14, px: 1.5 },
                             }}
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <Grid
+                        item
+                        xs={12}
+                        md={6}
+                        sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
+                    >
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
+                                mr: 2,
                             }}
+                            onClick={handleOpen} // ✅ هذا يفتح الموديول
                         >
                             أضف مسار
                         </Button>
@@ -62,10 +77,10 @@ const Section2 = () => {
                         <Button
                             variant="contained"
                             startIcon={<FileDownloadIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
+                                mr: 2,
                             }}
                         >
                             تصدير بيانات
@@ -77,6 +92,14 @@ const Section2 = () => {
                     </Grid>
                 </Grid>
             </Paper>
+
+            <AddBusDialog
+                open={openAddDialog}    
+                onClose={handleClose}   
+                onCreated={() => {
+                    handleClose();
+                }}
+            />
         </Box>
     );
 };

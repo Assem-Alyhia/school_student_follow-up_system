@@ -4,7 +4,7 @@ import Section2 from "./Section2";
 const GradeReports = () => {
     return (
         <>
-            <Section1/>
+            {/* <Section1/> */}
             <Section2/>
         </>
     );

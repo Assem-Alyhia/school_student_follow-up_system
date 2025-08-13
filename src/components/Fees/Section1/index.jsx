@@ -117,7 +117,6 @@ const Section1 = () => {
                     </Paper>
                 </Grid>
 
-                {/* مخطط الرسوم */}
                 <Grid item xs={12} md={8}>
                     <Paper sx={{ padding: 2, borderRadius: 3, boxShadow: 3, height: '100%' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>

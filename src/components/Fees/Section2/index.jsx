@@ -8,7 +8,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SortIcon from '@mui/icons-material/Sort';
 import AddIcon from '@mui/icons-material/Add';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
@@ -18,19 +17,27 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deletePayment } from '../../../api/Admin/Payments/deletePayment';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
+import AddPaymentDialog from '../AddPaymentDialog';
+import EditPaymentDialog from '../EditPaymentDialog'; // ⬅️ استيراد موديول التعديل
 
-const Section2 = ({ payments = [] }) => {
+const Section2 = ({ payments = [], onSearchChange }) => {
     const queryClient = useQueryClient();
+
+    // حالة البحث
+    const [searchValue, setSearchValue] = useState('');
+
+    // حذف
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState(null);
-    const [showSuccess, setShowSuccess] = useState(false);
+    const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
 
     const deleteMutation = useMutation({
         mutationFn: deletePayment,
         onSuccess: () => {
-            queryClient.invalidateQueries(['payments']);
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
+            // ينعش كل استعلامات payments
+            queryClient.invalidateQueries({ queryKey: ['payments'] });
+            setShowDeleteSuccess(true);
+            setTimeout(() => setShowDeleteSuccess(false), 3000);
         },
     });
 
@@ -46,6 +53,33 @@ const Section2 = ({ payments = [] }) => {
         }
     };
 
+    // إضافة
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [showCreateSuccess, setShowCreateSuccess] = useState(false);
+
+    const handlePaymentCreated = () => {
+        setOpenAddDialog(false);
+        queryClient.invalidateQueries({ queryKey: ['payments'] });
+        setShowCreateSuccess(true);
+        setTimeout(() => setShowCreateSuccess(false), 3000);
+    };
+
+    // تعديل
+    const [editId, setEditId] = useState(null); // ⬅️ تخزين معرف الدفعة الجاري تعديلها
+    const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
+
+    const handlePaymentUpdated = () => {
+        setEditId(null);
+        queryClient.invalidateQueries({ queryKey: ['payments'] });
+        setShowUpdateSuccess(true);
+        setTimeout(() => setShowUpdateSuccess(false), 3000);
+    };
+
+    // تنفيذ البحث عند الضغط على الزر أو Enter
+    const triggerSearch = () => {
+        onSearchChange?.(searchValue.trim());
+    };
+
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2, marginBottom: 3 }}>
@@ -58,7 +92,12 @@ const Section2 = ({ payments = [] }) => {
                             فلترة
                         </Button>
                         <TextField
-                            placeholder="ابحث هنا"
+                            placeholder="ابحث هنا (اسم الطالب/ولي الأمر/الصف...)"
+                            value={searchValue}
+                            onChange={(e) => setSearchValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') triggerSearch();
+                            }}
                             InputProps={{
                                 startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: '20px' }} />,
                             }}
@@ -71,14 +110,25 @@ const Section2 = ({ payments = [] }) => {
                                 },
                             }}
                         />
+                        <Button
+                            variant="contained"
+                            sx={{ ml: 2, backgroundColor: '#35AFBC' }}
+                            onClick={triggerSearch}
+                        >
+                            بحث
+                        </Button>
                     </Grid>
+
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Button variant="contained" startIcon={<AddIcon />} sx={{ backgroundColor: '#35AFBC', mr: 2 }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            sx={{ backgroundColor: '#35AFBC', mr: 2 }}
+                            onClick={() => setOpenAddDialog(true)}
+                        >
                             أضف دفعة
                         </Button>
-                        <Button variant="contained" startIcon={<FileDownloadIcon />} sx={{ backgroundColor: '#35AFBC', mr: 2 }}>
-                            تصدير البيانات
-                        </Button>
+
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />
                         </IconButton>
@@ -92,8 +142,8 @@ const Section2 = ({ payments = [] }) => {
                         <TableRow sx={{ backgroundColor: '#f1f1f1' }}>
                             <TableCell align="center">الإجراءات</TableCell>
                             <TableCell align="center">الحالة</TableCell>
-                            <TableCell align="center">تاريخ الدفع</TableCell> 
-                            <TableCell align="center">آخر موعد</TableCell>     
+                            <TableCell align="center">تاريخ الدفع</TableCell>
+                            <TableCell align="center">آخر موعد</TableCell>
                             <TableCell align="center">المبلغ</TableCell>
                             <TableCell align="center">الصف</TableCell>
                             <TableCell align="center">الاسم</TableCell>
@@ -107,10 +157,17 @@ const Section2 = ({ payments = [] }) => {
                         {payments.map((row) => (
                             <TableRow key={row.id}>
                                 <TableCell align="center">
-                                    <IconButton><VisibilityIcon sx={{ fontSize: 18 }} /></IconButton>
-                                    <IconButton><EditIcon sx={{ fontSize: 18 }} /></IconButton>
-                                    <IconButton onClick={() => handleDeleteClick(row)}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
+                                    {/* <IconButton><VisibilityIcon sx={{ fontSize: 18 }} /></IconButton> */}
+
+                                    <IconButton onClick={() => setEditId(row.id)}>
+                                        <EditIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+
+                                    <IconButton onClick={() => handleDeleteClick(row)}>
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
                                 </TableCell>
+
                                 <TableCell align="center">
                                     <Chip
                                         label={
@@ -155,6 +212,7 @@ const Section2 = ({ payments = [] }) => {
 
                                 <TableCell align="center">{row.schoolFee?.amount + '$'}</TableCell>
                                 <TableCell align="center">{row.student?.classroom?.name || '-'}</TableCell>
+
                                 <TableCell align="center">
                                     <Box display="flex" alignItems="center" justifyContent="center">
                                         <Avatar alt={row.student?.name} src="/images/avatar.jpg" sx={{ width: 32, height: 32, mr: 1 }} />
@@ -164,17 +222,17 @@ const Section2 = ({ payments = [] }) => {
                                         </Box>
                                     </Box>
                                 </TableCell>
+
                                 <TableCell align="center">{row.student?.prefix}</TableCell>
                                 <TableCell align="center">{row.parent?.prefix}</TableCell>
                                 <TableCell align="center">{row.id}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
-
-
                 </Table>
             </TableContainer>
 
+            {/* موديول تأكيد الحذف */}
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}
@@ -183,12 +241,47 @@ const Section2 = ({ payments = [] }) => {
                 message="سيتم حذف بيانات الدفعة من النظام."
             />
 
-            {showSuccess && (
+            {/* تنبيه نجاح الحذف */}
+            {showDeleteSuccess && (
                 <SuccessAlert
                     title="تم حذف الدفعة بنجاح!"
                     message="تمت إزالة بيانات الدفعة من النظام."
                     severity="error"
-                    onClose={() => setShowSuccess(false)}
+                    onClose={() => setShowDeleteSuccess(false)}
+                />
+            )}
+
+            {/* موديول الإضافة */}
+            <AddPaymentDialog
+                open={openAddDialog}
+                onClose={() => setOpenAddDialog(false)}
+                onCreated={handlePaymentCreated}
+            />
+
+            {/* موديول التعديل - يفتح عند وجود editId */}
+            <EditPaymentDialog
+                open={Boolean(editId)}
+                paymentId={editId}
+                onClose={() => setEditId(null)}
+                onUpdated={handlePaymentUpdated}
+            />
+
+            {/* تنبيه نجاح الإضافة / التعديل */}
+            {showCreateSuccess && (
+                <SuccessAlert
+                    title="تمت إضافة الدفعة بنجاح!"
+                    message="تم حفظ بيانات الدفعة في النظام."
+                    severity="success"
+                    onClose={() => setShowCreateSuccess(false)}
+                />
+            )}
+
+            {showUpdateSuccess && (
+                <SuccessAlert
+                    title="تم تعديل الدفعة بنجاح!"
+                    message="تم تحديث بيانات الدفعة."
+                    severity="success"
+                    onClose={() => setShowUpdateSuccess(false)}
                 />
             )}
         </Box>
