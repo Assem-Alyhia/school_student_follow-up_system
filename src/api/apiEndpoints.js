@@ -31,6 +31,8 @@ const apiEndpoints = {
   getAllClassrooms: "admin/classrooms",
   getAllClassroomsNoPaginate: "admin/classrooms/get-all",
   getClassroomById: (id) => `admin/classrooms/${id}`,
+  createClassroom: "admin/classrooms",
+  updateClassroom: (id) => `admin/classrooms/${id}`,
   deleteClassroom: (id) => `admin/classrooms/${id}`,
   // المشرفين
   getAllSupervisors: "admin/supervisors",
@@ -47,6 +49,7 @@ const apiEndpoints = {
 
   // المراحل الدراسية
   getLevelsStats: "admin/levels/home",
+  getAllLevels: "/admin/levels/get-all",
 
   //الادوار
   getAllRoles: "/admin/roles",
@@ -87,8 +90,10 @@ const apiEndpoints = {
   deleteSchedule: (id) => `admin/schedules/${id}`,
 
   //جدول الباصات
+  getBusById: (id) => `admin/buses/${id}`,
   getAllBuses: "admin/buses",
   createBus: "admin/buses",
+  updateBus: (id) => `admin/buses/${id}`,
   deleteBus: (id) => `admin/buses/${id}`,
 
   // المواقع

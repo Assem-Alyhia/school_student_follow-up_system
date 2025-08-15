@@ -69,11 +69,11 @@ const Section2 = () => {
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 mr: 2,
                             }}
-                            onClick={handleOpen} // ✅ هذا يفتح الموديول
+                            onClick={handleOpen} 
                         >
                             أضف مسار
                         </Button>
-
+{/* 
                         <Button
                             variant="contained"
                             startIcon={<FileDownloadIcon />}
@@ -84,7 +84,7 @@ const Section2 = () => {
                             }}
                         >
                             تصدير بيانات
-                        </Button>
+                        </Button> */}
 
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />

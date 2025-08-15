@@ -64,10 +64,21 @@ const dashboardRoutes = [
 ];
 
 export const router = createBrowserRouter([
+  // {
+  //   path: "/",
+  //   element: <Layout />,
+  //   errorElement: <p>Page not found</p>,
+  // },
   {
     path: "/",
-    element: <Layout />,
-    errorElement: <p>Page not found</p>,
+    element: <PrivateRoute />,
+    children: [
+      {
+        path: "",
+        element: <MiniDrawer />,
+        children: dashboardRoutes,
+      },
+    ],
   },
   {
     path: "/dashboard",

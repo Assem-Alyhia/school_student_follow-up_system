@@ -1,25 +1,33 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Box, Typography, Avatar, Grid, TextField, MenuItem, Button,
     Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton
 } from '@mui/material';
 import {
     Delete as DeleteIcon,
-    Edit as EditIcon
+    Edit as EditIcon,
+    Add as AddIcon,
+    Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllClassrooms } from '../../../api/Admin/Classrooms/getAllClassrooms';
 import { deleteClassroom } from '../../../api/Admin/Classrooms/deleteClassroom';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
+import AddClassroomModal from '../AddClassroomModal';
+import EditClassroomModal from '../EditClassroomModal';
 
 const Section1 = ({ page, rowsPerPage }) => {
     const [search, setSearch] = useState('');
     const [levelFilter, setLevelFilter] = useState('');
-    const [sortOption, setSortOption] = useState('');
+    const [sortOption, setSortOption] = useState(''); // أبقيناه إن احتجت تضيف فرز لاحقاً
     const [selectedId, setSelectedId] = useState(null);
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    const [openAddModal, setOpenAddModal] = useState(false);
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
 
     const queryClient = useQueryClient();
 
@@ -55,29 +63,63 @@ const Section1 = ({ page, rowsPerPage }) => {
 
     const classrooms = data?.data || [];
 
-    const filteredClassrooms = classrooms
-        .filter((cls) => {
-            const nameMatch = cls.name?.includes(search);
-            const levelMatch = levelFilter
-                ? cls.level?.name?.includes(levelFilter)
-                : true;
-            return (nameMatch || levelMatch);
-        })
-        .sort((a, b) => {
-            if (sortOption === 'students_desc') return b.students_count - a.students_count;
-            if (sortOption === 'students_asc') return a.students_count - b.students_count;
+    const levelOptions = useMemo(() => {
+        const set = new Set(classrooms.map(c => c?.level?.name).filter(Boolean));
+        return Array.from(set);
+    }, [classrooms]);
+
+    const filteredClassrooms = useMemo(() => {
+        const s = String(search).toLowerCase().trim();
+        const lf = String(levelFilter).toLowerCase().trim();
+
+        const filtered = classrooms.filter((cls) => {
+            const name = String(cls?.name ?? '').toLowerCase();
+            const levelName = String(cls?.level?.name ?? '').toLowerCase();
+
+            const nameMatch = s ? name.includes(s) : true;
+            const levelMatch = lf ? levelName === lf : true;
+
+            return nameMatch && levelMatch;
+        });
+
+        filtered.sort((a, b) => {
+            if (sortOption === 'capacity_desc') return (b.capacity || 0) - (a.capacity || 0);
+            if (sortOption === 'capacity_asc') return (a.capacity || 0) - (b.capacity || 0);
             return 0;
         });
 
-    const totalStudents = classrooms.reduce((acc, cls) => acc + (cls.students_count || 0), 0);
-    const totalSubjects = classrooms.reduce((acc, cls) => acc + (cls.level?.subjects_count || 0), 0);
+        return filtered;
+    }, [classrooms, search, levelFilter, sortOption]);
 
     if (isLoading) return <Typography>جاري تحميل الصفوف...</Typography>;
     if (isError) return <Typography color="error">حدث خطأ: {error.message}</Typography>;
 
+    const resetFilters = () => {
+        setSearch('');
+        setLevelFilter('');
+        setSortOption('');
+    };
+
     return (
         <Box sx={{ padding: 4 }}>
-            {/* الصورة والإحصائيات */}
+            <Grid container alignItems="center" sx={{ mb: 2 }}>
+                <Grid item xs>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#22385F' }}>
+                        إدارة الصفوف
+                    </Typography>
+                </Grid>
+                <Grid item>
+                    <Button
+                        startIcon={<AddIcon />}
+                        variant="contained"
+                        onClick={() => setOpenAddModal(true)}
+                        sx={{ backgroundColor: '#2a8a89', '&:hover': { backgroundColor: '#227472' } }}
+                    >
+                        إضافة صف
+                    </Button>
+                </Grid>
+            </Grid>
+
             <Box sx={{ textAlign: 'center', mb: 4 }}>
                 <Avatar
                     src="/images/classroom-icon.png"
@@ -87,16 +129,14 @@ const Section1 = ({ page, rowsPerPage }) => {
                     {data?.meta?.total || 0}
                 </Typography>
                 <Typography sx={{ color: '#888' }}>عدد الصفوف الكلي</Typography>
-                <Typography sx={{ color: '#666' }}>إجمالي الطلاب: {totalStudents}</Typography>
-                <Typography sx={{ color: '#666' }}>إجمالي المواد: {totalSubjects}</Typography>
+                {/* تمت إزالة: إجمالي الطلاب / إجمالي المواد */}
             </Box>
 
-            {/* الفلاتر */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={4}>
                     <TextField
                         fullWidth
-                        label="ابحث هنا"
+                        label="ابحث هنا (اسم الصف)"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         variant="outlined"
@@ -111,9 +151,9 @@ const Section1 = ({ page, rowsPerPage }) => {
                         onChange={(e) => setLevelFilter(e.target.value)}
                     >
                         <MenuItem value="">الكل</MenuItem>
-                        <MenuItem value="الابتدائية">الابتدائية</MenuItem>
-                        <MenuItem value="المتوسطة">المتوسطة</MenuItem>
-                        <MenuItem value="الثانوية">الثانوية</MenuItem>
+                        {levelOptions.map((lvl) => (
+                            <MenuItem key={lvl} value={lvl}>{lvl}</MenuItem>
+                        ))}
                     </TextField>
                 </Grid>
                 <Grid item xs={12} md={3}>
@@ -125,35 +165,47 @@ const Section1 = ({ page, rowsPerPage }) => {
                         onChange={(e) => setSortOption(e.target.value)}
                     >
                         <MenuItem value="">الافتراضي</MenuItem>
-                        <MenuItem value="students_desc">الأكثر طلاباً</MenuItem>
-                        <MenuItem value="students_asc">الأقل طلاباً</MenuItem>
+                        <MenuItem value="capacity_desc">الأكثر سعة</MenuItem>
+                        <MenuItem value="capacity_asc">الأقل سعة</MenuItem>
                     </TextField>
                 </Grid>
+
                 <Grid item xs={12} md={2}>
-                    <Button fullWidth variant="contained" sx={{ height: '100%' }}>
-                        قائمة
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        startIcon={<RefreshIcon />}
+                        onClick={resetFilters}
+                        sx={{ height: '100%' }}
+                    >
+                        تفريغ الفلاتر
                     </Button>
                 </Grid>
             </Grid>
 
-            {/* الجدول */}
             <Table sx={{ border: '1px solid #eee' }}>
                 <TableHead sx={{ backgroundColor: '#F0F8FB' }}>
                     <TableRow>
                         <TableCell align="center"><strong>الإجراءات</strong></TableCell>
                         <TableCell align="center"><strong>الحالة</strong></TableCell>
-                        <TableCell align="center"><strong>عدد المواد</strong></TableCell>
-                        <TableCell align="center"><strong>عدد الطلاب</strong></TableCell>
+                        <TableCell align="center"><strong>السعة</strong></TableCell>
                         <TableCell align="center"><strong>المرحلة</strong></TableCell>
                         <TableCell align="center"><strong>الصف</strong></TableCell>
                         <TableCell align="center"><strong>المعرف</strong></TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {filteredClassrooms.map((cls, index) => (
-                        <TableRow key={index}>
+                    {filteredClassrooms.map((cls) => (
+                        <TableRow key={cls.id}>
                             <TableCell align="center">
-                                <IconButton><EditIcon color="primary" /></IconButton>
+                                <IconButton
+                                    onClick={() => {
+                                        setEditingId(cls.id);
+                                        setOpenEditModal(true);
+                                    }}
+                                >
+                                    <EditIcon sx={{ color:"#2a8a89" }} />
+                                </IconButton>
                                 <IconButton onClick={() => handleDeleteClick(cls.id)}>
                                     <DeleteIcon color="error" />
                                 </IconButton>
@@ -171,17 +223,38 @@ const Section1 = ({ page, rowsPerPage }) => {
                                     }}
                                 />
                             </TableCell>
-                            <TableCell align="center">{cls.level?.subjects_count}</TableCell>
-                            <TableCell align="center">{cls.students_count}</TableCell>
+                            <TableCell align="center">{cls.capacity}</TableCell>
                             <TableCell align="center">{cls.level?.name}</TableCell>
                             <TableCell align="center">{cls.name}</TableCell>
-                            <TableCell align="center">{`C${cls.id.toString().padStart(5, '0')}`}</TableCell>
+                            <TableCell align="center">{`C${String(cls.id).padStart(5, '0')}`}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
 
-            {/* موديولات التأكيد والنجاح */}
+            <AddClassroomModal
+                open={openAddModal}
+                onClose={() => setOpenAddModal(false)}
+                onCreated={() => {
+                    queryClient.invalidateQueries(['classrooms']);
+                    setOpenAddModal(false);
+                }}
+            />
+
+            <EditClassroomModal
+                open={openEditModal}
+                classroomId={editingId}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditingId(null);
+                }}
+                onUpdated={() => {
+                    queryClient.invalidateQueries(['classrooms']);
+                    setOpenEditModal(false);
+                    setEditingId(null);
+                }}
+            />
+
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}

@@ -10,20 +10,21 @@ import {
     MenuItem,
     CircularProgress,
 } from "@mui/material";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { getUserById } from "../../../api/Admin/Users/getUserById";
 import { updateUser } from "../../../api/Admin/Users/updateUser";
 import { getAllRoles } from "../../../api/Admin/Roles/getAllRoles";
 
 const UpdateUser = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
 
     const [_userData, setUserData] = useState(null);
     const [form, setForm] = useState({
         name: "",
         email: "",
         image: null,
-        role: "", 
+        role: "",
     });
 
     const [preview, setPreview] = useState("");
@@ -44,8 +45,7 @@ const UpdateUser = () => {
                     ...prev,
                     name: res.data.name || "",
                     email: res.data.email || "",
-                    role: (res.data.role ??
-                        (Array.isArray(res.data.roles) ? res.data.roles[0] : "")) || "",
+                    role: (res.data.role ?? (Array.isArray(res.data.roles) ? res.data.roles[0] : "")) || "",
                     image: null,
                 }));
                 setPreview(res.data.image || "");
@@ -59,7 +59,7 @@ const UpdateUser = () => {
         const fetchRoles = async () => {
             try {
                 setRolesLoading(true);
-                const data = await getAllRoles(); 
+                const data = await getAllRoles();
                 setRoles(data || []);
             } catch (err) {
                 console.error("Error fetching roles:", err);
@@ -78,7 +78,7 @@ const UpdateUser = () => {
         if (userLoading || rolesLoading) return;
         if (!_userData) return;
 
-        const current = form.role; 
+        const current = form.role;
         if (!current) return;
 
         let normalized = String(current).trim();
@@ -113,8 +113,9 @@ const UpdateUser = () => {
     const handleSubmit = async () => {
         try {
             setLoading(true);
-            await updateUser(id, form); 
+            await updateUser(id, form);
             alert("تم تحديث المستخدم بنجاح");
+            navigate(-1); // الرجوع بعد الحفظ
         } catch (error) {
             alert("حدث خطأ أثناء التحديث: " + (error?.message || "غير معروف"));
         } finally {
@@ -169,7 +170,7 @@ const UpdateUser = () => {
                     select
                     name="role"
                     label="دور المستخدم"
-                    value={form.role || ""} 
+                    value={form.role || ""}
                     onChange={handleChange}
                     fullWidth
                     sx={{ mb: 3 }}
@@ -197,18 +198,29 @@ const UpdateUser = () => {
                     ))}
                 </TextField>
 
-                <Button
-                    variant="contained"
-                    sx={{
-                        backgroundColor: "#2a8a89",
-                        "&:hover": { backgroundColor: "#227472" },
-                    }}
-                    fullWidth
-                    disabled={loading}
-                    onClick={handleSubmit}
-                >
-                    {loading ? "جارٍ الحفظ..." : "حفظ التعديلات"}
-                </Button>
+                <Box display="flex" gap={2}>
+                    <Button
+                        variant="contained"
+                        sx={{
+                            backgroundColor: "#2a8a89",
+                            "&:hover": { backgroundColor: "#227472" },
+                        }}
+                        fullWidth
+                        disabled={loading}
+                        onClick={handleSubmit}
+                    >
+                        {loading ? "جارٍ الحفظ..." : "حفظ التعديلات"}
+                    </Button>
+
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={() => navigate(-1)}
+                        sx={{ color:"#2a8a89" , borderColor:"#2a8a89"}}
+                    >
+                        رجوع
+                    </Button>
+                </Box>
             </Paper>
         </Box>
     );

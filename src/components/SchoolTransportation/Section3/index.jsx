@@ -1,3 +1,4 @@
+// components/Buses/Section3.jsx
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer,
@@ -8,12 +9,15 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import MapIcon from '@mui/icons-material/Map';
+
 import MapDialog from '../../MapDialog';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteBus } from '../../../api/Admin/Buses/deleteBus';
+
+import EditBusDialog from '../EditBusDialog';
 
 const HEAD_CELLS = [
     { key: 'id', label: 'المعرف', sortable: true },
@@ -22,13 +26,13 @@ const HEAD_CELLS = [
     { key: 'capacity', label: 'السعة', sortable: true },
     { key: 'bus_type', label: 'نوع الباص', sortable: true },
     { key: 'status', label: 'الحالة', sortable: true },
-    { key: 'supervisor', label: 'المشرف', sortable: true }, 
+    { key: 'supervisor', label: 'المشرف', sortable: true },
     { key: 'created_at', label: 'تاريخ الإضافة', sortable: true },
     { key: 'actions', label: 'الإجراءات', sortable: false },
 ];
 
 const Section3 = ({ buses = [] }) => {
-    const [order, setOrder] = useState('asc'); 
+    const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('id');
     const [openMapDialog, setOpenMapDialog] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
@@ -36,6 +40,9 @@ const Section3 = ({ buses = [] }) => {
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [busToDelete, setBusToDelete] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    const [openEditDialog, setOpenEditDialog] = useState(false);
+    const [editBusId, setEditBusId] = useState(null);
 
     const queryClient = useQueryClient();
 
@@ -76,6 +83,12 @@ const Section3 = ({ buses = [] }) => {
         deleteMutation.mutate(busToDelete.id);
         setOpenDeleteModal(false);
     }, [busToDelete, deleteMutation]);
+
+
+    const handleEditClick = useCallback((row) => {
+        setEditBusId(row.id);       
+        setOpenEditDialog(true);    
+    }, []);
 
     const dateFormatter = useMemo(() => new Intl.DateTimeFormat('ar-EG'), []);
 
@@ -164,11 +177,19 @@ const Section3 = ({ buses = [] }) => {
                                         {row.created_at ? dateFormatter.format(new Date(row.created_at)) : '-'}
                                     </TableCell>
                                     <TableCell sx={{ fontSize: '0.75rem' }}>
-                                        <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
+                                        {/* ✨ فتح مودال التعديل */}
+                                        <IconButton size="small" onClick={() => handleEditClick(row)}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+
                                         <IconButton size="small" onClick={() => handleDeleteClick(row)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
-                                        <IconButton size="small"><VisibilityIcon fontSize="small" /></IconButton>
+
+                                        <IconButton size="small">
+                                            <VisibilityIcon fontSize="small" />
+                                        </IconButton>
+
                                         <IconButton size="small" onClick={() => handleOpenMap(row)}>
                                             <MapIcon fontSize="small" />
                                         </IconButton>
@@ -189,6 +210,18 @@ const Section3 = ({ buses = [] }) => {
                     data={selectedRow}
                 />
             )}
+
+            {/* ✨ مودال التعديل */}
+            <EditBusDialog
+                open={openEditDialog}
+                busId={editBusId}
+                onClose={() => setOpenEditDialog(false)}
+                onUpdated={() => {
+                    // إعادة تحميل القائمة بعد الحفظ
+                    queryClient.invalidateQueries(['buses']);
+                    setOpenEditDialog(false);
+                }}
+            />
 
             <ConfirmDeleteModal
                 open={openDeleteModal}
