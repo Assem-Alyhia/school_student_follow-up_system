@@ -21,9 +21,9 @@ const countries = [
 
 const AccountSettings = () => {
     const [values, setValues] = useState({
-        name: 'Wessal Al-Haj Ali',
+        name: 'Aasem Al-Yhia',
         phone: '(+123) 456789000',
-        email: 'wessalalal101@gmail.com',
+        email: 'Aasem@gmail.com',
         address: 'سوريا، حلب، صالح سعد الله',
         country: 'syria',
         city: 'حلب',
@@ -49,7 +49,6 @@ const AccountSettings = () => {
 
     return (
         <Box sx={{ p: 3, direction: 'rtl', bgcolor: '#f8f9fa' }}>
-            {/* القسم الأول: إعدادات الملف الشخصي */}
             <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
                     إعدادات الملف الشخصي
@@ -139,7 +138,6 @@ const AccountSettings = () => {
                 </Box>
             </Paper>
 
-            {/* القسم الثاني: تغيير كلمة المرور */}
             <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
                     كلمة المرور
@@ -185,7 +183,6 @@ const AccountSettings = () => {
                 </Box>
             </Paper>
 
-            {/* القسم الثالث: حذف الحساب */}
             <Paper sx={{ p: 3, borderRadius: 3 }} elevation={1}>
                 <Typography fontWeight="bold" mb={2} color="error" fontSize="1.1rem">
                     حذف الحساب

@@ -1,13 +1,19 @@
-// createPayment.js
 import axiosInstance from "../../axiosInstance";
 import apiEndpoints from "../../apiEndpoints";
 
-export const createPayment = async (data) => {
+export const createPayment = async (payload) => {
   try {
-    const response = await axiosInstance.post(apiEndpoints.createPayment, data);
-    return response.data.data;
+    const response = await axiosInstance.post(
+      apiEndpoints.createPayment, 
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
   } catch (error) {
-    console.error("فشل في إنشاء الدفعة:", error);
-    throw new Error(error.response?.data?.message || "فشل في إضافة دفعة جديدة");
+    throw new Error(error?.response?.data?.message || error.message);
   }
 };

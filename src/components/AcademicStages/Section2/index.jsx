@@ -6,12 +6,15 @@ import AddIcon from '@mui/icons-material/Add';
 import InfoIcon from '@mui/icons-material/Info';
 import { getLevelsStats } from '../../../api/Admin/AcademicStages/getLevelsStats';
 import AddClassroomModal from './../../Classes/AddClassroomModal/index';
+import StageDetailsModal from '../StageDetailsModal';
 
 const Section2 = () => {
     const [levelsData, setLevelsData] = useState(null);
 
     const [openAddModal, setOpenAddModal] = useState(false);
     const [selectedStage, setSelectedStage] = useState(null);
+
+    const [openDetailsModal, setOpenDetailsModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -61,6 +64,15 @@ const Section2 = () => {
 
     const handleCreated = () => {
         handleCloseAdd();
+    };
+
+    const handleOpenDetails = (stage) => {
+        setSelectedStage(stage);
+        setOpenDetailsModal(true);
+    };
+
+    const handleCloseDetails = () => {
+        setOpenDetailsModal(false);
     };
 
     return (
@@ -163,10 +175,12 @@ const Section2 = () => {
                                     >
                                         إضافة صف
                                     </Button>
+
                                     <Button
                                         variant="outlined"
                                         startIcon={<InfoIcon />}
                                         fullWidth
+                                        onClick={() => handleOpenDetails(stage)} // ✅ يفتح موديال التفاصيل
                                         sx={{
                                             borderColor: '#308A9F',
                                             color: '#308A9F',
@@ -185,9 +199,17 @@ const Section2 = () => {
             <AddClassroomModal
                 open={openAddModal}
                 onClose={handleCloseAdd}
-                onCreated={handleCreated}              
-                stageKey={selectedStage?.key}          
-                stageTitle={selectedStage?.title}       
+                onCreated={handleCreated}
+                stageKey={selectedStage?.key}
+                stageTitle={selectedStage?.title}
+            />
+
+            
+            <StageDetailsModal
+                open={openDetailsModal}
+                onClose={handleCloseDetails}
+                stageKey={selectedStage?.key}
+                stageTitle={selectedStage?.title}
             />
         </Box>
     );
