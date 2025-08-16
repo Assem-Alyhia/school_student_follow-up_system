@@ -34,6 +34,7 @@ const apiEndpoints = {
   createClassroom: "admin/classrooms",
   updateClassroom: (id) => `admin/classrooms/${id}`,
   deleteClassroom: (id) => `admin/classrooms/${id}`,
+  getAvailableClassrooms: "admin/classrooms/get-available",
   // المشرفين
   getAllSupervisors: "admin/supervisors",
   getAllSupervisorsNoPaginate: "admin/supervisors/get-all",
@@ -72,6 +73,7 @@ const apiEndpoints = {
 
   // الدرجات
   getAllGrades: "admin/grades",
+  getStudentsGradesReports: "admin/students/grades-reports",
 
   // السنوات الدراسية
   getAllAcademicYearsNoPaginate: "admin/academic-years/get-all",
@@ -79,6 +81,9 @@ const apiEndpoints = {
   //الجدول اليومي
   getDailySchedule: (classroomId, year) =>
     `admin/schedules/get-daily?classroom_id=${classroomId}&year=${year}`,
+
+  createSchedule: "admin/schedules",
+  updateSchedule: (id) => `admin/schedules/${id}`,
 
   // جداول الامتحانات
   getExamSchedule: (classroomId, year) =>

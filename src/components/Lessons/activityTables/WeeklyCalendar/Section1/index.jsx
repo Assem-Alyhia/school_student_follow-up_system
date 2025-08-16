@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
     IconButton, useMediaQuery, useTheme,
-    Select, MenuItem, FormControl
+    Select, MenuItem, FormControl, Popover, Button
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
@@ -16,6 +16,17 @@ const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأ�
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
+// وقت 12 ساعة مع ص/م
+const formatTime = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const am = h < 12 ? 'ص' : 'م';
+    h = h % 12 || 12;
+    return `${h}:${m} ${am}`;
+};
+
 const WeeklyEventsCalendar = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -25,8 +36,8 @@ const WeeklyEventsCalendar = () => {
 
     const getStartOfWeek = (date) => {
         const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? 0 : 0);
+        const day = d.getDay();         // 0-6
+        const diff = d.getDate() - day; // بداية الأسبوع على الأحد
         return new Date(d.setDate(diff));
     };
 
@@ -39,6 +50,13 @@ const WeeklyEventsCalendar = () => {
     const [classrooms, setClassrooms] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [selectedClassroom, setSelectedClassroom] = useState('');
+
+    // popover للحركة
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
+    const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
+    const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     const getWeekDays = (startDate) => {
         const days = [];
@@ -55,13 +73,11 @@ const WeeklyEventsCalendar = () => {
         prev.setDate(prev.getDate() - 7);
         setCurrentWeekStart(prev);
     };
-
     const handleNextWeek = () => {
         const next = new Date(currentWeekStart);
         next.setDate(next.getDate() + 7);
         setCurrentWeekStart(next);
     };
-
     const handleToday = () => {
         const now = new Date();
         setSelectedMonth(now.getMonth());
@@ -103,13 +119,16 @@ const WeeklyEventsCalendar = () => {
 
         try {
             const res = await getEventsSchedule(selectedClassroom, selectedYearValue);
-            const data = res.data; 
+            const data = res.data;
 
             const parsed = data.map((item, i) => ({
                 id: item.id,
                 title: item.title,
                 date: new Date(item.start_time),
+                start_time: item.start_time,
+                end_time: item.end_time,
                 color: colors[i % colors.length],
+                classroomName: item.classroom_name || item.classroom || '',
             }));
             setEvents(parsed);
         } catch (err) {
@@ -117,29 +136,33 @@ const WeeklyEventsCalendar = () => {
         }
     };
 
-
     const handleDelete = async (id) => {
         try {
             await deleteSchedule(id);
             setEvents(prev => prev.filter(event => event.id !== id));
+            closePopover();
         } catch (error) {
             console.error('فشل في حذف الحدث:', error.message);
         }
     };
 
-    useEffect(() => {
-        fetchClassroomsAndYears();
-    }, []);
+    const handleEdit = (ev) => {
+        // اربط بمودال التعديل لديك (فتح AddLessonModal بوضع التعديل وتمرير بيانات ev)
+        console.log('edit event', ev?.id);
+        closePopover();
+    };
 
-    useEffect(() => {
-        fetchEvents();
-    }, [selectedClassroom, selectedYearValue]);
-
-    useEffect(() => {
-        setSelectedMonth(currentWeekStart.getMonth());
-    }, [currentWeekStart]);
+    useEffect(() => { fetchClassroomsAndYears(); }, []);
+    useEffect(() => { fetchEvents(); }, [selectedClassroom, selectedYearValue]);
+    useEffect(() => { setSelectedMonth(currentWeekStart.getMonth()); }, [currentWeekStart]);
 
     const weekDays = getWeekDays(currentWeekStart);
+
+    const classroomName = useMemo(() => {
+        const f = classrooms.find(c => c.id === selectedClassroom);
+        return f?.name || '—';
+        // يُستخدم للعرض في البوب أوفر لو لم يأت الاسم مع الحدث
+    }, [classrooms, selectedClassroom]);
 
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
@@ -214,9 +237,9 @@ const WeeklyEventsCalendar = () => {
                                         {arabicDays[date.getDay()]} - {date.getDate()}
                                     </Typography>
                                     <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
-                                        {dayEvents.map((event, i) => (
+                                        {dayEvents.map((event) => (
                                             <Box
-                                                key={i}
+                                                key={event.id}
                                                 sx={{
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -229,19 +252,19 @@ const WeeklyEventsCalendar = () => {
                                                     transition: '0.2s',
                                                     '&:hover': { opacity: 0.9 }
                                                 }}
-                                                onClick={() => navigate(`/dashboard/event-details/${selectedClassroom}/${event.date.getFullYear()}/${event.date.getMonth() + 1}/${event.date.getDate()}`)}
+                                                onClick={() =>
+                                                    navigate(`/dashboard/event-details/${selectedClassroom}/${event.date.getFullYear()}/${event.date.getMonth() + 1}/${event.date.getDate()}`)
+                                                }
                                             >
                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                     {event.title}
                                                 </Typography>
+                                                {/* أيقونة الضبط تفتح Popover */}
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(event.id);
-                                                    }}
+                                                    onClick={(e) => { e.stopPropagation(); openPopover(e, event); }}
                                                 >
-                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
+                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
                                                 </IconButton>
                                             </Box>
                                         ))}
@@ -252,6 +275,59 @@ const WeeklyEventsCalendar = () => {
                     })}
                 </Grid>
             </Paper>
+
+            {/* Popover تفاصيل + تعديل/حذف */}
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={closePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 240 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 600, mb: 1 }}>
+                            {selectedEvent.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {selectedEvent.classroomName || classroomName}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', my: 1 }}>
+                            يوم {arabicDays[selectedEvent.date.getDay()]} - {selectedEvent.date.getDate()} {arabicMonths[selectedEvent.date.getMonth()]}
+                        </Typography>
+                        {(selectedEvent.start_time || selectedEvent.end_time) && (
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                                {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
+                            </Typography>
+                        )}
+
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                            <Button
+                                onClick={() => handleDelete(selectedEvent.id)}
+                                variant="contained"
+                                disableElevation
+                                sx={{ flex: 1, bgcolor: '#E5E7EB', color: '#6B7280', '&:hover': { bgcolor: '#D1D5DB' }, borderRadius: 2 }}
+                            >
+                                حذف
+                            </Button>
+                            <Button
+                                onClick={() => handleEdit(selectedEvent)}
+                                variant="contained"
+                                disableElevation
+                                sx={{
+                                    flex: 1,
+                                    borderRadius: 2,
+                                    background: 'linear-gradient(90deg, #1CB7BE 0%, #122E57 100%)',
+                                    '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
+                                }}
+                            >
+                                تعديل
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

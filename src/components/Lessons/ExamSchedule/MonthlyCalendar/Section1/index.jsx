@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
     IconButton, Select, MenuItem, FormControl,
-    useMediaQuery, useTheme
+    useMediaQuery, useTheme, Popover, Button
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today, DeleteOutline } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
 
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
@@ -14,6 +14,16 @@ import { getExamSchedule } from './../../../../../api/Admin/ExamSchedule/ExamSch
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
+
+const formatTime = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const am = h < 12 ? 'ص' : 'م';
+    h = h % 12 || 12;
+    return `${h}:${m} ${am}`;
+};
 
 const ExamMonthlyCalendar = () => {
     const theme = useTheme();
@@ -29,6 +39,13 @@ const ExamMonthlyCalendar = () => {
     const [selectedClassroom, setSelectedClassroom] = useState('');
 
     const [events, setEvents] = useState([]);
+
+    // Popover state
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
+    const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
+    const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     const fetchClassroomsAndYears = async () => {
         try {
@@ -55,36 +72,43 @@ const ExamMonthlyCalendar = () => {
         try {
             const res = await getExamSchedule(selectedClassroom, selectedYearValue);
             const examList = Array.isArray(res.data) ? res.data : [];
-            const parsed = examList.map((item, i) => ({
-                id: item.id,
-                title: item.title,
-                date: new Date(item.start_time).getDate(),
-                month: new Date(item.start_time).getMonth(),
-                color: colors[i % colors.length],
-            }));
+            const parsed = examList.map((item, i) => {
+                const dt = new Date(item.start_time);
+                return {
+                    id: item.id,
+                    title: item.title,
+                    start_time: item.start_time,
+                    end_time: item.end_time,
+                    date: dt.getDate(),
+                    month: dt.getMonth(),
+                    color: colors[i % colors.length],
+                    classroomName: item.classroom_name || item.classroom || '',
+                };
+            });
             setEvents(parsed);
         } catch (err) {
             console.error('فشل في جلب جدول الامتحانات:', err.message);
         }
     };
 
-
     const handleDelete = async (id) => {
         try {
             await deleteSchedule(id);
             setEvents(prev => prev.filter(event => event.id !== id));
+            closePopover();
         } catch (error) {
             console.error('فشل في حذف الحدث:', error.message);
         }
     };
 
-    useEffect(() => {
-        fetchClassroomsAndYears();
-    }, []);
+    const handleEdit = (ev) => {
+        // افتح مودال التعديل لديك (AddLessonModal بوضع تعديل) ومرر بيانات ev
+        console.log('edit exam', ev?.id);
+        closePopover();
+    };
 
-    useEffect(() => {
-        fetchSchedule();
-    }, [selectedClassroom, selectedYearValue]);
+    useEffect(() => { fetchClassroomsAndYears(); }, []);
+    useEffect(() => { fetchSchedule(); }, [selectedClassroom, selectedYearValue]);
 
     const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
     const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
@@ -107,7 +131,6 @@ const ExamMonthlyCalendar = () => {
             while (week.length < 7) week.push(null);
             weeks.push(week);
         }
-
         while (weeks.length < 5) weeks.push(Array(7).fill(null));
         return weeks;
     };
@@ -146,6 +169,11 @@ const ExamMonthlyCalendar = () => {
     };
 
     const calendarWeeks = generateCalendarWeeks();
+
+    const classroomName = useMemo(() => {
+        const f = classrooms.find(c => c.id === selectedClassroom);
+        return f?.name || '—';
+    }, [classrooms, selectedClassroom]);
 
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
@@ -213,21 +241,28 @@ const ExamMonthlyCalendar = () => {
                                                 <>
                                                     <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
-                                                        {dayEvents.map((event, i) => (
-                                                            <Box key={i} sx={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
-                                                                bgcolor: event.color,
-                                                                p: 0.5,
-                                                                mb: 0.5,
-                                                                borderRadius: 1
-                                                            }}>
+                                                        {dayEvents.map((event) => (
+                                                            <Box
+                                                                key={event.id}
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                    bgcolor: event.color,
+                                                                    p: 0.5,
+                                                                    mb: 0.5,
+                                                                    borderRadius: 1
+                                                                }}
+                                                            >
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
-                                                                <IconButton size="small" onClick={() => handleDelete(event.id)}>
-                                                                    <DeleteOutline fontSize="small" sx={{ color: '#fff' }} />
+                                                                {/* أيقونة الضبط تفتح Popover */}
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => openPopover(e, event)}
+                                                                >
+                                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
                                                                 </IconButton>
                                                             </Box>
                                                         ))}
@@ -242,6 +277,59 @@ const ExamMonthlyCalendar = () => {
                     ))}
                 </Box>
             </Paper>
+
+            {/* Popover تفاصيل + تعديل/حذف */}
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={closePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 240 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 600, mb: 1 }}>
+                            {selectedEvent.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {selectedEvent.classroomName || classroomName}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', my: 1 }}>
+                            يوم {arabicDays[new Date(selectedYearValue, selectedMonth, selectedEvent.date).getDay()]} - {selectedEvent.date} {arabicMonths[selectedMonth]}
+                        </Typography>
+                        {(selectedEvent.start_time || selectedEvent.end_time) && (
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                                {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
+                            </Typography>
+                        )}
+
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                            <Button
+                                onClick={() => handleDelete(selectedEvent.id)}
+                                variant="contained"
+                                disableElevation
+                                sx={{ flex: 1, bgcolor: '#E5E7EB', color: '#6B7280', '&:hover': { bgcolor: '#D1D5DB' }, borderRadius: 2 }}
+                            >
+                                حذف
+                            </Button>
+                            <Button
+                                onClick={() => handleEdit(selectedEvent)}
+                                variant="contained"
+                                disableElevation
+                                sx={{
+                                    flex: 1,
+                                    borderRadius: 2,
+                                    background: 'linear-gradient(90deg, #1CB7BE 0%, #122E57 100%)',
+                                    '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
+                                }}
+                            >
+                                تعديل
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

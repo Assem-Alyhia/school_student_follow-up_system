@@ -243,8 +243,6 @@ const AddUserModal = ({ open, onClose }) => {
                                     {rolesLoading ? 'جاري التحميل...' : 'اختر دور المستخدم'}
                                 </MenuItem>
                                 {roles.map((r) => (
-                                    // إذا كان الـ backend يتحقق بالاسم: أبقِ value = r.name
-                                    // إذا يتحقق بالـ id: غيّرها إلى r.id
                                     <MenuItem key={r.id} value={r.name}>
                                         {r.name}
                                     </MenuItem>

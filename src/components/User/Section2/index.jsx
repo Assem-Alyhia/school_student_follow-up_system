@@ -76,7 +76,7 @@ const Section2 = ({ page, rowsPerPage }) => {
         setOpenViewModal(true);
         try {
             const res = await getUserById(id);
-            setViewUserData(res.data); // ✅ تمرير البيانات الصحيحة
+            setViewUserData(res.data); 
         } catch (err) {
             console.error("❌ فشل في جلب بيانات المستخدم", err);
         } finally {

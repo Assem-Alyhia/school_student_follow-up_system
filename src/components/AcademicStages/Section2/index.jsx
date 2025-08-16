@@ -5,9 +5,13 @@ import PeopleIcon from '@mui/icons-material/People';
 import AddIcon from '@mui/icons-material/Add';
 import InfoIcon from '@mui/icons-material/Info';
 import { getLevelsStats } from '../../../api/Admin/AcademicStages/getLevelsStats';
+import AddClassroomModal from './../../Classes/AddClassroomModal/index';
 
 const Section2 = () => {
     const [levelsData, setLevelsData] = useState(null);
+
+    const [openAddModal, setOpenAddModal] = useState(false);
+    const [selectedStage, setSelectedStage] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -18,7 +22,6 @@ const Section2 = () => {
                 console.error("خطأ في جلب بيانات المراحل:", error);
             }
         };
-
         fetchData();
     }, []);
 
@@ -46,21 +49,38 @@ const Section2 = () => {
         },
     ];
 
+    const handleOpenAdd = (stage) => {
+        setSelectedStage(stage);
+        setOpenAddModal(true);
+    };
+
+    const handleCloseAdd = () => {
+        setOpenAddModal(false);
+        setSelectedStage(null);
+    };
+
+    const handleCreated = () => {
+        handleCloseAdd();
+    };
+
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
-                {stages.map((stage, index) => {
+                {stages.map((stage) => {
                     const level = levelsData?.[stage.key] || { classrooms: '...', students: '...' };
 
                     return (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
-                            <Paper elevation={3} sx={{
-                                padding: 2,
-                                textAlign: 'center',
-                                backgroundColor: '#F5F5F5',
-                                border: '1px solid #308A9F',
-                                borderRadius: 2,
-                            }}>
+                        <Grid item xs={12} sm={6} md={4} key={stage.key}>
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    padding: 2,
+                                    textAlign: 'center',
+                                    backgroundColor: '#F5F5F5',
+                                    border: '1px solid #308A9F',
+                                    borderRadius: 2,
+                                }}
+                            >
                                 <Box
                                     component="img"
                                     src={stage.image}
@@ -72,19 +92,20 @@ const Section2 = () => {
                                     }}
                                 />
 
-                                <Box sx={{
-                                    backgroundColor: '#E0E0E0',
-                                    border: '1px solid #BDBDBD',
-                                    borderRadius: '4px',
-                                    padding: '8px',
-                                    mb: 2,
-                                }}>
+                                <Box
+                                    sx={{
+                                        backgroundColor: '#E0E0E0',
+                                        border: '1px solid #BDBDBD',
+                                        borderRadius: '4px',
+                                        padding: '8px',
+                                        mb: 2,
+                                    }}
+                                >
                                     <Typography variant="h6" sx={{ color: '#308A9F' }}>
                                         {stage.title}
                                     </Typography>
                                 </Box>
 
-                                {/* عدد الصفوف والفئة العمرية */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-evenly', mb: 2 }}>
                                     <Box sx={{ textAlign: 'center' }}>
                                         <SchoolIcon sx={{ fontSize: '40px', color: '#308A9F' }} />
@@ -106,7 +127,6 @@ const Section2 = () => {
                                     </Box>
                                 </Box>
 
-                                {/* عدد الطلاب والصفوف */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-evenly', mb: 2 }}>
                                     <Box sx={{ textAlign: 'center' }}>
                                         <PeopleIcon sx={{ fontSize: '40px', color: '#308A9F' }} />
@@ -128,12 +148,12 @@ const Section2 = () => {
                                     </Box>
                                 </Box>
 
-                                {/* الأزرار */}
                                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexDirection: 'column' }}>
                                     <Button
                                         variant="contained"
                                         startIcon={<AddIcon />}
                                         fullWidth
+                                        onClick={() => handleOpenAdd(stage)}
                                         sx={{
                                             background: 'linear-gradient(90deg, #308A9F,#22385F)',
                                             '&:hover': { backgroundColor: '#308A9F' },
@@ -161,6 +181,14 @@ const Section2 = () => {
                     );
                 })}
             </Grid>
+
+            <AddClassroomModal
+                open={openAddModal}
+                onClose={handleCloseAdd}
+                onCreated={handleCreated}              
+                stageKey={selectedStage?.key}          
+                stageTitle={selectedStage?.title}       
+            />
         </Box>
     );
 };

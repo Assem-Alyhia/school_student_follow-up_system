@@ -58,20 +58,6 @@ const NavigationDailySchedule = () => {
                     >
                         التقويم اليومي
                     </Button>
-
-                    <Button
-                        variant="contained"
-                        onClick={() => handleButtonClick('اضافة حدث')}
-                        sx={{
-                            backgroundColor: activeButton === 'اضافة حدث' ? '#22385F' : '#35AFBC',
-                            '&:hover': { backgroundColor: '#30BA9F' },
-                            fontSize: '14px',
-                            padding: '6px 12px',
-                            flexGrow: 1,
-                        }}
-                    >
-                        اضافة حدث
-                    </Button>
                 </Box>
 
                 <Box sx={{ mt: 3 }}>
@@ -89,11 +75,6 @@ const NavigationDailySchedule = () => {
                     {activeButton === 'التقويم اليومي' && (
                         <Typography variant="body1">
                             <DailyCalendar/>
-                        </Typography>
-                    )}
-                    {activeButton === 'اضافة حدث' && (
-                        <Typography variant="body1">
-
                         </Typography>
                     )}
                 </Box>

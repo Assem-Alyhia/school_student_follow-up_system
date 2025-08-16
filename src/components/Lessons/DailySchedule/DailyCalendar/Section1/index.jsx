@@ -1,19 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
     IconButton, useMediaQuery, useTheme,
-    Select, MenuItem, FormControl
+    Select, MenuItem, FormControl, Popover, Button
 } from '@mui/material';
-import { Today, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Today, ChevronLeft, ChevronRight, SettingsRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
+import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
+
+const formatTime = (d) => {
+    const h24 = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const h12 = (h24 % 12) || 12;
+    const am = h24 < 12 ? 'ص' : 'م';
+    return `${h12}:${m} ${am}`;
+};
 
 const DailyCalendar = () => {
     const theme = useTheme();
@@ -29,6 +38,13 @@ const DailyCalendar = () => {
     const [classrooms, setClassrooms] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [currentDate, setCurrentDate] = useState(today);
+
+    // popover
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
+    const openPopover = (e, event) => { setAnchorEl(e.currentTarget); setSelectedEvent(event); };
+    const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     const fetchClassroomsAndYears = async () => {
         try {
@@ -52,19 +68,17 @@ const DailyCalendar = () => {
 
     const fetchSchedule = async () => {
         if (!selectedClassroom || !selectedYearValue) return;
-
         try {
             const data = await getDailySchedule(selectedClassroom, selectedYearValue);
-            if (!Array.isArray(data)) {
-                console.error('البيانات المستلمة ليست قائمة:', data);
-                return;
-            }
+            if (!Array.isArray(data)) return;
+
             const parsed = data.map((item, i) => ({
                 id: item.id,
                 title: item.title,
                 start_time: new Date(item.start_time),
                 end_time: new Date(item.end_time),
                 color: colors[i % colors.length],
+                classroomName: item.classroom_name || item.classroom || '', // إن توفر من الـ API
             }));
             setEvents(parsed);
         } catch (err) {
@@ -76,7 +90,6 @@ const DailyCalendar = () => {
         const days = [];
         const startOfWeek = new Date(date);
         startOfWeek.setDate(date.getDate() - date.getDay());
-
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
             day.setDate(startOfWeek.getDate() + i);
@@ -90,20 +103,17 @@ const DailyCalendar = () => {
         prev.setDate(prev.getDate() - 1);
         setCurrentDate(prev);
     };
-
     const handleNextDay = () => {
         const next = new Date(currentDate);
         next.setDate(next.getDate() + 1);
         setCurrentDate(next);
     };
-
     const handleToday = () => {
         const now = new Date();
         setCurrentDate(now);
         setSelectedMonth(now.getMonth());
         setSelectedYearValue(now.getFullYear());
     };
-
     const handleYearChange = (id) => {
         const selected = academicYears.find(y => y.id === id);
         if (selected) {
@@ -113,17 +123,9 @@ const DailyCalendar = () => {
         }
     };
 
-    useEffect(() => {
-        fetchClassroomsAndYears();
-    }, []);
-
-    useEffect(() => {
-        fetchSchedule();
-    }, [selectedClassroom, selectedYearValue]);
-
-    useEffect(() => {
-        setSelectedMonth(currentDate.getMonth());
-    }, [currentDate]);
+    useEffect(() => { fetchClassroomsAndYears(); }, []);
+    useEffect(() => { fetchSchedule(); }, [selectedClassroom, selectedYearValue]);
+    useEffect(() => { setSelectedMonth(currentDate.getMonth()); }, [currentDate]);
 
     const weekDays = getWeekDays(currentDate);
     const dayEvents = events.filter(
@@ -131,6 +133,27 @@ const DailyCalendar = () => {
             e.start_time.getMonth() === currentDate.getMonth() &&
             e.start_time.getFullYear() === currentDate.getFullYear()
     );
+
+    const classroomNameFromSelect = useMemo(() => {
+        const f = classrooms.find(c => c.id === selectedClassroom);
+        return f?.name || '—';
+    }, [classrooms, selectedClassroom]);
+
+    const handleDelete = async (id) => {
+        try {
+            await deleteSchedule(id);
+            setEvents(prev => prev.filter(ev => ev.id !== id));
+            closePopover();
+        } catch (e) {
+            console.error('فشل في حذف الحدث:', e.message);
+        }
+    };
+
+    const handleEdit = (event) => {
+        // اربط بمودال التعديل لديك (فتح AddLessonModal بحالة تعديل)
+        console.log('edit schedule', event?.id);
+        closePopover();
+    };
 
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
@@ -195,9 +218,7 @@ const DailyCalendar = () => {
                             }}
                         >
                             {[0, 1, 2, 3, 4].map((week) => (
-                                <MenuItem key={week} value={week}>
-                                    الأسبوع {week + 1}
-                                </MenuItem>
+                                <MenuItem key={week} value={week}>الأسبوع {week + 1}</MenuItem>
                             ))}
                         </Select>
                     </FormControl>
@@ -233,7 +254,7 @@ const DailyCalendar = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
-                {/* Weekly Calendar Header */}
+                {/* Week Header */}
                 <Grid container spacing={1} sx={{ mb: 2 }}>
                     {weekDays.map((date, i) => (
                         <Grid item xs key={i} sx={{ textAlign: 'center' }}>
@@ -248,21 +269,13 @@ const DailyCalendar = () => {
                 </Grid>
 
                 {/* Day Events */}
-                <Box sx={{
-                    border: '1px solid #ddd',
-                    minHeight: '50vh',
-                    bgcolor: '#fff',
-                    p: 2,
-                    borderRadius: 1
-                }}>
+                <Box sx={{ border: '1px solid #ddd', minHeight: '50vh', bgcolor: '#fff', p: 2, borderRadius: 1 }}>
                     {dayEvents.length === 0 ? (
-                        <Typography color="gray" textAlign="center">
-                            لا توجد أحداث في هذا اليوم
-                        </Typography>
+                        <Typography color="gray" textAlign="center">لا توجد أحداث في هذا اليوم</Typography>
                     ) : (
                         <Grid container spacing={2}>
-                            {dayEvents.map((event, i) => (
-                                <Grid item xs={12} key={i}>
+                            {dayEvents.map((event) => (
+                                <Grid item xs={12} key={event.id}>
                                     <Box
                                         sx={{
                                             bgcolor: event.color,
@@ -277,12 +290,23 @@ const DailyCalendar = () => {
                                             transition: '0.2s',
                                             '&:hover': { opacity: 0.9 }
                                         }}
-                                        onClick={() => navigate(`/dashboard/student-schedule-details/${selectedClassroom}/${event.start_time.getFullYear()}/${event.start_time.getMonth() + 1}/${event.start_time.getDate()}`)}
+                                        onClick={() =>
+                                            navigate(`/dashboard/student-schedule-details/${selectedClassroom}/${event.start_time.getFullYear()}/${event.start_time.getMonth() + 1}/${event.start_time.getDate()}`)
+                                        }
                                     >
                                         <Typography fontWeight="bold">{event.title}</Typography>
-                                        <Typography fontSize="0.9rem">
-                                            {event.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Typography fontSize="0.9rem">
+                                                {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                            </Typography>
+                                            {/* أيقونة الضبط لفتح البوب أوفر */}
+                                            <IconButton
+                                                size="small"
+                                                onClick={(e) => { e.stopPropagation(); openPopover(e, event); }}
+                                            >
+                                                <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                            </IconButton>
+                                        </Box>
                                     </Box>
                                 </Grid>
                             ))}
@@ -290,6 +314,57 @@ const DailyCalendar = () => {
                     )}
                 </Box>
             </Paper>
+
+            {/* Popover تفاصيل + تعديل/حذف */}
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={closePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 260 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 600, mb: 1 }}>
+                            {selectedEvent.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {selectedEvent.classroomName || classroomNameFromSelect}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', my: 1 }}>
+                            يوم {arabicDays[selectedEvent.start_time.getDay()]} - {selectedEvent.start_time.getDate()} {arabicMonths[selectedEvent.start_time.getMonth()]}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                            {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                            <Button
+                                onClick={() => handleDelete(selectedEvent.id)}
+                                variant="contained"
+                                disableElevation
+                                sx={{ flex: 1, bgcolor: '#E5E7EB', color: '#6B7280', '&:hover': { bgcolor: '#D1D5DB' }, borderRadius: 2 }}
+                            >
+                                حذف
+                            </Button>
+                            <Button
+                                onClick={() => handleEdit(selectedEvent)}
+                                variant="contained"
+                                disableElevation
+                                sx={{
+                                    flex: 1,
+                                    borderRadius: 2,
+                                    background: 'linear-gradient(90deg, #1CB7BE 0%, #122E57 100%)',
+                                    '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
+                                }}
+                            >
+                                تعديل
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

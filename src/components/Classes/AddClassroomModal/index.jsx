@@ -16,6 +16,7 @@ import {
     MenuItem,
     FormHelperText,
     Autocomplete,
+    Divider,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import { getAllLevels } from "../../../api/Admin/Levels/getAllLevels";
@@ -111,26 +112,68 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
         onClose?.();
     };
 
+    const fieldSx = {
+        bgcolor: "#F3F5F7",
+        "& .MuiOutlinedInput-root": {
+            borderRadius: "10px",
+            "& fieldset": { borderColor: "#E5E7EB" },
+            "&:hover fieldset": { borderColor: "#D1D5DB" },
+            "&.Mui-focused fieldset": { borderColor: "#1BB5C4", borderWidth: 2 },
+        },
+        "& .MuiInputBase-input": {
+            padding: "12px 14px",
+        },
+    };
+
     return (
         <Modal
             open={open}
             onClose={handleClose}
-            sx={{ display: "flex", alignItems: "center", justifyContent: "center", direction: "rtl" }}
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                direction: "rtl",
+                px: 2,
+            }}
         >
-            <Paper sx={{ borderRadius: "14px", width: 700, p: 3 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-                    <Typography sx={{ fontSize: 20, fontWeight: "bold", color: "#1E8796" }}>
+            <Paper
+                sx={{
+                    width: 820,
+                    maxWidth: "100%",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.18)",
+                }}
+            >
+                <Box sx={{ position: "relative", px: 2, pt: 1.25 }}>
+                    <IconButton
+                        onClick={handleClose}
+                        size="small"
+                        sx={{ position: "absolute", left: 8, top: 8 }}
+                        aria-label="إغلاق"
+                    >
+                        <CloseIcon />
+                    </IconButton>
+
+                    <Typography
+                        variant="h6"
+                        sx={{ fontWeight: 700, color: "#0C4A6E", textAlign: "right", pr: 1 }}
+                    >
                         أضف صف
                     </Typography>
-                    <IconButton onClick={handleClose}><CloseIcon /></IconButton>
+
+                    <Divider sx={{ mt: 1.25, mx: 1.5 }} />
                 </Box>
 
-                {errorMsg && (
-                    <Typography sx={{ color: "red", mb: 2, fontSize: 14 }}>{errorMsg}</Typography>
-                )}
+                <Box component="form" onSubmit={handleSubmit} sx={{ px: 2.5, pt: 2.5, pb: 1 }}>
+                    {errorMsg ? (
+                        <Typography sx={{ color: "error.main", mb: 2, textAlign: "right" }}>
+                            {errorMsg}
+                        </Typography>
+                    ) : null}
 
-                <Box component="form" onSubmit={handleSubmit}>
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid container spacing={2.25} alignItems="center">
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={levels}
@@ -142,10 +185,8 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="المرحلة"
-                                        placeholder="ابحث باسم المرحلة..."
-                                        margin="dense"
-                                        size="small"
+                                        placeholder="اختر المرحلة"
+                                        sx={fieldSx}
                                         error={Boolean(fieldErrors?.level_id)}
                                         helperText={fieldErrors?.level_id?.[0] || ""}
                                         InputProps={{
@@ -164,13 +205,11 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
 
                         <Grid item xs={12} md={6}>
                             <TextField
-                                label="اسم الصف"
-                                name="name"
-                                size="small"
-                                margin="dense"
                                 fullWidth
+                                placeholder="اسم الصف"
                                 value={form.name}
                                 onChange={(e) => setField("name", e.target.value)}
+                                sx={fieldSx}
                                 error={Boolean(fieldErrors?.name)}
                                 helperText={fieldErrors?.name?.[0] || ""}
                             />
@@ -178,14 +217,12 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
 
                         <Grid item xs={12} md={6}>
                             <TextField
-                                label="السعة"
-                                name="capacity"
-                                type="number"
-                                size="small"
-                                margin="dense"
                                 fullWidth
+                                type="number"
+                                placeholder="السعة"
                                 value={form.capacity}
                                 onChange={(e) => setField("capacity", e.target.value)}
+                                sx={fieldSx}
                                 inputProps={{ min: 1 }}
                                 error={Boolean(fieldErrors?.capacity)}
                                 helperText={fieldErrors?.capacity?.[0] || ""}
@@ -193,16 +230,17 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
                         </Grid>
 
                         <Grid item xs={12} md={6}>
-                            <FormControl fullWidth margin="dense" size="small" error={Boolean(fieldErrors?.status)}>
-                                <InputLabel id="status-label">الحالة</InputLabel>
+                            <FormControl fullWidth error={Boolean(fieldErrors?.status)}>
                                 <Select
-                                    labelId="status-label"
-                                    label="الحالة"
                                     value={form.status}
                                     onChange={(e) => setField("status", e.target.value)}
+                                    displayEmpty
+                                    sx={fieldSx}
                                 >
                                     {STATUSES.map((s) => (
-                                        <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+                                        <MenuItem key={s.value} value={s.value}>
+                                            {s.label}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                                 {fieldErrors?.status ? (
@@ -212,24 +250,50 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
                         </Grid>
                     </Grid>
 
-                    <Box sx={{ display: "flex", gap: 2, justifyContent: "center", mt: 4 }}>
+                    <Box
+                        sx={{
+                            display: "flex",
+                            gap: 2,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            mt: 3.5,
+                            mb: 3,
+                        }}
+                    >
+                        <Button
+                            onClick={handleClose}
+                            variant="outlined"
+                            sx={{
+                                minWidth: 140,
+                                borderRadius: 2,
+                                py: 1,
+                                borderColor: "rgba(0,0,0,0.12)",
+                                bgcolor: "#fff",
+                            }}
+                        >
+                            تجاهل
+                        </Button>
+
                         <Button
                             type="submit"
                             disabled={submitting || levelsLoading || !isValid}
+                            variant="contained"
                             sx={{
-                                maxWidth: "30%",
-                                background: "linear-gradient(to right, #00C6FF, #002952)",
-                                color: "#fff",
-                                "&:hover": { opacity: 0.9 },
+                                minWidth: 180,
+                                borderRadius: 2,
+                                py: 1,
+                                background: "linear-gradient(90deg, #1CB7BE 0%, #122E57 100%)",
+                                boxShadow: "none",
+                                "&:hover": {
+                                    background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)",
+                                },
                             }}
                         >
-                            {submitting ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إضافة الصف"}
-                        </Button>
-                        <Button
-                            onClick={handleClose}
-                            sx={{ maxWidth: "30%", backgroundColor: "#f5f5f5", color: "#333", "&:hover": { backgroundColor: "#e0e0e0" } }}
-                        >
-                            إلغاء
+                            {submitting ? (
+                                <CircularProgress size={20} sx={{ color: "#fff" }} />
+                            ) : (
+                                "إضافة الصف"
+                            )}
                         </Button>
                     </Box>
                 </Box>
