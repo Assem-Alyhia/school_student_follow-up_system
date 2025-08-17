@@ -11,6 +11,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+import { useNavigate } from 'react-router-dom'; // ⬅️ جديد
+
 import ParentChildrenModal from '../parentChildrenModal/ParentChildrenModal';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
@@ -18,6 +20,8 @@ import { deleteParent } from '../../../api/Admin/Parents/deleteParent';
 import { getParentById } from '../../../api/Admin/Parents/getParentById';
 
 const Section2 = ({ parents = [], setParents }) => {
+    const navigate = useNavigate(); // ⬅️ جديد
+
     const [selectedParent, setSelectedParent] = useState(null);
     const [openModal, setOpenModal] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -35,18 +39,11 @@ const Section2 = ({ parents = [], setParents }) => {
         setMenuParent(null);
     };
 
-
     const handleOpenModal = async (parentId) => {
         try {
             const response = await getParentById(parentId);
-
             const fullParent = response?.data?.parent ?? response?.data ?? response;
-
-            if (!fullParent?.id) {
-                console.error("بيانات ولي الأمر غير كاملة:", fullParent);
-                return;
-            }
-
+            if (!fullParent?.id) return;
             setSelectedParent(fullParent);
             setOpenModal(true);
         } catch (err) {
@@ -54,9 +51,9 @@ const Section2 = ({ parents = [], setParents }) => {
         }
     };
 
-
     const handleEdit = (parent) => {
-        console.log('تعديل:', parent);
+        if (!parent?.id) return;
+        navigate(`/dashboard/guardian/parentFormEdit/${parent.id}`);
         handleMenuClose();
     };
 
@@ -76,11 +73,7 @@ const Section2 = ({ parents = [], setParents }) => {
 
         try {
             await deleteParent(menuParent.id);
-
-            if (setParents) {
-                setParents((prev) => prev.filter((p) => p.id !== menuParent.id));
-            }
-
+            if (setParents) setParents((prev) => prev.filter((p) => p.id !== menuParent.id));
             setShowSuccess(true);
         } catch (error) {
             alert("فشل في الحذف: " + error.message);
@@ -100,16 +93,19 @@ const Section2 = ({ parents = [], setParents }) => {
             <Grid container spacing={3}>
                 {parents.map((parent, index) => (
                     <Grid item xs={12} sm={6} md={4} key={index}>
-                        <Paper elevation={3} sx={{
-                            padding: 2,
-                            height: '100%',
-                            textAlign: 'center',
-                            backgroundColor: '#F5F5F5',
-                            border: '1px solid #308A9F',
-                            maxWidth: '90%',
-                            margin: 'auto',
-                            position: 'relative',
-                        }}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                padding: 2,
+                                height: '100%',
+                                textAlign: 'center',
+                                backgroundColor: '#F5F5F5',
+                                border: '1px solid #308A9F',
+                                maxWidth: '90%',
+                                margin: 'auto',
+                                position: 'relative',
+                            }}
+                        >
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                     <IconButton onClick={(e) => handleMenuOpen(e, parent)}>
@@ -125,7 +121,7 @@ const Section2 = ({ parents = [], setParents }) => {
                             </Box>
 
                             <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: 2, overflow: 'hidden', width: 100, height: 100, margin: 'auto', borderRadius: '8px' }}>
-                                <Box component="img" src={parent.avatar} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <Box component="img" src={parent.user.image} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 <Box sx={{
                                     position: 'absolute',
                                     bottom: 8,
@@ -232,14 +228,16 @@ const Section2 = ({ parents = [], setParents }) => {
             </Grid>
 
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-                <MenuItem onClick={() => { handleOpenModal(menuParent); handleMenuClose(); }}>
+                <MenuItem onClick={() => { handleOpenModal(menuParent?.id); handleMenuClose(); }}>
                     <ListItemIcon><VisibilityIcon sx={{ color: '#0D47A1' }} /></ListItemIcon>
                     <ListItemText primary="عرض التفاصيل" primaryTypographyProps={{ color: '#0D47A1' }} />
                 </MenuItem>
+
                 <MenuItem onClick={() => handleEdit(menuParent)}>
                     <ListItemIcon><EditIcon sx={{ color: '#FB8C00' }} /></ListItemIcon>
                     <ListItemText primary="تعديل" primaryTypographyProps={{ color: '#FB8C00' }} />
                 </MenuItem>
+
                 <MenuItem onClick={() => handleDelete(menuParent)}>
                     <ListItemIcon><DeleteIcon sx={{ color: '#C62828' }} /></ListItemIcon>
                     <ListItemText primary="حذف" primaryTypographyProps={{ color: '#C62828' }} />

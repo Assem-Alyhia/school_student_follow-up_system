@@ -25,7 +25,9 @@ const apiEndpoints = {
   // أولياء الأمور
   getAllParents: "admin/parents",
   getParentById: (id) => `admin/parents/${id}`,
+  createParent: "/admin/parents",
   deleteParent: (id) => `admin/parents/${id}`,
+  updateParent: (id) => `admin/parents/${id}`,
   getAllParentsNoPaginate: "admin/parents/get-all",
   // الصفوف
   getAllClassrooms: "admin/classrooms",
@@ -45,7 +47,10 @@ const apiEndpoints = {
 
   // المعلمون
   getAllTeachers: "admin/teachers",
+  getTeacherById: (id) => `admin/teachers/${id}`,
   getAllTeachersNoPaginate: "admin/teachers/get-all",
+  createTeacher: "/admin/teachers",
+  updateTeacher: (id) => `admin/teachers/${id}`,
   deleteTeacher: (id) => `admin/teachers/${id}`,
 
   // المراحل الدراسية
@@ -111,6 +116,10 @@ const apiEndpoints = {
   createPayment: "admin/payments",
   updatePayment: (id) => `admin/payments/${id}`,
   deletePayment: (id) => `admin/payments/${id}`,
+
+  // المواد
+  subjects: "/admin/subjects",
+  subjectById: (id) => `/admin/subjects/${id}`,
 };
 
 export default apiEndpoints;

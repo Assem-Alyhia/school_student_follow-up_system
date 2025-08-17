@@ -29,7 +29,6 @@ function Login() {
             setError("");
             const response = await login(email, password);
             console.log("تم تسجيل الدخول:", response);
-            // هنا يمكنك التعامل مع rememberMe حسب المطلوب (مثلاً تخزين token أطول)
             navigate("/dashboard");
         } catch (err) {
             setError(err.message || "فشل في تسجيل الدخول");

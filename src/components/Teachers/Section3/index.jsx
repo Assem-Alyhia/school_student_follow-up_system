@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import PaginationSection from "../../../layout/PaginationSection";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTeachers } from "../../../api/Admin/Teachers/getAllTeachers";
-import Section2 from "../Section2"; 
+import Section2 from "../Section2";
 
 const Section3 = () => {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const { data, isLoading, isError, error } = useQuery({
-        queryKey: ['teachers', page, rowsPerPage],
+        queryKey: ["teachers", page, rowsPerPage],
         queryFn: () => getAllTeachers(page, rowsPerPage),
         keepPreviousData: true,
     });
@@ -19,7 +19,11 @@ const Section3 = () => {
 
     return (
         <>
-            <Section2 teachers={data?.data || []} />
+            <Section2
+                teachers={data?.data || []}
+                page={page}
+                rowsPerPage={rowsPerPage}
+            />
 
             <PaginationSection
                 page={page}
