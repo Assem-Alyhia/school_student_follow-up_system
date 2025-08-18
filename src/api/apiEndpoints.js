@@ -125,7 +125,34 @@ const apiEndpoints = {
   // ******************************{techers}*****************************************
   // *****************************************************************************
 
+  // الصفحة الشخصية
   getTeacherProfile: "teacher/profile",
+
+  // الطلاب
+  getTeacherStudents: "teacher/students",
+  getTeacherStudentById: (id) => `teacher/students/${id}`,
+
+  // اولياء الامور
+  getTeacherParents: "teacher/parents",
+  getTeacherParentById: (id) => `teacher/parents/${id}`,
+
+  // المراحل الدراسية - للمعلم
+  getTeacherLevels: "teacher/levels/home",
+  getAllTeacherLevels: "teacher/levels",
+
+  // المواد
+  getTeacherSubjects: "teacher/subjects",
+
+  // الصفوف
+  getTeacherClassrooms: "teacher/classrooms/teacher-classrooms",
+  getAllTeacherClassrooms: "teacher/classrooms/all-teacher-classrooms",
+
+  // التقارير
+  getTeacherSchedulesByClassroom: "/teacher/schedules",
+
+  //الامتحانات
+  getTeacherExamsList: "/teacher/exams",
+  getTeacherExamTypes: "/teacher/exam-types",
 };
 
 export default apiEndpoints;

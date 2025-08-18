@@ -42,17 +42,28 @@ import TeacherFormUpdate from "./components/Teachers/TeacherFormUpdate";
 import TeacherProfile from "./components/TeacherRole/ProfilePage";
 import TeacherSettingNavigation from "./components/TeacherRole/TeacherSettings/settingNavigation";
 import TeacherDashboard from "./pages/TeacherRole/dashboard";
+import TeacherStudents from "./pages/TeacherRole/Students";
+import TStudentDetails from "./components/TeacherRole/Students/studentDetails";
+import TeacherParents from "./pages/TeacherRole/Parents";
+import TParentDetails from "./components/TeacherRole/Parents/parentDetails";
+import TLevelsSection from "./pages/TeacherRole/AcademicStages";
+import TeacherSubjects from "./pages/TeacherRole/Subjects";
+import TeacherClassrooms from "./pages/TeacherRole/Classrooms";
+import NavigationCalendarSchedule from "./components/TeacherRole/Lessons/NavigationDailySchedule";
+import TeacherClassesLists from "./pages/TeacherRole/Exams/Classes";
+import TeacherExamLists from "./pages/TeacherRole/Exams/Examlists";
+import TeacherTypesExams from "./pages/TeacherRole/Exams/TypesExams";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
-  { path: "student-schedule-details/:studentId/:year/:month/:day", element: <StudentScheduleDetails    /> },
+  { path: "student-schedule-details/:studentId/:year/:month/:day", element: <StudentScheduleDetails /> },
   { path: "users", element: <User /> },
   { path: "users/usersProfile/:id", element: <UserProfile /> },
   { path: "users/usersSettings/:id", element: <SettingNavigation /> },
   { path: "users/updateUser/:id", element: <UpdateUser /> },
   { path: "users/roles", element: <Roles /> },
   { path: "users/rolse/editRolse/:id", element: <UpdateRole /> },
-  { path: "users/rolse/addRolse", element: <_AddRolse/> },
+  { path: "users/rolse/addRolse", element: <_AddRolse /> },
   { path: "users/permissions", element: <Permissions /> },
   { path: "students", element: <Students /> },
   { path: "teachers", element: <Teachers /> },
@@ -80,6 +91,17 @@ const teacherDashboardRoutes = [
   { path: "", element: <TeacherDashboard /> },
   { path: "profile", element: <TeacherProfile /> },
   { path: "settings", element: <TeacherSettingNavigation /> },
+  { path: "students", element: <TeacherStudents /> },
+  { path: "students/tStudentDetails/:id", element: <TStudentDetails /> },
+  { path: "parents", element: <TeacherParents /> },
+  { path: "parents/tParentDetails/:id", element: <TParentDetails /> },
+  { path: "levels", element: <TLevelsSection /> },
+  { path: "subjects", element: <TeacherSubjects /> },
+  { path: "classrooms", element: <TeacherClassrooms /> },
+  { path: "calendarSchedule", element: <NavigationCalendarSchedule /> },
+  { path: "exam/classesLists", element: <TeacherClassesLists /> },
+  { path: "exam/examlists", element: <TeacherExamLists /> },
+  { path: "exam/typesExams", element: <TeacherTypesExams /> },
 ];
 
 

@@ -1,0 +1,23 @@
+// api/Teacher/getTeacherStudents.js
+import axiosInstance from "../../axiosInstance";
+import apiEndpoints from "../../apiEndpoints";
+
+export const getTeacherStudents = async (page = 1, perPage = 10) => {
+  try {
+    const response = await axiosInstance.get(
+      `${apiEndpoints.getTeacherStudents}?page=${page}&per_page=${perPage}`
+    );
+
+    if (response.status !== 200) {
+      throw new Error("فشل في جلب طلاب المعلم");
+    }
+
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "حدث خطأ أثناء جلب طلاب المعلم"
+    );
+  }
+};

@@ -124,27 +124,28 @@ const getStoredUser = () => {
 const hasRole = (user, role) => Array.isArray(user?.roles) && user.roles.some(r => r.name === role);
 
 const teacherMenu = [
-    { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/dashboard' },
+    { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/teacherDashboard' },
 
-    { text: 'الطلاب', icon: <PersonIcon />, url: '/dashboard/students' },
-    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/dashboard/parents' },
-    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/levels' },
-    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/dashboard/subjects' },
-    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classrooms' },
-    { text: 'الجداول', icon: <ScheduleIcon />, url: '/dashboard/schedules' },
+    { text: 'الطلاب', icon: <PersonIcon />, url: '/teacherDashboard/students' },
+    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/teacherDashboard/parents' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/teacherDashboard/levels' },
+    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/teacherDashboard/subjects' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/teacherDashboard/classrooms' },
+    { text: 'الجداول', icon: <ScheduleIcon />, url: '/teacherDashboard/calendarSchedule' },
 
     {
         text: 'الامتحانات',
         icon: <AssignmentIcon />,
-        url: '/dashboard/exams',
+        url: '/teacherDashboard/exams',
         children: [
-            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/dashboard/exams/list' },
-            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/dashboard/exams/types' },
-            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/dashboard/exams/grades' },
+            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/teacherDashboard/exam/classesLists' },
+            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/teacherDashboard/exam/examlists' },
+            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/teacherDashboard/exam/typesExams' },
+            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/teacherDashboard/exams/grades' },
         ]
     },
 
-    { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
+    { text: 'الدرجات', icon: <GradeIcon />, url: '/teacherDashboard/grades' },
 ];
 
 
