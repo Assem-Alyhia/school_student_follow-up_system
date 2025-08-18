@@ -29,7 +29,22 @@ function Login() {
             setError("");
             const response = await login(email, password);
             console.log("تم تسجيل الدخول:", response);
-            navigate("/dashboard");
+            if (response?.access_token) {
+                localStorage.setItem("token", response.access_token);
+            }
+            if (response?.user) {
+                localStorage.setItem("user", JSON.stringify(response.user));
+            }
+            const roles = Array.isArray(response?.user?.roles)
+                ? response.user.roles.map((r) => r?.name?.toLowerCase()).filter(Boolean)
+                : [];
+            if (roles.includes("admin")) {
+                navigate("/dashboard");
+            } else if (roles.includes("teacher")) {
+                navigate("/teacherDashboard");
+            } else {
+                setError("لا يوجد صلاحية معروفة لهذا المستخدم.");
+            }
         } catch (err) {
             setError(err.message || "فشل في تسجيل الدخول");
         }
@@ -98,10 +113,7 @@ function Login() {
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">
-                                <IconButton
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    edge="end"
-                                >
+                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                                     {showPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>

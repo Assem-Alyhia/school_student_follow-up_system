@@ -20,16 +20,9 @@ import { Outlet, useLocation, Link } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import GradeIcon from '@mui/icons-material/Grade';
-import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ReportIcon from '@mui/icons-material/Report';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -37,12 +30,26 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import SecurityIcon from '@mui/icons-material/Security';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import GroupsIcon from '@mui/icons-material/Groups';
+import LayersIcon from '@mui/icons-material/Layers';
+import ClassIcon from '@mui/icons-material/Class';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import GradingIcon from '@mui/icons-material/Grading';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { useState, useEffect } from 'react';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { Collapse } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import { clearToken } from '../../api/authApi/tokenManager';
 import { getUserById } from '../../api/Admin/Users/getUserById';
+
 
 const drawerWidth = 240;
 
@@ -145,27 +152,29 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const menuItems = [
     { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/dashboard' },
+
     {
         text: 'المستخدمون',
-        icon: <PeopleIcon />,
+        icon: <PeopleAltIcon />,
         url: '/dashboard/users',
         children: [
-            { text: 'الأدوار', icon: <PeopleIcon />, url: '/dashboard/users/roles' },
-            { text: 'الصلاحيات', icon: <PeopleIcon />, url: '/dashboard/users/permissions' },
-            { text: 'القوائم', icon: <PeopleIcon />, url: '/dashboard/users' },
+            { text: 'الأدوار', icon: <AdminPanelSettingsIcon />, url: '/dashboard/users/roles' },
+            { text: 'الصلاحيات', icon: <SecurityIcon />, url: '/dashboard/users/permissions' },
+            { text: 'القوائم', icon: <ListAltIcon />, url: '/dashboard/users' },
         ]
     },
-    { text: 'الطلاب', icon: <PersonIcon />, url: '/dashboard/students' },
-    { text: 'المعلمون', icon: <PersonIcon />, url: '/dashboard/teachers' },
+
+    { text: 'الطلاب', icon: <GroupsIcon />, url: '/dashboard/students' },
+    { text: 'المعلمون', icon: <SchoolIcon />, url: '/dashboard/teachers' },
     { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
-    { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },
-    { text: 'الصفوف الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/classes' },
-    { text: 'الدروس', icon: <AssignmentIcon />, url: '/dashboard/lessons' },
-    { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
-    { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/studentsAttending' },
-    { text: 'النقل المدرسي', icon: <ReportIcon />, url: '/dashboard/schoolTransportation' },
-    { text: 'الشؤون المالية', icon: <AttachMoneyIcon />, url: '/dashboard/fees' },
-    { text: 'التقارير', icon: <SettingsIcon />, url: '/dashboard/reports' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
+    { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },
+    { text: 'الدرجات', icon: <GradingIcon />, url: '/dashboard/grades' },
+    { text: 'الحضور والغياب', icon: <HowToRegIcon />, url: '/dashboard/studentsAttending' },
+    { text: 'النقل المدرسي', icon: <DirectionsBusIcon />, url: '/dashboard/schoolTransportation' },
+    { text: 'الشؤون المالية', icon: <RequestQuoteIcon />, url: '/dashboard/fees' },
+    { text: 'التقارير', icon: <AssessmentIcon />, url: '/dashboard/reports' },
 ];
 
 export default function MiniDrawer() {

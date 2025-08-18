@@ -1,48 +1,36 @@
 import * as React from 'react';
 import { styled, useTheme } from '@mui/material/styles';
-import Box from '@mui/material/Box';
+import {
+    Box, CssBaseline, Typography, Divider, IconButton, List, ListItem, ListItemButton,
+    ListItemIcon, ListItemText, Menu, MenuItem, Avatar, Collapse
+} from '@mui/material';
 import MuiDrawer from '@mui/material/Drawer';
 import MuiAppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
-import CssBaseline from '@mui/material/CssBaseline';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
+
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import PeopleIcon from '@mui/icons-material/People';
-import SchoolIcon from '@mui/icons-material/School';
-import PersonIcon from '@mui/icons-material/Person';
-import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import GradeIcon from '@mui/icons-material/Grade';
-import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ReportIcon from '@mui/icons-material/Report';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import SettingsIcon from '@mui/icons-material/Settings';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import Avatar from '@mui/material/Avatar';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import { useState, useEffect } from 'react';
+import PersonIcon from '@mui/icons-material/Person';
+import GradeIcon from '@mui/icons-material/Grade';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import SettingsIcon from '@mui/icons-material/Settings';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import { Collapse } from '@mui/material';
-import { useNavigate } from "react-router-dom";
+import GroupsIcon from '@mui/icons-material/Groups';
+import LayersIcon from '@mui/icons-material/Layers';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ClassIcon from '@mui/icons-material/Class';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import CategoryIcon from '@mui/icons-material/Category';
 import { clearToken } from '../../api/authApi/tokenManager';
-import { getUserById } from '../../api/Admin/Users/getUserById';
 
 const drawerWidth = 240;
 
@@ -108,16 +96,6 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
                 color: '#A4A8B2',
                 display: 'flex',
                 flexDirection: 'column',
-                '&::-webkit-scrollbar': {
-                    width: '6px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: '#35AFBC',
-                    borderRadius: '3px',
-                },
-                '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'transparent',
-                },
             },
         }),
         ...(!open && {
@@ -128,103 +106,76 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
                 color: '#A4A8B2',
                 display: 'flex',
                 flexDirection: 'column',
-                '&::-webkit-scrollbar': {
-                    width: '6px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: '#35AFBC',
-                    borderRadius: '3px',
-                },
-                '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'transparent',
-                },
             },
         }),
     })
 );
 
-const menuItems = [
+/* ===================== helpers ===================== */
+const getStoredUser = () => {
+    try {
+        const raw = localStorage.getItem('user');
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const hasRole = (user, role) => Array.isArray(user?.roles) && user.roles.some(r => r.name === role);
+
+const teacherMenu = [
     { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/dashboard' },
+
+    { text: 'الطلاب', icon: <PersonIcon />, url: '/dashboard/students' },
+    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/dashboard/parents' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/levels' },
+    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/dashboard/subjects' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classrooms' },
+    { text: 'الجداول', icon: <ScheduleIcon />, url: '/dashboard/schedules' },
+
     {
-        text: 'المستخدمون',
-        icon: <PeopleIcon />,
-        url: '/dashboard/users',
+        text: 'الامتحانات',
+        icon: <AssignmentIcon />,
+        url: '/dashboard/exams',
         children: [
-            { text: 'الأدوار', icon: <PeopleIcon />, url: '/dashboard/users/roles' },
-            { text: 'الصلاحيات', icon: <PeopleIcon />, url: '/dashboard/users/permissions' },
-            { text: 'القوائم', icon: <PeopleIcon />, url: '/dashboard/users' },
+            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/dashboard/exams/list' },
+            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/dashboard/exams/types' },
+            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/dashboard/exams/grades' },
         ]
     },
-    { text: 'الطلاب', icon: <PersonIcon />, url: '/dashboard/students' },
-    { text: 'المعلمون', icon: <PersonIcon />, url: '/dashboard/teachers' },
-    { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
-    { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },
-    { text: 'الصفوف الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/classes' },
-    { text: 'الدروس', icon: <AssignmentIcon />, url: '/dashboard/lessons' },
+
     { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
-    { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/studentsAttending' },
-    { text: 'النقل المدرسي', icon: <ReportIcon />, url: '/dashboard/schoolTransportation' },
-    { text: 'الشؤون المالية', icon: <AttachMoneyIcon />, url: '/dashboard/fees' },
-    { text: 'التقارير', icon: <SettingsIcon />, url: '/dashboard/reports' },
 ];
 
+
+/* ===================== component ===================== */
 export default function TeacherDrawer() {
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
     const location = useLocation();
-    const [expandedItems, setExpandedItems] = useState({});
+    const [expandedItems, setExpandedItems] = React.useState({});
     const [anchorEl, setAnchorEl] = React.useState(null);
     const navigate = useNavigate();
+
+    const user = getStoredUser();
+    const isTeacher = hasRole(user, 'teacher');
+
+    const menuItems = React.useMemo(() => (teacherMenu), [isTeacher]);
 
     const hideDrawerRoutes = ['/some-other-route'];
     const shouldHideDrawer = hideDrawerRoutes.includes(location.pathname);
 
-    const handleDrawerOpen = () => {
-        setOpen(true);
-    };
+    const handleDrawerOpen = () => setOpen(true);
+    const handleDrawerClose = () => { setOpen(false); setExpandedItems({}); };
+    const handleProfileMenuOpen = (e) => setAnchorEl(e.currentTarget);
+    const handleProfileMenuClose = () => setAnchorEl(null);
+    const _toggleReports = (index) =>
+        setExpandedItems((s) => ({ ...s, [index]: !s[index] }));
+    const handleLogout = () => { clearToken(); handleProfileMenuClose(); navigate('/login'); };
 
-    const handleDrawerClose = () => {
-        setOpen(false);
-        setExpandedItems({});
-    };
-
-    const handleProfileMenuOpen = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleProfileMenuClose = () => {
-        setAnchorEl(null);
-    };
-
-    const toggleReports = (index) => {
-        setExpandedItems((prevState) => ({
-            ...prevState,
-            [index]: !prevState[index],
-        }));
-    };
-
-    const handleLogout = () => {
-        clearToken();
-        handleProfileMenuClose();
-        navigate("/login");
-    };
-
-
-    const [userData, setUserData] = useState(null);
-    const userId = localStorage.getItem("UserId");
-    useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                if (!userId) return;
-                const response = await getUserById(userId);
-                setUserData(response.data);
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-            }
-        };
-
-        fetchUserData();
-    }, [userId]);
+    const userName = user?.name || 'المستخدم';
+    const userEmail = user?.email || 'email@example.com';
+    const userImage = user?.image && user.image !== '' ? user.image : undefined;
 
     return (
         <Box sx={{ display: 'flex', position: 'relative' }}>
@@ -238,34 +189,25 @@ export default function TeacherDrawer() {
                                 aria-label="open drawer"
                                 onClick={handleDrawerOpen}
                                 edge="start"
-                                sx={{
-                                    marginRight: 5,
-                                    ...(open && { display: 'none' }),
-                                }}
+                                sx={{ mr: 5, ...(open && { display: 'none' }) }}
                             >
                                 <MenuIcon />
                             </IconButton>
-                            <Typography variant="h6" noWrap component="div" sx={{ color: '#fff', flexGrow: 1 }}>
+                            <Typography variant="h6" noWrap sx={{ color: '#fff', flexGrow: 1 }}>
                                 لوحة التحكم
                             </Typography>
 
-                            <IconButton sx={{ color: '#fff', marginRight: 2 }}>
-                                <SearchIcon />
-                            </IconButton>
-                            <IconButton sx={{ color: '#fff', marginRight: 2 }}>
-                                <ChatIcon />
-                            </IconButton>
-                            <IconButton sx={{ color: '#fff', marginRight: 2 }}>
-                                <NotificationsIcon />
-                            </IconButton>
+                            <IconButton sx={{ color: '#fff', mr: 2 }}><SearchIcon /></IconButton>
+                            <IconButton sx={{ color: '#fff', mr: 2 }}><ChatIcon /></IconButton>
+                            <IconButton sx={{ color: '#fff', mr: 2 }}><NotificationsIcon /></IconButton>
 
                             <IconButton onClick={handleProfileMenuOpen} sx={{ color: '#fff' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar src={userData?.image || '/default-avatar.png'} />
-                                    <Typography sx={{ marginLeft: 1, color: '#fff' }}>
-                                        {userData?.name || 'المستخدم'}
+                                    <Avatar src={userImage}>{!userImage && userName?.charAt(0)}</Avatar>
+                                    <Typography sx={{ ml: 1, color: '#fff' }}>
+                                        {userName}
                                     </Typography>
-                                    <ExpandMoreIcon sx={{ color: '#fff', marginLeft: 1 }} />
+                                    <ExpandMoreIcon sx={{ color: '#fff', ml: 1 }} />
                                 </Box>
                             </IconButton>
 
@@ -273,227 +215,102 @@ export default function TeacherDrawer() {
                                 anchorEl={anchorEl}
                                 open={Boolean(anchorEl)}
                                 onClose={handleProfileMenuClose}
-                                PaperProps={{
-                                    sx: {
-                                        width: 250,
-                                        borderRadius: 2,
-                                        p: 2,
-                                        boxShadow: 4,
-                                        mt: 1.5
-                                    },
-                                }}
-                                anchorOrigin={{
-                                    vertical: 'bottom',
-                                    horizontal: 'right',
-                                }}
-                                transformOrigin={{
-                                    vertical: 'top',
-                                    horizontal: 'right',
-                                }}
+                                PaperProps={{ sx: { width: 260, borderRadius: 2, p: 2, boxShadow: 4, mt: 1.5 } }}
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                             >
                                 <Box sx={{ textAlign: 'center', mb: 1 }}>
                                     <Avatar
-                                        alt={userData?.name}
-                                        src={userData?.image && userData.image !== '' ? userData.image : undefined}
-                                        sx={{
-                                            width: 60,
-                                            height: 60,
-                                            margin: '0 auto 8px',
-                                            fontSize: '1rem',
-                                            fontWeight: 'bold',
-                                            bgcolor: '#ccc',
-                                        }}
+                                        alt={userName}
+                                        src={userImage}
+                                        sx={{ width: 60, height: 60, m: '0 auto 8px', fontSize: '1rem', fontWeight: 'bold', bgcolor: '#ccc' }}
                                     >
-                                        {(!userData?.image || userData.image === '') && userData?.name?.charAt(0)}
+                                        {!userImage && userName?.charAt(0)}
                                     </Avatar>
-                                    <Typography fontWeight="bold" fontSize="1rem">
-                                        {userData?.name || 'اسم المستخدم'}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {userData?.email || 'email@example.com'}
-                                    </Typography>
-
+                                    <Typography fontWeight="bold" fontSize="1rem">{userName}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{userEmail}</Typography>
                                 </Box>
 
                                 <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
 
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
-                                    <Link
-                                        to={`/dashboard/users/usersProfile/${userId}`}
-                                        style={{
-                                            textDecoration: 'none',
-                                            color: 'inherit',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <PersonIcon sx={{ mr: 1 }} />
-                                        الملف الشخصي
+                                    <Link to="profile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                        <PersonIcon sx={{ mr: 1 }} /> الملف الشخصي
                                     </Link>
                                 </MenuItem>
-
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
-                                    <Link
-                                        to={`/dashboard/users/usersSettings/${userId}`}
-                                        style={{
-                                            textDecoration: 'none',
-                                            color: 'inherit',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <SettingsIcon sx={{ mr: 1 }} />
-                                        الإعدادات
+                                    <Link to="settings" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                        <SettingsIcon sx={{ mr: 1 }} /> الإعدادات
                                     </Link>
                                 </MenuItem>
 
                                 <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
 
                                 <MenuItem onClick={handleLogout} sx={{ color: 'red', px: 2 }}>
-                                    <ExitToAppIcon sx={{ mr: 1 }} />
-                                    تسجيل الخروج
+                                    <ExitToAppIcon sx={{ mr: 1 }} /> تسجيل الخروج
                                 </MenuItem>
                             </Menu>
-
                         </Toolbar>
                     </AppBar>
 
-                    <Drawer variant="permanent" open={open} sx={{ position: 'relative !important' }}>
+                    <Drawer variant="permanent" open={open}>
                         <DrawerHeader>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: 2,
-                                    width: '9rem',
-                                    margin: 'auto'
-                                }}
-                            >
-                                {open && (
-                                    <img
-                                        src="/auth/1.png"
-                                        alt="Logo Open"
-                                        style={{
-                                            width: '100%',
-                                            transition: 'width 0.3s',
-                                        }}
-                                    />
-                                )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, width: '9rem', m: 'auto' }}>
+                                {open && <img src="/auth/1.png" alt="Logo Open" style={{ width: '100%', transition: 'width 0.3s' }} />}
                             </Box>
                             <IconButton onClick={handleDrawerClose} sx={{ color: '#308A9F' }}>
                                 {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
                             </IconButton>
                         </DrawerHeader>
                         <Divider />
-                        <Box sx={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            '&::-webkit-scrollbar': {
-                                width: '6px',
-                            },
-                            '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: '#35AFBC',
-                                borderRadius: '3px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'transparent',
-                            },
-                        }}>
+
+                        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                             <List>
                                 {menuItems.map((item, index) => (
                                     <React.Fragment key={index}>
                                         {item.children ? (
                                             <>
                                                 <ListItemButton
-                                                    onClick={() => toggleReports(index)}
+                                                    onClick={() => setExpandedItems(s => ({ ...s, [index]: !s[index] }))}
                                                     sx={{
-                                                        width: '90%',
-                                                        margin: 'auto',
-                                                        minHeight: 48,
-                                                        justifyContent: open ? 'initial' : 'center',
-                                                        px: 2.5,
-                                                        borderRadius: '8px',
-                                                        backgroundColor: 'transparent',
-                                                        '&:hover': {
-                                                            backgroundColor: 'transparent',
-                                                            '& .MuiListItemIcon-root': {
-                                                                color: '#A4A8B2',
-                                                            },
-                                                        },
+                                                        width: '90%', m: 'auto', minHeight: 48, justifyContent: open ? 'initial' : 'center',
+                                                        px: 2.5, borderRadius: '8px', backgroundColor: 'transparent',
                                                     }}
                                                 >
-                                                    <ListItemIcon
-                                                        sx={{
-                                                            minWidth: 0,
-                                                            justifyContent: 'center',
-                                                            mr: open ? 3 : 0,
-                                                            '& svg': {
-                                                                fontSize: '1.2rem',
-                                                                color: '#A4A8B2'
-                                                            },
-                                                        }}
-                                                    >
+                                                    <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: open ? 3 : 0, '& svg': { fontSize: '1.2rem', color: '#A4A8B2' } }}>
                                                         {item.icon}
                                                     </ListItemIcon>
                                                     {open && (
-                                                        <ListItemText
-                                                            primary={item.text}
-                                                            primaryTypographyProps={{
-                                                                fontSize: '0.85rem',
-                                                                fontWeight: '700',
-                                                                color: '#A4A8B2'
-                                                            }}
-                                                        />
+                                                        <ListItemText primary={item.text}
+                                                            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 700, color: '#A4A8B2' }} />
                                                     )}
-                                                    {expandedItems[index] ?
-                                                        <ExpandLessIcon sx={{ color: '#A4A8B2', ml: open ? 1 : 0 }} /> :
-                                                        <ExpandMoreIcon sx={{ color: '#A4A8B2', ml: open ? 1 : 0 }} />
-                                                    }
+                                                    {expandedItems[index] ? <ExpandLessIcon sx={{ color: '#A4A8B2', ml: open ? 1 : 0 }} />
+                                                        : <ExpandMoreIcon sx={{ color: '#A4A8B2', ml: open ? 1 : 0 }} />}
                                                 </ListItemButton>
+
                                                 <Collapse in={expandedItems[index]} timeout="auto" unmountOnExit>
                                                     <List component="div" disablePadding>
-                                                        {item.children.map((child, childIndex) => (
+                                                        {item.children.map((child, i2) => (
                                                             <ListItemButton
-                                                                key={childIndex}
+                                                                key={i2}
                                                                 component={Link}
                                                                 to={child.url}
                                                                 sx={{
-                                                                    pl: open ? 5 : 3,
-                                                                    textAlign: 'center',
-                                                                    minHeight: 40,
+                                                                    pl: open ? 5 : 3, minHeight: 40,
                                                                     backgroundColor: location.pathname === child.url ? '#34b1b7' : 'transparent',
                                                                     '&:hover': {
-                                                                        backgroundColor: location.pathname === child.url ? '#34b1b7' : 'rgba(0, 0, 0, 0.04)',
+                                                                        backgroundColor: location.pathname === child.url ? '#34b1b7' : 'rgba(0,0,0,0.04)',
                                                                         color: location.pathname === child.url ? '#fff' : '#A4A8B2',
-                                                                        '& .MuiListItemIcon-root': {
-                                                                            color: location.pathname === child.url ? '#fff' : '#A4A8B2',
-                                                                        },
+                                                                        '& .MuiListItemIcon-root': { color: location.pathname === child.url ? '#fff' : '#A4A8B2' },
                                                                     },
                                                                 }}
                                                             >
-                                                                <ListItemIcon
-                                                                    sx={{
-                                                                        minWidth: 0,
-                                                                        mr: open ? 2 : 0,
-                                                                        '& svg': {
-                                                                            fontSize: '1rem',
-                                                                            color: location.pathname === child.url ? '#fff' : '#A4A8B2'
-                                                                        }
-                                                                    }}
-                                                                >
+                                                                <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 0, '& svg': { fontSize: '1rem', color: location.pathname === child.url ? '#fff' : '#A4A8B2' } }}>
                                                                     {child.icon}
                                                                 </ListItemIcon>
                                                                 {open && (
-                                                                    <ListItemText
-                                                                        primary={child.text}
-                                                                        primaryTypographyProps={{
-                                                                            fontSize: '0.75rem',
-                                                                            fontWeight: '700',
-                                                                            color: location.pathname === child.url ? '#fff' : '#A4A8B2'
-                                                                        }}
-                                                                    />
+                                                                    <ListItemText primary={child.text}
+                                                                        primaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 700, color: location.pathname === child.url ? '#fff' : '#A4A8B2' }} />
                                                                 )}
                                                             </ListItemButton>
                                                         ))}
@@ -502,51 +319,26 @@ export default function TeacherDrawer() {
                                             </>
                                         ) : (
                                             <ListItem disablePadding sx={{ display: 'block' }}>
-                                                <Link
-                                                    to={item.url}
-                                                    style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}
-                                                >
+                                                <Link to={item.url} style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                                                     <ListItemButton
                                                         sx={{
-                                                            width: '90%',
-                                                            margin: 'auto',
-                                                            minHeight: 48,
-                                                            justifyContent: open ? 'initial' : 'center',
-                                                            px: 2.5,
-                                                            borderRadius: '8px',
+                                                            width: '90%', m: 'auto', minHeight: 48, justifyContent: open ? 'initial' : 'center',
+                                                            px: 2.5, borderRadius: '8px',
                                                             backgroundColor: location.pathname === item.url ? '#34b1b7' : 'transparent',
                                                             '&:hover': {
-                                                                backgroundColor: location.pathname === item.url ? '#34b1b7' : 'rgba(0, 0, 0, 0.04)',
+                                                                backgroundColor: location.pathname === item.url ? '#34b1b7' : 'rgba(0,0,0,0.04)',
                                                                 color: location.pathname === item.url ? '#fff' : '#A4A8B2',
-                                                                '& .MuiListItemIcon-root': {
-                                                                    color: location.pathname === item.url ? '#fff' : '#A4A8B2',
-                                                                },
+                                                                '& .MuiListItemIcon-root': { color: location.pathname === item.url ? '#fff' : '#A4A8B2' },
                                                             },
                                                         }}
                                                     >
-                                                        <ListItemIcon
-                                                            sx={{
-                                                                minWidth: 0,
-                                                                justifyContent: 'center',
-                                                                mr: open ? 3 : 'auto',
-                                                                '& svg': {
-                                                                    fontSize: '1.2rem',
-                                                                    color: location.pathname === item.url ? '#fff' : '#A4A8B2'
-                                                                },
-                                                            }}
-                                                        >
+                                                        <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: open ? 3 : 'auto', '& svg': { fontSize: '1.2rem', color: location.pathname === item.url ? '#fff' : '#A4A8B2' } }}>
                                                             {item.icon}
                                                         </ListItemIcon>
                                                         <ListItemText
                                                             primary={item.text}
-                                                            primaryTypographyProps={{
-                                                                fontSize: '0.85rem',
-                                                                fontWeight: '700',
-                                                                color: location.pathname === item.url ? '#fff' : '#A4A8B2'
-                                                            }}
-                                                            sx={{
-                                                                opacity: open ? 1 : 0,
-                                                            }}
+                                                            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 700, color: location.pathname === item.url ? '#fff' : '#A4A8B2' }}
+                                                            sx={{ opacity: open ? 1 : 0 }}
                                                         />
                                                     </ListItemButton>
                                                 </Link>
@@ -559,6 +351,7 @@ export default function TeacherDrawer() {
                     </Drawer>
                 </>
             )}
+
             <Box component="main" sx={{ flexGrow: 1 }}>
                 {!shouldHideDrawer && <DrawerHeader />}
                 <Outlet />

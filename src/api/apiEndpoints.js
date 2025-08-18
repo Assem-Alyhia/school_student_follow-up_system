@@ -120,6 +120,12 @@ const apiEndpoints = {
   // المواد
   subjects: "/admin/subjects",
   subjectById: (id) => `/admin/subjects/${id}`,
+
+  // ******************************************************************************
+  // ******************************{techers}*****************************************
+  // *****************************************************************************
+
+  getTeacherProfile: "teacher/profile",
 };
 
 export default apiEndpoints;

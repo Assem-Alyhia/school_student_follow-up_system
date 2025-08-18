@@ -180,7 +180,6 @@ const DailySchedule = () => {
 
     const calendarWeeks = generateCalendarWeeks();
 
-    // للحصول على اسم الصف من الـ id المعروض بالهيدر
     const classroomName = useMemo(() => {
         const f = classrooms.find(c => c.id === selectedClassroom);
         return f?.name || '—';

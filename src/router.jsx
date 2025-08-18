@@ -39,6 +39,9 @@ import TeacherForAdd from "./components/Teachers/teacherForAdd";
 import ParentFormAdd from "./components/Guardian/ParentFormAdd";
 import ParentFormUpdate from "./components/Guardian/ParentFormUpdate";
 import TeacherFormUpdate from "./components/Teachers/TeacherFormUpdate";
+import TeacherProfile from "./components/TeacherRole/ProfilePage";
+import TeacherSettingNavigation from "./components/TeacherRole/TeacherSettings/settingNavigation";
+import TeacherDashboard from "./pages/TeacherRole/dashboard";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -74,20 +77,9 @@ const dashboardRoutes = [
 
 
 const teacherDashboardRoutes = [
-  { path: "", element: <Dashboard /> },
-  { path: "student-schedule-details/:studentId/:year/:month/:day", element: <StudentScheduleDetails    /> },
-  { path: "users", element: <User /> },
-  { path: "users/usersProfile/:id", element: <UserProfile /> },
-  { path: "users/usersSettings/:id", element: <SettingNavigation /> },
-  { path: "users/updateUser/:id", element: <UpdateUser /> },
-  { path: "users/roles", element: <Roles /> },
-  { path: "users/rolse/editRolse/:id", element: <UpdateRole /> },
-  { path: "users/rolse/addRolse", element: <_AddRolse/> },
-  { path: "users/permissions", element: <Permissions /> },
-  { path: "students", element: <Students /> },
-  { path: "teachers", element: <Teachers /> },
-  { path: "guardian", element: <Guardian /> },
-
+  { path: "", element: <TeacherDashboard /> },
+  { path: "profile", element: <TeacherProfile /> },
+  { path: "settings", element: <TeacherSettingNavigation /> },
 ];
 
 

@@ -1,7 +1,21 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
 
-// https://vite.dev/config/
 export default defineConfig({
+  optimizeDeps: {
+    force: true,
+    include: [
+      "react",
+      "react-dom/client",
+      "@tanstack/react-query",
+      "prop-types",
+      "@mui/material",
+      "@mui/icons-material",
+      "date-fns",
+    ],
+  },
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
   plugins: [react()],
-})
+});
