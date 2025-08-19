@@ -11,6 +11,8 @@ import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClas
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -46,6 +48,11 @@ const DailyCalendar = () => {
     const openPopover = (e, event) => { setAnchorEl(e.currentTarget); setSelectedEvent(event); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
+    // edit modal
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
+
     const fetchClassroomsAndYears = async () => {
         try {
             const [classroomRes, yearRes] = await Promise.all([
@@ -78,7 +85,7 @@ const DailyCalendar = () => {
                 start_time: new Date(item.start_time),
                 end_time: new Date(item.end_time),
                 color: colors[i % colors.length],
-                classroomName: item.classroom_name || item.classroom || '', // إن توفر من الـ API
+                classroomName: item.classroom_name || item.classroom || '',
             }));
             setEvents(parsed);
         } catch (err) {
@@ -98,16 +105,6 @@ const DailyCalendar = () => {
         return days;
     };
 
-    const handlePrevDay = () => {
-        const prev = new Date(currentDate);
-        prev.setDate(prev.getDate() - 1);
-        setCurrentDate(prev);
-    };
-    const handleNextDay = () => {
-        const next = new Date(currentDate);
-        next.setDate(next.getDate() + 1);
-        setCurrentDate(next);
-    };
     const handleToday = () => {
         const now = new Date();
         setCurrentDate(now);
@@ -127,7 +124,6 @@ const DailyCalendar = () => {
     useEffect(() => { fetchSchedule(); }, [selectedClassroom, selectedYearValue]);
     useEffect(() => { setSelectedMonth(currentDate.getMonth()); }, [currentDate]);
 
-    const weekDays = getWeekDays(currentDate);
     const dayEvents = events.filter(
         e => e.start_time.getDate() === currentDate.getDate() &&
             e.start_time.getMonth() === currentDate.getMonth() &&
@@ -149,10 +145,20 @@ const DailyCalendar = () => {
         }
     };
 
-    const handleEdit = (event) => {
-        // اربط بمودال التعديل لديك (فتح AddLessonModal بحالة تعديل)
-        console.log('edit schedule', event?.id);
-        closePopover();
+    // استدعاء عملية التعديل + فتح الموديال
+    const handleEdit = async (event) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(event.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (e) {
+            console.error('فشل في جلب بيانات الحدث:', e?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     return (
@@ -245,18 +251,18 @@ const DailyCalendar = () => {
                 {/* Day Navigation */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton onClick={handlePrevDay}><ChevronRight /></IconButton>
+                        <IconButton onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 1)))}><ChevronRight /></IconButton>
                         <Typography variant="h6" fontWeight="bold" color="#22385F">
                             {arabicDays[currentDate.getDay()]} - {currentDate.getDate()} {arabicMonths[currentDate.getMonth()]} {currentDate.getFullYear()}
                         </Typography>
-                        <IconButton onClick={handleNextDay}><ChevronLeft /></IconButton>
+                        <IconButton onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 1)))}><ChevronLeft /></IconButton>
                     </Box>
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
                 {/* Week Header */}
                 <Grid container spacing={1} sx={{ mb: 2 }}>
-                    {weekDays.map((date, i) => (
+                    {getWeekDays(currentDate).map((date, i) => (
                         <Grid item xs key={i} sx={{ textAlign: 'center' }}>
                             <Typography
                                 fontWeight={date.getDate() === currentDate.getDate() ? 'bold' : 'normal'}
@@ -352,6 +358,7 @@ const DailyCalendar = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -359,12 +366,21 @@ const DailyCalendar = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            {/* Modal التعديل */}
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => { setOpenEditModal(false); setEditSchedule(null); }}
+                schedule={editSchedule}
+                name="تعديل الحدث"
+                onUpdated={() => { fetchSchedule(); }}  
+            />
         </Box>
     );
 };

@@ -1,4 +1,4 @@
-// src/components/TeacherRole/Classrooms/ClassroomsTable.jsx
+// src/components/TeacherRole/Grades/GradesTable.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
@@ -6,17 +6,28 @@ import {
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 import { useQuery } from "@tanstack/react-query";
-import { getTeacherExamsList } from "../../../../../api/Teacher/Exam/getTeacherExamsList";
 import EditCalendarRoundedIcon from "@mui/icons-material/EditCalendarRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import { getTeacherGrades } from './../../../../api/Teacher/Grades/getTeacherGrades';
+
+const noteColor = (note) => {
+    if (!note) return "text.secondary";
+    const n = String(note).trim();
+    if (n.includes("ممتاز")) return "success.main";
+    if (n.includes("جيد جدا")) return "secondary.main";
+    if (n.includes("جيد")) return "info.main";
+    if (n.includes("متوسط")) return "warning.main";
+    if (n.includes("ضعيف")) return "error.main";
+    return "text.primary";
+};
 
 const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
     const [order, setOrder] = useState("asc");
     const [orderBy, setOrderBy] = useState("code");
 
     const { data, isLoading, isError, error } = useQuery({
-        queryKey: ["teacher-exams", page, rowsPerPage],
-        queryFn: () => getTeacherExamsList(page, rowsPerPage),
+        queryKey: ["teacher-grades", page, rowsPerPage],
+        queryFn: () => getTeacherGrades(page, rowsPerPage),
         keepPreviousData: true,
         staleTime: 60_000,
     });
@@ -58,19 +69,16 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
     if (isLoading) return <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>;
     if (isError) return <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>خطأ: {error?.message}</Box>;
 
+    // الترتيب من اليمين لليسار كما بالصورة
     const columns = [
         { key: "actions", label: "الإجراءات", sortable: false },
-        { key: "weight", label: "الوزن", sortable: true },
-        { key: "max_score", label: "العلامة الكاملة", sortable: true },
-        { key: "end_time", label: "وقت النهاية", sortable: true },
-        { key: "start_time", label: "وقت البداية", sortable: true },
-        { key: "date", label: "التاريخ", sortable: true },
-        { key: "exam_type_name", label: "نوع الامتحان", sortable: true },
+        { key: "note", label: "ملاحظة", sortable: true },
+        { key: "final_mark", label: "العلامة النهائية", sortable: true }, // اسم الحقل من API
         { key: "subject_name", label: "المادة", sortable: true },
-        { key: "name", label: "اسم الامتحان", sortable: true },
-        { key: "stage", label: "المرحلة", sortable: true },
         { key: "grade", label: "الصف", sortable: true },
+        { key: "stage", label: "المرحلة", sortable: true },
         { key: "term", label: "الفصل", sortable: true },
+        { key: "student_name", label: "اسم الطالب", sortable: true },
         { key: "code", label: "المعرف", sortable: true },
     ];
 
@@ -79,13 +87,13 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
                     <Table
-                        aria-label="قوائم الامتحانات"
+                        aria-label="الدرجات"
                         sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}
                     >
                         <TableHead>
                             <TableRow sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)" }}>
                                 {columns.map((col) => (
-                                    <TableCell key={col.key} sx={{ color: "#fff", fontWeight: "bold" }}>
+                                    <TableCell key={col.key} sx={{ color: "#fff", fontWeight: "bold", whiteSpace: "nowrap" }}>
                                         {col.sortable ? (
                                             <TableSortLabel
                                                 active={orderBy === col.key}
@@ -93,6 +101,7 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                                                 onClick={() => handleRequestSort(col.key)}
                                                 sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
                                             >
+
                                                 {col.label}
                                                 {orderBy === col.key && (
                                                     <Box component="span" sx={visuallyHidden}>
@@ -112,12 +121,13 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                             {viewRows.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} align="center">
-                                        <Typography color="text.secondary">لا توجد امتحانات حالياً.</Typography>
+                                        <Typography color="text.secondary">لا توجد درجات حالياً.</Typography>
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 viewRows.map((row, idx) => (
                                     <TableRow key={`${row.id}-${idx}`} hover>
+                                        {/* الإجراءات */}
                                         <TableCell>
                                             <Tooltip title="تعديل">
                                                 <IconButton size="small" onClick={() => onEdit?.(row)}>
@@ -131,21 +141,21 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                                             </Tooltip>
                                         </TableCell>
 
-                                        <TableCell>{row.weight}%</TableCell>
-                                        <TableCell>{row.max_score}</TableCell>
-                                        <TableCell>{row.end_time}</TableCell>
-                                        <TableCell>{row.start_time}</TableCell>
-                                        <TableCell>{row.date}</TableCell>
-                                        <TableCell>{row.exam_type_name}</TableCell>
+                                        <TableCell>
+                                            <Typography sx={{ fontWeight: 600, color: noteColor(row.note) }}>
+                                                {row.note}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>{row.final_mark}</TableCell>
                                         <TableCell>
                                             <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
                                                 {row.subject_name}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{row.name}</TableCell>
-                                        <TableCell>{row.stage}</TableCell>
                                         <TableCell>{row.grade}</TableCell>
+                                        <TableCell>{row.stage}</TableCell>
                                         <TableCell>{row.term}</TableCell>
+                                        <TableCell>{row.student_name}</TableCell>
                                         <TableCell>{row.code}</TableCell>
                                     </TableRow>
                                 ))

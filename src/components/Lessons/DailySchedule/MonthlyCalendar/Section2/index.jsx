@@ -197,6 +197,7 @@ const DailySchedule = () => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                {/* الفلاتر */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                     <FormControl sx={{ minWidth: 180 }}>
                         <Typography variant="caption" color="gray">اختر الصف</Typography>
@@ -212,6 +213,7 @@ const DailySchedule = () => {
                     </FormControl>
                 </Box>
 
+                {/* شريط التنقل */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
@@ -234,6 +236,7 @@ const DailySchedule = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
+                {/* ترويسات الأيام */}
                 <Grid container spacing={1} sx={{ mb: 1 }}>
                     {arabicDays.map(day => (
                         <Grid item xs key={day} sx={{ textAlign: 'center' }}>
@@ -242,11 +245,14 @@ const DailySchedule = () => {
                     ))}
                 </Grid>
 
+                {/* التقويم */}
                 <Box>
                     {calendarWeeks.map((week, i) => (
                         <Grid container spacing={1} key={i}>
                             {week.map((day, j) => {
                                 const dayEvents = events.filter(e => e.date === day && e.month === selectedMonth);
+                                const count = day ? dayEvents.length : 0;
+
                                 return (
                                     <Grid item xs key={j}>
                                         <Box sx={{
@@ -258,7 +264,34 @@ const DailySchedule = () => {
                                         }}>
                                             {day && (
                                                 <>
-                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
+                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">
+
+                                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: .75 ,justifyContent:'space-between'}}>
+                                                            <Box
+                                                                component="span"
+                                                                sx={{
+                                                                    fontSize: 11,
+                                                                    px: .75,
+                                                                    py: .15,
+                                                                    borderRadius: 10,
+                                                                    lineHeight: 1.6,
+                                                                    color: count ? '#ffffffff' : '#6B7280',
+                                                                    background: count
+                                                                        ? '#babfcaff'
+                                                                        : '#E5E7EB',
+                                                                    boxShadow: count ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                                                }}
+                                                                title={`عدد الأحداث: ${count}`}
+                                                            >
+                                                                - {count} -
+                                                            </Box>
+
+                                                            <Box component="span">{day}</Box>
+
+                                                        </Box>
+                                                    </Typography>
+
+                                                    {/* قائمة أحداث اليوم */}
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event) => (
                                                             <Box key={event.id} sx={{
@@ -290,6 +323,7 @@ const DailySchedule = () => {
                 </Box>
             </Paper>
 
+            {/* Popover التفاصيل */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}

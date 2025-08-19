@@ -42,6 +42,8 @@ function Login() {
                 navigate("/dashboard");
             } else if (roles.includes("teacher")) {
                 navigate("/teacherDashboard");
+            } else if (roles.includes("parent")) {
+                navigate("/parentDashboard");
             } else {
                 setError("لا يوجد صلاحية معروفة لهذا المستخدم.");
             }

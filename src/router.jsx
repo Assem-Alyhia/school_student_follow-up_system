@@ -53,6 +53,10 @@ import NavigationCalendarSchedule from "./components/TeacherRole/Lessons/Navigat
 import TeacherClassesLists from "./pages/TeacherRole/Exams/Classes";
 import TeacherExamLists from "./pages/TeacherRole/Exams/Examlists";
 import TeacherTypesExams from "./pages/TeacherRole/Exams/TypesExams";
+import TeacherResultsExam from "./pages/TeacherRole/Exams/ExamGrades";
+import TeacherGrades from "./pages/TeacherRole/Grades";
+import ParentDashboard from "./pages/ParentRole/dashboard";
+import ParentDrawer from './layout/parentDrawer/index';
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -102,6 +106,28 @@ const teacherDashboardRoutes = [
   { path: "exam/classesLists", element: <TeacherClassesLists /> },
   { path: "exam/examlists", element: <TeacherExamLists /> },
   { path: "exam/typesExams", element: <TeacherTypesExams /> },
+  { path: "exam/resultsExams", element: <TeacherResultsExam /> },
+  { path: "grades", element: <TeacherGrades/> },
+];
+
+
+const parentDashboardRoutes = [
+  { path: "", element: <ParentDashboard /> },
+  // { path: "profile", element: <TeacherProfile /> },
+  // { path: "settings", element: <TeacherSettingNavigation /> },
+  // { path: "students", element: <TeacherStudents /> },
+  // { path: "students/tStudentDetails/:id", element: <TStudentDetails /> },
+  // { path: "parents", element: <TeacherParents /> },
+  // { path: "parents/tParentDetails/:id", element: <TParentDetails /> },
+  // { path: "levels", element: <TLevelsSection /> },
+  // { path: "subjects", element: <TeacherSubjects /> },
+  // { path: "classrooms", element: <TeacherClassrooms /> },
+  // { path: "calendarSchedule", element: <NavigationCalendarSchedule /> },
+  // { path: "exam/classesLists", element: <TeacherClassesLists /> },
+  // { path: "exam/examlists", element: <TeacherExamLists /> },
+  // { path: "exam/typesExams", element: <TeacherTypesExams /> },
+  // { path: "exam/resultsExams", element: <TeacherResultsExam /> },
+  // { path: "grades", element: <TeacherGrades/> },
 ];
 
 
@@ -148,6 +174,21 @@ export const router = createBrowserRouter([
         path: "",
         element: <TeacherDrawer />,
         children: teacherDashboardRoutes,
+      },
+    ],
+  },
+
+
+
+
+  {
+    path: "/parentDashboard",
+    element: <PrivateRoute />,
+    children: [
+      {
+        path: "",
+        element: <ParentDrawer />,
+        children: parentDashboardRoutes,
       },
     ],
   },

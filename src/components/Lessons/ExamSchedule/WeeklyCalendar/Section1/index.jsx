@@ -11,6 +11,8 @@ import { getExamSchedule } from '../../../../../api/Admin/ExamSchedule/ExamSched
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -57,6 +59,11 @@ const WeeklyExamSchedule = () => {
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
+
+    // Modal التعديل
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
 
     const getWeekDays = (startDate) => {
         const days = [];
@@ -161,10 +168,20 @@ const WeeklyExamSchedule = () => {
         }
     };
 
-    const handleEdit = (ev) => {
-        // اربطه بمودال التعديل لديك (AddLessonModal بوضع تعديل) وتمرير بيانات ev
-        console.log('edit exam', ev?.id);
-        closePopover();
+    // استدعاء عملية التعديل + فتح الموديال
+    const handleEdit = async (ev) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(ev.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (e) {
+            console.error('فشل في جلب بيانات الامتحان:', e?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     useEffect(() => { fetchClassroomsAndYears(); }, []);
@@ -239,6 +256,7 @@ const WeeklyExamSchedule = () => {
                             e.date.getMonth() === date.getMonth() &&
                             e.date.getFullYear() === date.getFullYear()
                         );
+                        const count = dayExams.length;
 
                         return (
                             <Grid item xs={12} sm={6} md={3} lg={1.71} key={i}>
@@ -250,12 +268,27 @@ const WeeklyExamSchedule = () => {
                                     borderRadius: 1
                                 }}>
                                     <Typography fontWeight="bold" textAlign="end" color="#22385F">
-                                        {dayExams.length > 0 && (
-                                            <Typography component="span" sx={{ color: '#22385F', fontSize: '.8rem', fontWeight: 900, ml: 1, display: 'inline-block' }}>
-                                                ({dayExams.length})
-                                            </Typography>
-                                        )}
-                                        {arabicDays[date.getDay()]} - {date.getDate()}
+                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: .75, justifyContent: 'space-between' }}>
+                                            <Box
+                                                component="span"
+                                                sx={{
+                                                    fontSize: 11,
+                                                    px: .75,
+                                                    py: .15,
+                                                    borderRadius: 10,
+                                                    lineHeight: 1.6,
+                                                    color: count ? '#fff' : '#6B7280',
+                                                    background: count
+                                                        ? '#babfcaff'
+                                                        : '#E5E7EB',
+                                                    boxShadow: count ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                                }}
+                                                title={`عدد الامتحانات: ${count}`}
+                                            >
+                                                - {count} -
+                                            </Box>
+                                            <Box component="span">{arabicDays[date.getDay()]} - {date.getDate()}</Box>
+                                        </Box>
                                     </Typography>
 
                                     <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
@@ -274,13 +307,14 @@ const WeeklyExamSchedule = () => {
                                                     transition: '0.2s',
                                                     '&:hover': { opacity: 0.9 }
                                                 }}
-                                                onClick={() => navigate(`/dashboard/student-schedule-details/${selectedClassroom}/${exam.date.getFullYear()}/${exam.date.getMonth() + 1}/${exam.date.getDate()}`)}
+                                                onClick={() =>
+                                                    navigate(`/dashboard/student-schedule-details/${selectedClassroom}/${exam.date.getFullYear()}/${exam.date.getMonth() + 1}/${exam.date.getDate()}`)
+                                                }
                                             >
                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                     {exam.title}
                                                 </Typography>
 
-                                                {/* أيقونة الضبط بدل الحذف */}
                                                 <IconButton
                                                     size="small"
                                                     onClick={(e) => { e.stopPropagation(); openPopover(e, exam); }}
@@ -336,6 +370,7 @@ const WeeklyExamSchedule = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -343,12 +378,25 @@ const WeeklyExamSchedule = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الامتحان"
+                onUpdated={() => {
+                    fetchExams();
+                }}
+            />
         </Box>
     );
 };

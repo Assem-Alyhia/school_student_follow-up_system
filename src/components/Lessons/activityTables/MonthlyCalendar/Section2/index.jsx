@@ -11,6 +11,10 @@ import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClas
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 
+// جديد: نفس أسلوب الجلب والتعديل السابق
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
@@ -47,6 +51,11 @@ const EventScheduleTable = () => {
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
+    // حالات الموديال (تعديل)
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
+
     const fetchInitialData = async () => {
         try {
             const [classroomRes, yearRes] = await Promise.all([
@@ -71,7 +80,7 @@ const EventScheduleTable = () => {
         if (!selectedClassroom || !selectedYearValue) return;
         try {
             const response = await getEventsSchedule(selectedClassroom, selectedYearValue);
-            const data = response.data;
+            const data = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
 
             const parsed = data.map((item, i) => {
                 const start = new Date(item.start_time);
@@ -89,6 +98,7 @@ const EventScheduleTable = () => {
             setEvents(parsed);
         } catch (err) {
             console.error('فشل في جلب الأحداث:', err.message);
+            setEvents([]);
         }
     };
 
@@ -102,10 +112,20 @@ const EventScheduleTable = () => {
         }
     };
 
-    const handleEdit = (ev) => {
-        // افتح مودال التعديل لديك (AddLessonModal بوضع تعديل) ومرر ev
-        console.log('edit schedule', ev?.id);
-        closePopover();
+    // جلب بيانات الحدث وفتح موديال التعديل
+    const handleEdit = async (ev) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(ev.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (err) {
+            console.error('فشل في جلب بيانات الحدث:', err?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     useEffect(() => { fetchInitialData(); }, []);
@@ -168,7 +188,7 @@ const EventScheduleTable = () => {
 
     const calendarWeeks = generateCalendarWeeks();
 
-    const classroomName = useMemo(() => {
+    const _classroomName = useMemo(() => {
         const f = classrooms.find((c) => c.id === selectedClassroom);
         return f?.name || '—';
     }, [classrooms, selectedClassroom]);
@@ -176,6 +196,7 @@ const EventScheduleTable = () => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                {/* الفلاتر */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                     <FormControl sx={{ minWidth: 180 }}>
                         <Typography variant="caption" color="gray">اختر الصف</Typography>
@@ -191,6 +212,7 @@ const EventScheduleTable = () => {
                     </FormControl>
                 </Box>
 
+                {/* أزرار التنقل في الشهر */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
@@ -217,6 +239,7 @@ const EventScheduleTable = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
+                {/* ترويسة أيام الأسبوع */}
                 <Grid container spacing={1} sx={{ mb: 1 }}>
                     {arabicDays.map((day) => (
                         <Grid item xs key={day} sx={{ textAlign: 'center' }}>
@@ -225,11 +248,14 @@ const EventScheduleTable = () => {
                     ))}
                 </Grid>
 
+                {/* التقويم الشهري مع عدّاد الأحداث وشاشة الإعداد */}
                 <Box>
                     {calendarWeeks.map((week, i) => (
                         <Grid container spacing={1} key={i}>
                             {week.map((day, j) => {
                                 const dayEvents = events.filter((e) => e.date === day && e.month === selectedMonth);
+                                const count = day ? dayEvents.length : 0;
+
                                 return (
                                     <Grid item xs key={j}>
                                         <Box sx={{
@@ -241,7 +267,28 @@ const EventScheduleTable = () => {
                                         }}>
                                             {day && (
                                                 <>
-                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <Box
+                                                            component="span"
+                                                            sx={{
+                                                                fontSize: 11,
+                                                                px: .75,
+                                                                py: .15,
+                                                                borderRadius: 10,
+                                                                lineHeight: 1.6,
+                                                                color: count ? '#ffffffff' : '#6B7280',
+                                                                background: count ? '#babfcaff' : '#E5E7EB',
+                                                                boxShadow: count ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                                            }}
+                                                            title={`عدد الأحداث: ${count}`}
+                                                        >
+                                                            - {count} -
+                                                        </Box>
+                                                        <Typography fontWeight="bold" textAlign="end" color="#22385F">
+                                                            {day}
+                                                        </Typography>
+                                                    </Box>
+
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event) => (
                                                             <Box
@@ -259,7 +306,6 @@ const EventScheduleTable = () => {
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
-                                                                {/* أيقونة الضبط تفتح Popover */}
                                                                 <IconButton size="small" onClick={(e) => openPopover(e, event)}>
                                                                     <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
                                                                 </IconButton>
@@ -291,9 +337,6 @@ const EventScheduleTable = () => {
                         <Typography sx={{ color: '#22385F', fontWeight: 600, mb: 1 }}>
                             {selectedEvent.title}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            {classroomName}
-                        </Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary', my: 1 }}>
                             يوم {arabicDays[new Date(selectedYearValue, selectedMonth, selectedEvent.date).getDay()]} - {selectedEvent.date} {arabicMonths[selectedMonth]}
                         </Typography>
@@ -316,6 +359,7 @@ const EventScheduleTable = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -323,12 +367,27 @@ const EventScheduleTable = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            {/* موديال التعديل */}
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الحدث"
+                onUpdated={() => {
+                    // بعد الحفظ أعد تحميل الأحداث
+                    fetchEvents();
+                }}
+            />
         </Box>
     );
 };

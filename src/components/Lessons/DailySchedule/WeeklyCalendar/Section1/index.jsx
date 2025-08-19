@@ -11,12 +11,14 @@ import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClas
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
-// تنسيق وقت 12 ساعة مع ص/م
+// 12h format with AM/PM (Arabic)
 const formatTime = (iso) => {
     const d = new Date(iso);
     let h = d.getHours();
@@ -35,8 +37,8 @@ const WeeklyCalendar = () => {
 
     const getStartOfWeek = (date) => {
         const d = new Date(date);
-        const day = d.getDay(); // 0 = الأحد حسب بيئتك الحالية؟
-        const diff = d.getDate() - day + 0; // بداية الأسبوع على الأحد
+        const day = d.getDay();        // 0..6
+        const diff = d.getDate() - day + 0; // week starts on Sunday (0)
         return new Date(d.setDate(diff));
     };
 
@@ -50,13 +52,17 @@ const WeeklyCalendar = () => {
     const [academicYears, setAcademicYears] = useState([]);
     const [selectedClassroom, setSelectedClassroom] = useState('');
 
-    // popover state
+    // Popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
-
     const openPopover = (e, event) => { setAnchorEl(e.currentTarget); setSelectedEvent(event); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
+
+    // Edit modal
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
 
     const getWeekDays = (startDate) => {
         const days = [];
@@ -125,7 +131,7 @@ const WeeklyCalendar = () => {
                 startTime: item.start_time,
                 endTime: item.end_time,
                 color: colors[i % colors.length],
-                classroomName: item.classroom_name || item.classroom || '', // إن توفر
+                classroomName: item.classroom_name || item.classroom || '',
             }));
             setEvents(parsed);
         } catch (err) {
@@ -143,11 +149,19 @@ const WeeklyCalendar = () => {
         }
     };
 
-    const handleEdit = (event) => {
-        // اربطه بمودال التعديل لديك (AddLessonModal بوضع التعديل)
-        // مثال: openEditModal(event)
-        console.log('edit schedule', event?.id);
-        closePopover();
+    const handleEdit = async (event) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(event.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (err) {
+            console.error('فشل في جلب بيانات الحدث:', err?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     useEffect(() => { fetchClassroomsAndYears(); }, []);
@@ -218,13 +232,36 @@ const WeeklyCalendar = () => {
                                 e.date.getMonth() === date.getMonth() &&
                                 e.date.getFullYear() === date.getFullYear()
                         );
+                        const count = dayEvents.length;
 
                         return (
                             <Grid item xs={12} sm={6} md={3} lg={1.71} key={i}>
                                 <Box sx={{ border: '1px solid #ddd', minHeight: '18vh', bgcolor: '#fff', p: 1, borderRadius: 1 }}>
                                     <Typography fontWeight="bold" textAlign="end" color="#22385F">
-                                        {arabicDays[date.getDay()]} - {date.getDate()}
+                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: .75, justifyContent: 'space-between' }}>
+                                            <Box
+                                                component="span"
+                                                sx={{
+                                                    fontSize: 11,
+                                                    px: .75,
+                                                    py: .15,
+                                                    borderRadius: 10,
+                                                    lineHeight: 1.6,
+                                                    color: count ? '#fff' : '#6B7280',
+                                                    background: count
+                                                        ? '#babfcaff'
+                                                        : '#E5E7EB',
+                                                    boxShadow: count ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                                }}
+                                                title={`عدد الأحداث: ${count}`}
+                                            >
+                                                - {count} -
+                                            </Box>
+                                            <Box component="span">{arabicDays[date.getDay()]} - {date.getDate()}</Box>
+                                        </Box>
                                     </Typography>
+
+                                    {/* أحداث اليوم */}
                                     <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
                                         {dayEvents.map((event) => (
                                             <Box
@@ -265,7 +302,7 @@ const WeeklyCalendar = () => {
                 </Grid>
             </Paper>
 
-            {/* Popover تفاصيل + تعديل/حذف */}
+            {/* Popover: تفاصيل + تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -304,6 +341,7 @@ const WeeklyCalendar = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -311,12 +349,25 @@ const WeeklyCalendar = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الحدث"
+                onUpdated={() => {
+                    fetchSchedule();
+                }}
+            />
         </Box>
     );
 };

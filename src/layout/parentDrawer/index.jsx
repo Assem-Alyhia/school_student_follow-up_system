@@ -124,33 +124,33 @@ const getStoredUser = () => {
 const hasRole = (user, role) => Array.isArray(user?.roles) && user.roles.some(r => r.name === role);
 
 const teacherMenu = [
-    { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/teacherDashboard' },
+    { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/parentDashboard' },
 
-    { text: 'الطلاب', icon: <PersonIcon />, url: '/teacherDashboard/students' },
-    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/teacherDashboard/parents' },
-    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/teacherDashboard/levels' },
-    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/teacherDashboard/subjects' },
-    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/teacherDashboard/classrooms' },
-    { text: 'الجداول', icon: <ScheduleIcon />, url: '/teacherDashboard/calendarSchedule' },
+    { text: 'الطلاب', icon: <PersonIcon />, url: '/parentDashboard/students' },
+    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/parentDashboard/parents' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/parentDashboard/levels' },
+    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/parentDashboard/subjects' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/parentDashboard/classrooms' },
+    { text: 'الجداول', icon: <ScheduleIcon />, url: '/parentDashboard/calendarSchedule' },
 
-    {
-        text: 'الامتحانات',
-        icon: <AssignmentIcon />,
-        url: '/teacherDashboard/exams',
-        children: [
-            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/teacherDashboard/exam/classesLists' },
-            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/teacherDashboard/exam/examlists' },
-            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/teacherDashboard/exam/typesExams' },
-            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/teacherDashboard/exam/resultsExams' },
-        ]
-    },
+    // {
+    //     text: 'الامتحانات',
+    //     icon: <AssignmentIcon />,
+    //     url: '/parentDashboard/exams',
+    //     children: [
+    //         { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/parentDashboard/exam/classesLists' },
+    //         { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/parentDashboard/exam/examlists' },
+    //         { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/parentDashboard/exam/typesExams' },
+    //         { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/parentDashboard/exam/resultsExams' },
+    //     ]
+    // },
 
-    { text: 'الدرجات', icon: <GradeIcon />, url: '/teacherDashboard/grades' },
+    // { text: 'الدرجات', icon: <GradeIcon />, url: '/parentDashboard/grades' },
 ];
 
 
 /* ===================== component ===================== */
-export default function TeacherDrawer() {
+export default function ParentDrawer() {
     const theme = useTheme();
     const [open, setOpen] = React.useState(false);
     const location = useLocation();

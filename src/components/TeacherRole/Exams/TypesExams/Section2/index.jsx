@@ -1,124 +1,172 @@
-// src/components/TeacherRole/ExamTypes/TypesTable.jsx
-import React, { useMemo, useState, useEffect } from "react";
+// src/components/TeacherRole/ExamTypes/TypesGrid.jsx
+import React, { useMemo, useEffect } from "react";
 import {
-    Box, Paper, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, TableSortLabel, Typography, CircularProgress
+    Box, Paper, Grid, Card, CardContent, CardActions,
+    Typography, Button, CircularProgress, Stack, Divider
 } from "@mui/material";
-import { visuallyHidden } from "@mui/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getTeacherExamTypes } from "../../../../../api/Teacher/Exam/getTeacherExamTypes";
 
-const pickRowValues = (raw) => {
-    const id = raw?.id;
+const pickCardValues = (raw) => {
+    const id = raw?.id ?? null;
     const code = raw?.code ?? (id != null ? `TYP-${id}` : "—");
     const name = raw?.name ?? "—";
     const description = raw?.description ?? "—";
-    return { code, name, description };
+    const count =
+        raw?.exams_count ??
+        raw?.count ??
+        raw?.examsCount ??
+        raw?.exams?.length ??
+        0;
+
+    return { id, code, name, description, count };
 };
 
-const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
-    const [order, setOrder] = useState("asc");
-    const [orderBy, setOrderBy] = useState("code");
-
+const Section2 = ({ page = 1, rowsPerPage = 12, onMeta, onView }) => {
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["teacher-exam-types"],
         queryFn: getTeacherExamTypes,
         staleTime: 60_000,
     });
 
-    const allRows = useMemo(() => {
-        const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-        return list.map(pickRowValues);
+    const allCards = useMemo(() => {
+        const list = Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data)
+                ? data
+                : [];
+        return list.map(pickCardValues);
     }, [data]);
 
-    const handleRequestSort = (prop) => {
-        const isAsc = orderBy === prop && order === "asc";
-        setOrder(isAsc ? "desc" : "asc");
-        setOrderBy(prop);
-    };
-
-    const sortedRows = useMemo(() => {
-        const arr = [...allRows];
-        arr.sort((a, b) => {
-            const av = a[orderBy] ?? "";
-            const bv = b[orderBy] ?? "";
-            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
-            return av < bv ? 1 : av > bv ? -1 : 0;
-        });
-        return arr;
-    }, [allRows, order, orderBy]);
+    const sorted = useMemo(() => {
+        const a = [...allCards];
+        a.sort((x, y) => (x.name > y.name ? 1 : x.name < y.name ? -1 : 0));
+        return a;
+    }, [allCards]);
 
     const start = (page - 1) * rowsPerPage;
-    const view = sortedRows.slice(start, start + rowsPerPage);
+    const view = sorted.slice(start, start + rowsPerPage);
 
     useEffect(() => {
         onMeta?.({
-            total: sortedRows.length,
-            last_page: Math.max(1, Math.ceil(sortedRows.length / rowsPerPage)),
+            total: sorted.length,
+            last_page: Math.max(1, Math.ceil(sorted.length / rowsPerPage)),
         });
-    }, [sortedRows.length, rowsPerPage, onMeta]);
+    }, [sorted.length, rowsPerPage, onMeta]);
 
-    if (isLoading) return <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>;
-    if (isError) return <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>خطأ: {error.message}</Box>;
+    if (isLoading)
+        return (
+            <Box sx={{ p: 3, textAlign: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
+
+    if (isError)
+        return (
+            <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>
+                خطأ: {error?.message || "حدث خطأ غير متوقع"}
+            </Box>
+        );
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="أنواع الاختبارات">
-                        <TableHead sx={{ backgroundColor: "#308A9F" }}>
-                            <TableRow>
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    <TableSortLabel
-                                        active={orderBy === "code"}
-                                        direction={orderBy === "code" ? order : "asc"}
-                                        onClick={() => handleRequestSort("code")}
-                                        sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
-                                    >
-                                        المعرّف
-                                        {orderBy === "code" && <Box component="span" sx={visuallyHidden}>{order === "desc" ? "تنازلي" : "تصاعدي"}</Box>}
-                                    </TableSortLabel>
-                                </TableCell>
+                <Typography
+                    variant="h6"
+                    sx={{
+                        mb: 3,
+                        fontWeight: 700,
+                        textAlign: "center",
+                        background: "linear-gradient(180deg,#35AFBC,#308A9F,#22385F)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                    }}
+                >
+                    أنواع الامتحانات
+                </Typography>
 
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    <TableSortLabel
-                                        active={orderBy === "name"}
-                                        direction={orderBy === "name" ? order : "asc"}
-                                        onClick={() => handleRequestSort("name")}
-                                        sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
-                                    >
-                                        الاسم
-                                        {orderBy === "name" && <Box component="span" sx={visuallyHidden}>{order === "desc" ? "تنازلي" : "تصاعدي"}</Box>}
-                                    </TableSortLabel>
-                                </TableCell>
+                <Grid container spacing={3} justifyContent="center">
+                    {view.length === 0 ? (
+                        <Grid item xs={12}>
+                            <Typography color="text.secondary" align="center">
+                                لا توجد أنواع مسجّلة حالياً.
+                            </Typography>
+                        </Grid>
+                    ) : (
+                        view.map((item) => (
+                            <Grid item key={item.code} xs={12} sm={6} md={3}>
+                                <Card
+                                    variant="outlined"
+                                    sx={{
+                                        height: "100%",
+                                        borderRadius: 2,
+                                        boxShadow: "none",
+                                        transition: "all .2s ease",
+                                        "&:hover": { boxShadow: 3, transform: "translateY(-3px)" },
+                                        border: "2px solid transparent",
+                                        backgroundImage:
+                                            "linear-gradient(white, white), linear-gradient(180deg,#35AFBC,#308A9F,#22385F)",
+                                        backgroundOrigin: "border-box",
+                                        backgroundClip: "content-box, border-box",
+                                    }}
+                                >
+                                    <CardContent>
+                                        <Stack spacing={1} alignItems="center" textAlign="center">
+                                            <Typography
+                                                variant="h6"
+                                                sx={{
+                                                    fontWeight: 800,
+                                                    background: "linear-gradient(180deg,#35AFBC,#308A9F,#22385F)",
+                                                    WebkitBackgroundClip: "text",
+                                                    WebkitTextFillColor: "transparent",
+                                                }}
+                                            >
+                                                {item.name}
+                                            </Typography>
 
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    الوصف
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {item.description}
+                                            </Typography>
 
-                        <TableBody>
-                            {view.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} align="center">
-                                        <Typography color="text.secondary">لا توجد أنواع مسجّلة حالياً.</Typography>
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                view.map((row, idx) => (
-                                    <TableRow key={`${row.code}-${idx}`} hover>
-                                        <TableCell align="center">{row.code}</TableCell>
-                                        <TableCell align="center">
-                                            <Typography sx={{ fontWeight: 600, color: "#22385F" }}>{row.name}</Typography>
-                                        </TableCell>
-                                        <TableCell align="center">{row.description}</TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                                            <Divider sx={{ my: 1.5, width: "100%" }} />
+
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    background: "linear-gradient(180deg,#35AFBC,#308A9F,#22385F)",
+                                                    WebkitBackgroundClip: "text",
+                                                    WebkitTextFillColor: "transparent",
+                                                }}
+                                            >
+                                                عدد الامتحانات: {item.count}
+                                            </Typography>
+                                        </Stack>
+                                    </CardContent>
+
+                                    <CardActions sx={{ p: 2, pt: 0 }}>
+                                        <Button
+                                            fullWidth
+                                            variant="contained"
+                                            disableElevation
+                                            onClick={() => onView?.(item)}
+                                            disabled={item.count === 0}
+                                            sx={{
+                                                background: "#E6E6E6",
+                                                color: "#233",
+                                                fontWeight: 700,
+                                                borderRadius: 1.5,
+                                                "&:hover": { background: "#d9d9d9" },
+                                            }}
+                                        >
+                                            عرض الامتحانات
+                                        </Button>
+                                    </CardActions>
+                                </Card>
+                            </Grid>
+                        ))
+                    )}
+                </Grid>
             </Paper>
         </Box>
     );

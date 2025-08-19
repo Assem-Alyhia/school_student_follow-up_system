@@ -10,6 +10,8 @@ import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClas
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 import { getExamSchedule } from './../../../../../api/Admin/ExamSchedule/ExamSchedule';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -40,12 +42,17 @@ const ExamMonthlyCalendar = () => {
 
     const [events, setEvents] = useState([]);
 
-    // Popover state
+    // Popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
+
+    // Edit modal
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
 
     const fetchClassroomsAndYears = async () => {
         try {
@@ -71,14 +78,14 @@ const ExamMonthlyCalendar = () => {
         if (!selectedClassroom || !selectedYearValue) return;
         try {
             const res = await getExamSchedule(selectedClassroom, selectedYearValue);
-            const examList = Array.isArray(res.data) ? res.data : [];
-            const parsed = examList.map((item, i) => {
-                const dt = new Date(item.start_time);
+            const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+            const parsed = list.map((item, i) => {
+                const dt = new Date(item.start_time ?? item.date ?? today);
                 return {
                     id: item.id,
-                    title: item.title,
-                    start_time: item.start_time,
-                    end_time: item.end_time,
+                    title: item.title ?? item.name ?? 'امتحان',
+                    start_time: item.start_time ?? null,
+                    end_time: item.end_time ?? null,
                     date: dt.getDate(),
                     month: dt.getMonth(),
                     color: colors[i % colors.length],
@@ -101,10 +108,19 @@ const ExamMonthlyCalendar = () => {
         }
     };
 
-    const handleEdit = (ev) => {
-        // افتح مودال التعديل لديك (AddLessonModal بوضع تعديل) ومرر بيانات ev
-        console.log('edit exam', ev?.id);
-        closePopover();
+    const handleEdit = async (ev) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(ev.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (e) {
+            console.error('فشل في جلب بيانات الامتحان:', e?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     useEffect(() => { fetchClassroomsAndYears(); }, []);
@@ -178,6 +194,7 @@ const ExamMonthlyCalendar = () => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                {/* Filters */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                     <FormControl sx={{ minWidth: 180 }}>
                         <Typography variant="caption" color="gray">اختر الصف</Typography>
@@ -193,6 +210,7 @@ const ExamMonthlyCalendar = () => {
                     </FormControl>
                 </Box>
 
+                {/* Month Navigation */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
@@ -215,6 +233,7 @@ const ExamMonthlyCalendar = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
+                {/* Weekday Header */}
                 <Grid container spacing={1} sx={{ mb: 1 }}>
                     {arabicDays.map(day => (
                         <Grid item xs key={day} sx={{ textAlign: 'center' }}>
@@ -223,11 +242,14 @@ const ExamMonthlyCalendar = () => {
                     ))}
                 </Grid>
 
+                {/* Calendar Grid */}
                 <Box>
                     {calendarWeeks.map((week, i) => (
                         <Grid container spacing={1} key={i}>
                             {week.map((day, j) => {
                                 const dayEvents = events.filter(e => e.date === day && e.month === selectedMonth);
+                                const count = dayEvents.length;
+
                                 return (
                                     <Grid item xs key={j}>
                                         <Box sx={{
@@ -239,7 +261,30 @@ const ExamMonthlyCalendar = () => {
                                         }}>
                                             {day && (
                                                 <>
-                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
+                                                    <Typography fontWeight="bold" textAlign="end" color="#22385F">
+                                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: .75 ,justifyContent:'space-between'}}>
+                                                            <Box
+                                                                component="span"
+                                                                sx={{
+                                                                    fontSize: 11,
+                                                                    px: .7,
+                                                                    py: .1,
+                                                                    borderRadius: 10,
+                                                                    lineHeight: 1.6,
+                                                                    color: count ? '#fff' : '#6B7280',
+                                                                    background: count
+                                                                        ? '#babfcaff'
+                                                                        : '#E5E7EB',
+                                                                    boxShadow: count ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                                                }}
+                                                                title={`عدد الامتحانات: ${count}`}
+                                                            >
+                                                                {count}
+                                                            </Box>
+                                                            <Box component="span">{day}</Box>
+                                                        </Box>
+                                                    </Typography>
+
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
                                                         {dayEvents.map((event) => (
                                                             <Box
@@ -251,16 +296,19 @@ const ExamMonthlyCalendar = () => {
                                                                     bgcolor: event.color,
                                                                     p: 0.5,
                                                                     mb: 0.5,
-                                                                    borderRadius: 1
+                                                                    borderRadius: 1,
+                                                                    cursor: 'pointer',
+                                                                    transition: '0.2s',
+                                                                    '&:hover': { opacity: 0.9 }
                                                                 }}
+                                                                onClick={(e) => openPopover(e, event)}
                                                             >
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
-                                                                {/* أيقونة الضبط تفتح Popover */}
                                                                 <IconButton
                                                                     size="small"
-                                                                    onClick={(e) => openPopover(e, event)}
+                                                                    onClick={(e) => { e.stopPropagation(); openPopover(e, event); }}
                                                                 >
                                                                     <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
                                                                 </IconButton>
@@ -278,7 +326,7 @@ const ExamMonthlyCalendar = () => {
                 </Box>
             </Paper>
 
-            {/* Popover تفاصيل + تعديل/حذف */}
+            {/* Popover: تفاصيل + تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -317,6 +365,7 @@ const ExamMonthlyCalendar = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -324,12 +373,20 @@ const ExamMonthlyCalendar = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => { setOpenEditModal(false); setEditSchedule(null); }}
+                schedule={editSchedule}
+                name="تعديل الامتحان"
+                onUpdated={() => { fetchSchedule(); }}  
+            />
         </Box>
     );
 };

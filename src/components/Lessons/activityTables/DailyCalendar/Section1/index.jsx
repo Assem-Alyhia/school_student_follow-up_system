@@ -11,12 +11,15 @@ import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClas
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { getEventsSchedule } from '../../../../../api/Admin/EventSchedule/getEventsSchedule';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
 const formatTime = (d) => {
+    if (!(d instanceof Date)) return '—';
     const h24 = d.getHours();
     const m = d.getMinutes().toString().padStart(2, '0');
     const h12 = (h24 % 12) || 12;
@@ -46,6 +49,11 @@ const DailyEventsCalendar = () => {
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
+    // تعديل
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
+
     const fetchClassroomsAndYears = async () => {
         try {
             const [classroomRes, yearRes] = await Promise.all([
@@ -71,7 +79,7 @@ const DailyEventsCalendar = () => {
 
         try {
             const res = await getEventsSchedule(selectedClassroom, selectedYearValue);
-            const data = Array.isArray(res.data) ? res.data : [];
+            const data = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
             const parsed = data.map((item, i) => ({
                 id: item.id,
                 title: item.title,
@@ -134,6 +142,7 @@ const DailyEventsCalendar = () => {
     const dayEvents = events.filter(
         e => e.start_time.toDateString() === currentDate.toDateString()
     );
+    const dayCount = dayEvents.length;
 
     const classroomName = useMemo(() => {
         const f = classrooms.find(c => c.id === selectedClassroom);
@@ -150,10 +159,19 @@ const DailyEventsCalendar = () => {
         }
     };
 
-    const handleEdit = (ev) => {
-        // افتح مودال التعديل لديك (AddLessonModal بوضع تعديل) ومرر ev
-        console.log('edit event', ev?.id);
-        closePopover();
+    const handleEdit = async (ev) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(ev.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (err) {
+            console.error('فشل في جلب بيانات الفعالية:', err?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     return (
@@ -249,8 +267,30 @@ const DailyEventsCalendar = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevDay}><ChevronRight /></IconButton>
-                        <Typography variant="h6" fontWeight="bold" color="#22385F">
+                        <Typography
+                            variant="h6"
+                            fontWeight="bold"
+                            color="#22385F"
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}
+                        >
                             {arabicDays[currentDate.getDay()]} - {currentDate.getDate()} {arabicMonths[currentDate.getMonth()]} {currentDate.getFullYear()}
+                            {/* بادج عدد فعاليات اليوم */}
+                            <Box
+                                component="span"
+                                sx={{
+                                    fontSize: 11,
+                                    px: .75,
+                                    py: .15,
+                                    borderRadius: 10,
+                                    lineHeight: 1.6,
+                                    color: dayCount ? '#ffffffff' : '#6B7280',
+                                    background: dayCount ? '#babfcaff' : '#E5E7EB',
+                                    boxShadow: dayCount ? '0 1px 4px rgba(34,56,95,.25)' : 'none',
+                                }}
+                                title={`عدد الفعاليات: ${dayCount}`}
+                            >
+                                - {dayCount} -
+                            </Box>
                         </Typography>
                         <IconButton onClick={handleNextDay}><ChevronLeft /></IconButton>
                     </Box>
@@ -259,16 +299,38 @@ const DailyEventsCalendar = () => {
 
                 {/* Week Header */}
                 <Grid container spacing={1} sx={{ mb: 2 }}>
-                    {weekDays.map((date, i) => (
-                        <Grid item xs key={i} sx={{ textAlign: 'center' }}>
-                            <Typography
-                                fontWeight={date.toDateString() === currentDate.toDateString() ? 'bold' : 'normal'}
-                                color={date.toDateString() === currentDate.toDateString() ? '#308A9F' : 'inherit'}
-                            >
-                                {arabicDays[date.getDay()]} {date.getDate()}
-                            </Typography>
-                        </Grid>
-                    ))}
+                    {weekDays.map((date, i) => {
+                        const count = events.filter(e => e.start_time.toDateString() === date.toDateString()).length;
+                        const isToday = date.toDateString() === currentDate.toDateString();
+                        return (
+                            <Grid item xs key={i} sx={{ textAlign: 'center' }}>
+                                <Typography
+                                    fontWeight={isToday ? 'bold' : 'normal'}
+                                    color={isToday ? '#308A9F' : 'inherit'}
+                                    sx={{ display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center' }}
+                                >
+                                    {arabicDays[date.getDay()]} {date.getDate()}
+
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontSize: 10,
+                                            px: .6,
+                                            py: .1,
+                                            borderRadius: 10,
+                                            lineHeight: 1.5,
+                                            color: count ? '#ffffffff' : '#6B7280',
+                                            background: count ? '#babfcaff' : '#E5E7EB',
+                                        }}
+                                        title={`عدد الفعاليات: ${count}`}
+                                    >
+                                        {count}
+                                    </Box>
+
+                                </Typography>
+                            </Grid>
+                        );
+                    })}
                 </Grid>
 
                 {/* Day Events */}
@@ -357,6 +419,7 @@ const DailyEventsCalendar = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -364,12 +427,27 @@ const DailyEventsCalendar = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            {/* مودال التعديل */}
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الفعالية"
+                onUpdated={() => {
+                    // بعد الحفظ نعيد جلب البيانات لتحديث اليوم
+                    fetchEvents();
+                }}
+            />
         </Box>
     );
 };

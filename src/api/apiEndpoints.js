@@ -160,6 +160,10 @@ const apiEndpoints = {
   //الامتحانات
   getTeacherExamsList: "/teacher/exams",
   getTeacherExamTypes: "/teacher/exam-types",
+  getTeacherExamResults: "/teacher/exam-results",
+
+  // الدرجات
+  getTeacherGrades: "/teacher/grades",
 };
 
 export default apiEndpoints;

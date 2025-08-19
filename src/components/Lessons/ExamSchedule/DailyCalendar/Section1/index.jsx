@@ -12,6 +12,10 @@ import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getA
 import { getExamSchedule } from '../../../../../api/Admin/ExamSchedule/ExamSchedule';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
 
+// إضافات التعديل
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
+
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
@@ -40,12 +44,17 @@ const DailyExamsCalendar = () => {
     const [academicYears, setAcademicYears] = useState([]);
     const [currentDate, setCurrentDate] = useState(today);
 
-    // Popover للتحكم بالامتحان
+    // Popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedExam, setSelectedExam] = useState(null);
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, exam) => { setAnchorEl(e.currentTarget); setSelectedExam(exam); };
     const closePopover = () => { setAnchorEl(null); setSelectedExam(null); };
+
+    // حالات الموديال (تعديل)
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
 
     const fetchClassroomsAndYears = async () => {
         try {
@@ -153,10 +162,20 @@ const DailyExamsCalendar = () => {
         }
     };
 
-    const handleEdit = (exam) => {
-        // اربطه بمودال التعديل لديك (AddLessonModal بوضع تعديل) وتمرير بيانات exam
-        console.log('edit exam', exam?.id);
-        closePopover();
+    // جلب بيانات الامتحان وفتح موديال التعديل
+    const handleEdit = async (exam) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(exam.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (e) {
+            console.error('فشل في جلب بيانات الامتحان:', e?.message);
+        } finally {
+            setEditLoading(false);
+            closePopover();
+        }
     };
 
     return (
@@ -271,6 +290,11 @@ const DailyExamsCalendar = () => {
                     ))}
                 </Grid>
 
+                {/* عداد امتحانات اليوم */}
+                <Typography sx={{ mb: 1, color: '#22385F', fontWeight: 700 }}>
+                    عدد امتحانات هذا اليوم: {dayExams.length}
+                </Typography>
+
                 {/* عرض الامتحانات */}
                 <Box sx={{ border: '1px solid #ddd', minHeight: '50vh', bgcolor: '#fff', p: 2, borderRadius: 1 }}>
                     {dayExams.length === 0 ? (
@@ -302,7 +326,6 @@ const DailyExamsCalendar = () => {
                                             <Typography fontSize="0.9rem">
                                                 {formatTime(exam.start_time)} - {formatTime(exam.end_time)}
                                             </Typography>
-                                            {/* أيقونة الضبط تفتح Popover */}
                                             <IconButton
                                                 size="small"
                                                 onClick={(e) => { e.stopPropagation(); openPopover(e, exam); }}
@@ -355,6 +378,7 @@ const DailyExamsCalendar = () => {
                                 onClick={() => handleEdit(selectedExam)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -362,12 +386,25 @@ const DailyExamsCalendar = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الامتحان"
+                onUpdated={() => {
+                    fetchExams();
+                }}
+            />
         </Box>
     );
 };
