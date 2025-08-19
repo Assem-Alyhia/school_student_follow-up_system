@@ -5,17 +5,17 @@ import {
     useMediaQuery, useTheme, Popover, Button
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
-
 import { getDailySchedule } from '../../../../../api/Admin/DailySchedule/getDailySchedule';
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
+import UpdateScheduleModal from '../../../UpdateScheduleModal';
+import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
-// صياغة الوقت 12 ساعة مع ص/م
 const formatTime = (iso) => {
     const d = new Date(iso);
     let h = d.getHours();
@@ -40,10 +40,13 @@ const DailySchedule = () => {
 
     const [events, setEvents] = useState([]);
 
-    // لحالة الـ Popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
+
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editSchedule, setEditSchedule] = useState(null);
 
     const handleOpenPopover = (ev, event) => {
         setAnchorEl(ev.currentTarget);
@@ -62,7 +65,6 @@ const DailySchedule = () => {
             ]);
             setClassrooms(classroomRes.data);
             setAcademicYears(yearRes);
-
             if (classroomRes.data.length) setSelectedClassroom(classroomRes.data[0].id);
             if (yearRes.length) {
                 setSelectedYearId(yearRes[0].id);
@@ -108,11 +110,19 @@ const DailySchedule = () => {
         }
     };
 
-    // افتراضي: افتح مودال التعديل الخاص بك هنا
-    const handleEdit = (event) => {
-        // TODO: اربط بمودال التعديل لديك (تمرير event.id لفتح AddLessonModal في وضع تعديل)
-        console.log('edit schedule', event?.id);
-        handleClosePopover();
+    const handleEdit = async (event) => {
+        try {
+            setEditLoading(true);
+            const res = await getScheduleById(event.id);
+            const sch = res?.data ?? res ?? null;
+            setEditSchedule(sch);
+            setOpenEditModal(true);
+        } catch (err) {
+            console.error('فشل في جلب بيانات الحدث:', err?.message);
+        } finally {
+            setEditLoading(false);
+            handleClosePopover();
+        }
     };
 
     useEffect(() => {
@@ -131,7 +141,6 @@ const DailySchedule = () => {
         const firstDay = getFirstDayOfMonth(selectedYearValue, selectedMonth);
         const weeks = [];
         let week = [];
-
         for (let i = 0; i < firstDay; i++) week.push(null);
         for (let day = 1; day <= daysInMonth; day++) {
             week.push(day);
@@ -264,7 +273,6 @@ const DailySchedule = () => {
                                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                                     {event.title}
                                                                 </Typography>
-                                                                {/* أيقونة الضبط بدل الحذف */}
                                                                 <IconButton size="small" onClick={(e) => handleOpenPopover(e, event)}>
                                                                     <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
                                                                 </IconButton>
@@ -282,7 +290,6 @@ const DailySchedule = () => {
                 </Box>
             </Paper>
 
-            {/* Popover تفاصيل الحدث + أزرار تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -325,6 +332,7 @@ const DailySchedule = () => {
                                 onClick={() => handleEdit(selectedEvent)}
                                 variant="contained"
                                 disableElevation
+                                disabled={editLoading}
                                 sx={{
                                     flex: 1,
                                     borderRadius: 2,
@@ -332,12 +340,25 @@ const DailySchedule = () => {
                                     '&:hover': { background: 'linear-gradient(90deg, #23C6CD 0%, #193868 100%)' },
                                 }}
                             >
-                                تعديل
+                                {editLoading ? 'جارٍ التحميل...' : 'تعديل'}
                             </Button>
                         </Box>
                     </Box>
                 )}
             </Popover>
+
+            <UpdateScheduleModal
+                open={openEditModal}
+                onClose={() => {
+                    setOpenEditModal(false);
+                    setEditSchedule(null);
+                }}
+                schedule={editSchedule}
+                name="تعديل الحدث"
+                onUpdated={() => {
+                    fetchSchedule();
+                }}
+            />
         </Box>
     );
 };

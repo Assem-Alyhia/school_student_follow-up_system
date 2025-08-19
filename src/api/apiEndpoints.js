@@ -7,6 +7,9 @@ const apiEndpoints = {
   resetPassword: "reset-password",
   changePassword: "change-password",
 
+  //داشبورد
+  getDashboard: "/admin/dashboard",
+
   // المستخدمون
   getAllUsers: "admin/users",
   getUserById: (id) => `admin/users/${id}`,
@@ -79,6 +82,10 @@ const apiEndpoints = {
   // الدرجات
   getAllGrades: "admin/grades",
   getStudentsGradesReports: "admin/students/grades-reports",
+  createGrade: "admin/grades",
+  updateGrade: "admin/grades",
+  deleteGrade: "admin/grades",
+  getGradeById: "admin/grades",
 
   // السنوات الدراسية
   getAllAcademicYearsNoPaginate: "admin/academic-years/get-all",

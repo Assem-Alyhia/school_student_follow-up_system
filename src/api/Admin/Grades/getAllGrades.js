@@ -1,3 +1,4 @@
+// src/api/Admin/Grades/getAllGrades.js
 import axiosInstance from "../../axiosInstance";
 import apiEndpoints from "../../apiEndpoints";
 

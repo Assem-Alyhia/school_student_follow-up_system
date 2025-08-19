@@ -1,20 +1,24 @@
 import React from 'react';
 import { Box, Grid, Button, IconButton, TextField, Paper, Select, MenuItem } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add'; 
-import PrintIcon from '@mui/icons-material/Print'; 
-import SortIcon from '@mui/icons-material/Sort'; 
-import FilterListIcon from '@mui/icons-material/FilterList'; 
-import SearchIcon from '@mui/icons-material/Search'; 
-import FileDownloadIcon from '@mui/icons-material/FileDownload'; 
-import TableChartIcon from '@mui/icons-material/TableChart'; 
-import EditIcon from '@mui/icons-material/Edit'; 
+import AddIcon from '@mui/icons-material/Add';
+import PrintIcon from '@mui/icons-material/Print';
+import SortIcon from '@mui/icons-material/Sort';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+
+import AddGradeModal from '../AddGradeModal';
 
 const Section1 = () => {
-    const [selectedClass, setSelectedClass] = React.useState(''); 
+    const [selectedClass, setSelectedClass] = React.useState('');
+    const [openAddModal, setOpenAddModal] = React.useState(false);
 
     const handleClassChange = (event) => {
         setSelectedClass(event.target.value);
     };
+
+    const handleOpenAdd = () => setOpenAddModal(true);
+    const handleCloseAdd = () => setOpenAddModal(false);
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -33,16 +37,16 @@ const Section1 = () => {
                             value={selectedClass}
                             onChange={handleClassChange}
                             displayEmpty
-                            sx={{ 
-                                marginRight: 2, 
-                                minWidth: 120, 
-                                color: '#35AFBC', 
+                            sx={{
+                                marginRight: 2,
+                                minWidth: 120,
+                                color: '#35AFBC',
                                 borderColor: '#35AFBC',
-                                height: '40px', 
-                                padding: '6px 12px', 
-                                fontSize: '14px', 
+                                height: '40px',
+                                padding: '6px 12px',
+                                fontSize: '14px',
                                 '& .MuiSelect-select': {
-                                    padding: '6px 12px', 
+                                    padding: '6px 12px',
                                 },
                             }}
                         >
@@ -67,29 +71,35 @@ const Section1 = () => {
                             InputProps={{
                                 startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
                             }}
-                            sx={{ 
+                            sx={{
                                 flexGrow: 1,
-                                height: '40px', 
+                                height: '40px',
                                 '& .MuiInputBase-root': {
-                                    height: '40px', 
+                                    height: '40px',
                                     fontSize: '14px',
-                                    padding: '6px 12px', 
+                                    padding: '6px 12px',
                                 },
                             }}
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <Grid
+                        item
+                        xs={12}
+                        md={6}
+                        sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
+                    >
                         <Button
                             variant="contained"
-                            startIcon={<FileDownloadIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            startIcon={<AddIcon />}
+                            onClick={handleOpenAdd}
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
+                                marginRight: 2,
                             }}
                         >
-                            تصدير بيانات
+                            اضافة درجة
                         </Button>
 
                         <IconButton sx={{ color: '#35AFBC' }}>
@@ -98,6 +108,12 @@ const Section1 = () => {
                     </Grid>
                 </Grid>
             </Paper>
+
+            <AddGradeModal
+                open={openAddModal}
+                onClose={handleCloseAdd}
+                title="إنشاء نتيجة"
+            />
         </Box>
     );
 };

@@ -1,7 +1,9 @@
+// src/features/Grades/Section3.jsx
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import PaginationSection from "../../../layout/PaginationSection";
-import Section2 from "../Section2"; // تأكد أن هذا الملف هو Grades وليس Students
+import Section2 from "../Section2";
 import { getAllGrades } from "../../../api/Admin/Grades/getAllGrades";
 
 const Section3 = () => {
@@ -17,18 +19,24 @@ const Section3 = () => {
     if (isLoading) return <div>جاري التحميل...</div>;
     if (isError) return <div>خطأ: {error.message}</div>;
 
+    const rows = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    const total = data?.meta?.total || 0;
+    const lastPage = data?.meta?.last_page || 1;
+
     return (
         <>
-            <Section2 grades={data?.data || []} /> 
+            <Section2 rows={rows} page={page} rowsPerPage={rowsPerPage} />
+
             <PaginationSection
                 page={page}
                 rowsPerPage={rowsPerPage}
-                total={data?.meta?.total || 0}
-                lastPage={data?.meta?.last_page || 1}
+                total={total}
+                lastPage={lastPage}
                 onPageChange={(newPage) => setPage(newPage)}
                 onRowsPerPageChange={(event) => {
-                    setRowsPerPage(event.target.value);
-                    setPage(1);
+                    const value = Number(event.target.value); 
+                    setRowsPerPage(value);
+                    setPage(1); 
                 }}
             />
         </>
