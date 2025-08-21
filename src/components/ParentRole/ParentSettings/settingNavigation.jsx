@@ -7,7 +7,7 @@ import NotificationSettings from './notifications';
 
 
 
-const TeacherSettingNavigation = () => {
+const ParentSettingNavigation = () => {
     const [activeTab, setActiveTab] = useState('اعدادات الحساب');
 
     const handleTabChange = (tabName) => {
@@ -96,4 +96,4 @@ const TeacherSettingNavigation = () => {
     );
 };
 
-export default TeacherSettingNavigation;
+export default ParentSettingNavigation;

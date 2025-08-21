@@ -101,6 +101,12 @@ function Login() {
                     sx={{ mb: 2 }}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="off"                
+                    inputProps={{
+                        autoCorrect: "off",
+                        autoCapitalize: "none",
+                        spellCheck: "false",
+                    }}
                 />
 
                 <TextField
@@ -112,6 +118,12 @@ function Login() {
                     sx={{ mb: 2 }}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"        
+                    inputProps={{
+                        autoCorrect: "off",
+                        autoCapitalize: "none",
+                        spellCheck: "false",
+                    }}
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">

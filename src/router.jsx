@@ -57,6 +57,9 @@ import TeacherResultsExam from "./pages/TeacherRole/Exams/ExamGrades";
 import TeacherGrades from "./pages/TeacherRole/Grades";
 import ParentDashboard from "./pages/ParentRole/dashboard";
 import ParentDrawer from './layout/parentDrawer/index';
+import ParentProfile from "./components/ParentRole/ProfilePage";
+import ParentSettingNavigation from "./components/ParentRole/ParentSettings/settingNavigation";
+import ParentStudents from "./pages/ParentRole/Student";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -113,9 +116,9 @@ const teacherDashboardRoutes = [
 
 const parentDashboardRoutes = [
   { path: "", element: <ParentDashboard /> },
-  // { path: "profile", element: <TeacherProfile /> },
-  // { path: "settings", element: <TeacherSettingNavigation /> },
-  // { path: "students", element: <TeacherStudents /> },
+  { path: "profile", element: <ParentProfile /> },
+  { path: "settings", element: <ParentSettingNavigation /> },
+  { path: "students", element: <ParentStudents /> },
   // { path: "students/tStudentDetails/:id", element: <TStudentDetails /> },
   // { path: "parents", element: <TeacherParents /> },
   // { path: "parents/tParentDetails/:id", element: <TParentDetails /> },
@@ -135,11 +138,7 @@ const parentDashboardRoutes = [
 
 
 export const router = createBrowserRouter([
-  // {
-  //   path: "/",
-  //   element: <Layout />,
-  //   errorElement: <p>Page not found</p>,
-  // },
+
   {
     path: "/",
     element: <PrivateRoute />,

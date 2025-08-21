@@ -1,14 +1,16 @@
-// src/components/TeacherRole/Grades/GradesTable.jsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
     TableRow, TableSortLabel, Typography, CircularProgress, IconButton, Tooltip
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
-import { useQuery } from "@tanstack/react-query";
 import EditCalendarRoundedIcon from "@mui/icons-material/EditCalendarRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import { getTeacherGrades } from './../../../../api/Teacher/Grades/getTeacherGrades';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteTeacherGrade } from "./../../../../api/Teacher/Grades/deleteTeacherGrade";
+import ConfirmDeleteModal from "../../../../layout/ConfirmDeleteModal";
+import SuccessAlert from "../../../../layout/SuccessAlert";
+import UpdateGradeModal from "../UpdateGradeModal";
 
 const noteColor = (note) => {
     if (!note) return "text.secondary";
@@ -21,20 +23,25 @@ const noteColor = (note) => {
     return "text.primary";
 };
 
-const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
+const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
     const [order, setOrder] = useState("asc");
-    const [orderBy, setOrderBy] = useState("code");
+    const [orderBy, setOrderBy] = useState("id");
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const queryClient = useQueryClient();
 
-    const { data, isLoading, isError, error } = useQuery({
-        queryKey: ["teacher-grades", page, rowsPerPage],
-        queryFn: () => getTeacherGrades(page, rowsPerPage),
-        keepPreviousData: true,
-        staleTime: 60_000,
+    const deleteMutation = useMutation({
+        mutationFn: (id) => deleteTeacherGrade(id),
+        onSuccess: () => {
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2500);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["teacher-grades"] });
+        },
     });
-
-    const rowsAll = useMemo(() => {
-        return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    }, [data]);
 
     const handleRequestSort = (prop) => {
         const isAsc = orderBy === prop && order === "asc";
@@ -42,54 +49,77 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
         setOrderBy(prop);
     };
 
+    const flatRows = useMemo(() => {
+        return rows.map((r) => ({
+            id: r?.id ?? "",
+            student_name: r?.student?.name ?? r?.student_name ?? "",
+            classroom_name: r?.classroom?.name ?? r?.classroom_name ?? "",
+            subject_name: r?.subject?.name ?? r?.subject_name ?? "",
+            term: r?.term ?? r?.subject?.term ?? "",
+            final_score: r?.final_score ?? r?.final_mark ?? "",
+            note: r?.note ?? "",
+            _raw: r,
+        }));
+    }, [rows]);
+
     const sortedRows = useMemo(() => {
-        const arr = [...rowsAll];
+        const arr = [...flatRows];
         arr.sort((a, b) => {
-            const av = (a[orderBy] ?? "").toString();
-            const bv = (b[orderBy] ?? "").toString();
-            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
-            return av < bv ? 1 : av > bv ? -1 : 0;
+            const av = a?.[orderBy];
+            const bv = b?.[orderBy];
+            if (!Number.isNaN(Number(av)) && !Number.isNaN(Number(bv))) {
+                const na = Number(av), nb = Number(bv);
+                return order === "asc" ? na - nb : nb - na;
+            }
+            const as = (av ?? "").toString();
+            const bs = (bv ?? "").toString();
+            if (order === "asc") return as > bs ? 1 : as < bs ? -1 : 0;
+            return as < bs ? 1 : as > bs ? -1 : 0;
         });
         return arr;
-    }, [rowsAll, order, orderBy]);
+    }, [flatRows, order, orderBy]);
 
-    const start = (page - 1) * rowsPerPage;
-    const viewRows = sortedRows.slice(start, start + rowsPerPage);
-
-    useEffect(() => {
-        if (data?.meta) onMeta?.(data.meta);
-        else {
-            onMeta?.({
-                total: sortedRows.length,
-                last_page: Math.max(1, Math.ceil(sortedRows.length / rowsPerPage)),
-            });
-        }
-    }, [data?.meta, sortedRows.length, rowsPerPage, onMeta]);
-
-    if (isLoading) return <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>;
-    if (isError) return <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>خطأ: {error?.message}</Box>;
-
-    // الترتيب من اليمين لليسار كما بالصورة
     const columns = [
-        { key: "actions", label: "الإجراءات", sortable: false },
-        { key: "note", label: "ملاحظة", sortable: true },
-        { key: "final_mark", label: "العلامة النهائية", sortable: true }, // اسم الحقل من API
-        { key: "subject_name", label: "المادة", sortable: true },
-        { key: "grade", label: "الصف", sortable: true },
-        { key: "stage", label: "المرحلة", sortable: true },
-        { key: "term", label: "الفصل", sortable: true },
+        { key: "id", label: "المعرف", sortable: true },
         { key: "student_name", label: "اسم الطالب", sortable: true },
-        { key: "code", label: "المعرف", sortable: true },
+        { key: "classroom_name", label: "اسم الشعبة", sortable: true },
+        { key: "subject_name", label: "اسم المادة", sortable: true },
+        { key: "term", label: "الفصل", sortable: true },
+        { key: "final_score", label: "الدرجة النهائية", sortable: true },
+        { key: "note", label: "ملاحظة", sortable: true },
+        { key: "actions", label: "الإجراءات", sortable: false },
     ];
+
+    const askDelete = (row) => {
+        setSelectedRow(row);
+        setOpenDeleteModal(true);
+    };
+
+    const confirmDelete = () => {
+        if (selectedRow?.id) deleteMutation.mutate(selectedRow.id);
+        setOpenDeleteModal(false);
+    };
+
+    const openEdit = (row) => {
+        setSelectedRow(row);
+        setEditOpen(true);
+    };
+
+    const closeEdit = () => {
+        setEditOpen(false);
+        setSelectedRow(null);
+    };
+
+    const afterUpdated = () => {
+        queryClient.invalidateQueries({ queryKey: ["teacher-grades"] });
+        closeEdit();
+    };
 
     return (
         <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <Table
-                        aria-label="الدرجات"
-                        sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}
-                    >
+                    <Table aria-label="الدرجات" sx={{ minWidth: 900, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
                         <TableHead>
                             <TableRow sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)" }}>
                                 {columns.map((col) => (
@@ -101,7 +131,6 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                                                 onClick={() => handleRequestSort(col.key)}
                                                 sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
                                             >
-
                                                 {col.label}
                                                 {orderBy === col.key && (
                                                     <Box component="span" sx={visuallyHidden}>
@@ -118,45 +147,48 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                         </TableHead>
 
                         <TableBody>
-                            {viewRows.length === 0 ? (
+                            {loading ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} align="center">
-                                        <Typography color="text.secondary">لا توجد درجات حالياً.</Typography>
+                                        <Box sx={{ py: 4 }}>
+                                            <CircularProgress />
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
+                            ) : sortedRows.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} align="center">
+                                        <Typography color="text.secondary">
+                                            {errorMessage ? `لا توجد درجات (${errorMessage})` : "لا توجد درجات حالياً."}
+                                        </Typography>
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                viewRows.map((row, idx) => (
-                                    <TableRow key={`${row.id}-${idx}`} hover>
-                                        {/* الإجراءات */}
-                                        <TableCell>
-                                            <Tooltip title="تعديل">
-                                                <IconButton size="small" onClick={() => onEdit?.(row)}>
-                                                    <EditCalendarRoundedIcon fontSize="inherit" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="حذف">
-                                                <IconButton size="small" color="error" onClick={() => onDelete?.(row)}>
-                                                    <DeleteRoundedIcon fontSize="inherit" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </TableCell>
-
+                                sortedRows.map((row, idx) => (
+                                    <TableRow key={`${row.id ?? idx}`} hover>
+                                        <TableCell>{row.id}</TableCell>
+                                        <TableCell>{row.student_name}</TableCell>
+                                        <TableCell>{row.classroom_name}</TableCell>
+                                        <TableCell>{row.subject_name}</TableCell>
+                                        <TableCell>{row.term}</TableCell>
+                                        <TableCell>{row.final_score}</TableCell>
                                         <TableCell>
                                             <Typography sx={{ fontWeight: 600, color: noteColor(row.note) }}>
                                                 {row.note}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{row.final_mark}</TableCell>
                                         <TableCell>
-                                            <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
-                                                {row.subject_name}
-                                            </Typography>
+                                            <Tooltip title="تعديل">
+                                                <IconButton size="small" onClick={() => openEdit(row)}>
+                                                    <EditCalendarRoundedIcon fontSize="inherit" />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="حذف">
+                                                <IconButton size="small" color="error" onClick={() => askDelete(row)}>
+                                                    <DeleteRoundedIcon fontSize="inherit" />
+                                                </IconButton>
+                                            </Tooltip>
                                         </TableCell>
-                                        <TableCell>{row.grade}</TableCell>
-                                        <TableCell>{row.stage}</TableCell>
-                                        <TableCell>{row.term}</TableCell>
-                                        <TableCell>{row.student_name}</TableCell>
-                                        <TableCell>{row.code}</TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -164,6 +196,32 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            <UpdateGradeModal
+                open={editOpen}
+                onClose={closeEdit}
+                grade={{ ...selectedRow?._raw, ...selectedRow }}
+                onUpdated={afterUpdated}
+                title="تعديل درجة"
+            />
+
+            <ConfirmDeleteModal
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="هل أنت متأكد من حذف الدرجة؟"
+                message="سيتم حذف بيانات الدرجة من النظام."
+                isLoading={deleteMutation.isLoading}
+            />
+
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف الدرجة بنجاح!"
+                    message="تمت إزالة بيانات الدرجة من النظام."
+                    severity="error"
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </Box>
     );
 };

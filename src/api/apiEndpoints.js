@@ -8,7 +8,7 @@ const apiEndpoints = {
   changePassword: "change-password",
 
   //داشبورد
-  getDashboard: "/admin/dashboard",
+  getAdminDashboard: "/admin/dashboard",
 
   // المستخدمون
   getAllUsers: "admin/users",
@@ -25,6 +25,8 @@ const apiEndpoints = {
   getStudentPaymentById: (id) => `admin/payments/${id}`,
   getScheduleById: (id) => `admin/schedules/${id}`,
   getAllStudentsNoPaginate: "/admin/students/get-all",
+  topStudentsByLevel: (levelId) =>
+    `admin/students/top-students?level_id=${levelId}`,
   // أولياء الأمور
   getAllParents: "admin/parents",
   getParentById: (id) => `admin/parents/${id}`,
@@ -138,6 +140,8 @@ const apiEndpoints = {
   // الطلاب
   getTeacherStudents: "teacher/students",
   getTeacherStudentById: (id) => `teacher/students/${id}`,
+  getStudentsInClassroom: (classroomId) =>
+    `/teacher/students/get-in-classroom/${classroomId}`,
 
   // اولياء الامور
   getTeacherParents: "teacher/parents",
@@ -159,11 +163,38 @@ const apiEndpoints = {
 
   //الامتحانات
   getTeacherExamsList: "/teacher/exams",
-  getTeacherExamTypes: "/teacher/exam-types",
+  createTeacherExam: "/teacher/exams",
+  getTeacherExamById: (id) => `/teacher/exams/${id}`,
+  updateTeacherExam: (id) => `/teacher/exams/${id}`,
+  deleteTeacherExam: (id) => `/teacher/exams/${id}`,
+
   getTeacherExamResults: "/teacher/exam-results",
+  createTeacherExamResults: "/teacher/exam-results",
+  getTeacherExamResultById: (id) => `/teacher/exam-results/${id}`,
+  updateTeacherExamResult: (id) => `/teacher/exam-results/${id}`,
+  deleteTeacherExamResult: (id) => `/teacher/exam-results/${id}`,
+
+  getTeacherExamTypes: "/teacher/exam-types",
 
   // الدرجات
   getTeacherGrades: "/teacher/grades",
+  getTeacherGradeById: (gradeId) => `teacher/grades/${gradeId}`,
+  createTeacherGrades: `teacher/grades`,
+  deleteTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
+  updateTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
+
+  // ******************************************************************************
+  // ******************************{parent}*****************************************
+  // *****************************************************************************
+
+  // الصفحة الشخصية
+  getParentProfile: "parent/profile",
+
+  // التقارير
+  getParentSchedules: "parent/schedules",
+
+  // المدفوعات
+  getParentPayments: "parent/payments",
 };
 
 export default apiEndpoints;

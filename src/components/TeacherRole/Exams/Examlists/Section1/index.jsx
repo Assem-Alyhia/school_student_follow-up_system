@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, Grid, Button, IconButton, TextField, Paper } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
@@ -6,7 +7,11 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
+// عدّل المسار حسب مكان الملف لديك
+import AddExamModal from '../AddExamModal';
+
 const Section1 = () => {
+    const [openAdd, setOpenAdd] = useState(false);
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -49,14 +54,15 @@ const Section1 = () => {
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"
-                            startIcon={<FileDownloadIcon />}
+                            startIcon={<AddIcon />}
+                            onClick={() => setOpenAdd(true)}
                             sx={{
                                 backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
+                                marginRight: 2,
                             }}
                         >
-                            تصدير بيانات
+                            اضافة قائمة
                         </Button>
 
                         <IconButton sx={{ color: '#35AFBC' }}>
@@ -65,6 +71,13 @@ const Section1 = () => {
                     </Grid>
                 </Grid>
             </Paper>
+
+            <AddExamModal
+                open={openAdd}
+                onClose={() => setOpenAdd(false)}
+                onCreated={() => setOpenAdd(false)}
+                title="إضافة امتحان"
+            />
         </Box>
     );
 };

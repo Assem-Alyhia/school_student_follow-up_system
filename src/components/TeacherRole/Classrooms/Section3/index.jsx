@@ -6,7 +6,6 @@ import Section2 from "../Section2";
 export default function Section3() {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-
     const metaRef = useRef({ total: 0, last_page: 1 });
 
     return (

@@ -180,7 +180,7 @@ const Section2 = () => {
                                         variant="outlined"
                                         startIcon={<InfoIcon />}
                                         fullWidth
-                                        onClick={() => handleOpenDetails(stage)} // ✅ يفتح موديال التفاصيل
+                                        onClick={() => handleOpenDetails(stage)} 
                                         sx={{
                                             borderColor: '#308A9F',
                                             color: '#308A9F',

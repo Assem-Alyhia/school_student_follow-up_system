@@ -1,29 +1,86 @@
 // src/components/TeacherRole/ExamResults/ResultsTable.jsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
     TableRow, TableSortLabel, Typography, CircularProgress, IconButton, Tooltip
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
-import { useQuery } from "@tanstack/react-query";
 import EditCalendarRoundedIcon from "@mui/icons-material/EditCalendarRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import { getTeacherExamResults } from "../../../../../api/Teacher/Exam/getTeacherExamResults";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
+import ConfirmDeleteModal from "../../../../../layout/ConfirmDeleteModal";
+import SuccessAlert from "../../../../../layout/SuccessAlert";
+import UpdateExamResultModal from "../UpdateExamResultModal";
+
+import { deleteTeacherExamResult } from "../../../../../api/Teacher/Exam/ExamResults/deleteTeacherExamResult";
+
+const onlyTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
     const [order, setOrder] = useState("asc");
-    const [orderBy, setOrderBy] = useState("code");
+    const [orderBy, setOrderBy] = useState("student_name");
 
-    const { data, isLoading, isError, error } = useQuery({
-        queryKey: ["teacher-exam-results", page, rowsPerPage],
-        queryFn: () => getTeacherExamResults(page, rowsPerPage),
-        keepPreviousData: true,
-        staleTime: 60_000,
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+
+    const queryClient = useQueryClient();
+
+    const deleteMutation = useMutation({
+        mutationFn: (id) => deleteTeacherExamResult(id),
+        onSuccess: () => {
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2500);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["teacher-exam-results"] });
+        },
     });
 
-    const rowsAll = useMemo(() => {
-        return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    }, [data]);
+    const preparedRows = useMemo(() => {
+        const mapped = rows.map((item) => {
+            const startISO = item?.exam?.start_time ?? "";
+            const endISO = item?.exam?.end_time ?? "";
+            return {
+                id: item?.id ?? "",
+                score: item?.score ?? "",
+                term: item?.exam?.term ?? "",
+                start_time_raw: startISO,
+                end_time_raw: endISO,
+                start_time: onlyTime(startISO),
+                end_time: onlyTime(endISO),
+                max_score: item?.exam?.max_score ?? "",
+                weight: item?.exam?.weight ?? "",
+                student_prefix: item?.student?.prefix ?? "",
+                student_id: item?.student?.id ?? "",
+                student_name: item?.student?.name ?? "",
+                // نمرّر بيانات أصلية للموديال ليستعملها كـ fallback
+                _raw: item,
+                exam_id: item?.exam_id ?? item?.exam?.id ?? "",
+                exam: item?.exam ?? null,
+                classroom: item?.classroom ?? item?.exam?.classroom ?? null,
+                student: item?.student ?? null,
+            };
+        });
+
+        return mapped.sort((a, b) => {
+            const key =
+                orderBy === "start_time" ? "start_time_raw" :
+                    orderBy === "end_time" ? "end_time_raw" :
+                        orderBy;
+            const av = (a?.[key] ?? "").toString();
+            const bv = (b?.[key] ?? "").toString();
+            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
+            return av < bv ? 1 : av > bv ? -1 : 0;
+        });
+    }, [rows, order, orderBy]);
 
     const handleRequestSort = (prop) => {
         const isAsc = orderBy === prop && order === "asc";
@@ -31,48 +88,40 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
         setOrderBy(prop);
     };
 
-    const sortedRows = useMemo(() => {
-        const arr = [...rowsAll];
-        arr.sort((a, b) => {
-            const av = (a[orderBy] ?? "").toString();
-            const bv = (b[orderBy] ?? "").toString();
-            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
-            return av < bv ? 1 : av > bv ? -1 : 0;
-        });
-        return arr;
-    }, [rowsAll, order, orderBy]);
+    const askDelete = (row) => {
+        setSelectedRow(row);
+        setOpenDeleteModal(true);
+    };
 
-    const start = (page - 1) * rowsPerPage;
-    const viewRows = sortedRows.slice(start, start + rowsPerPage);
+    const confirmDelete = () => {
+        if (selectedRow?.id) deleteMutation.mutate(selectedRow.id);
+        setOpenDeleteModal(false);
+    };
 
-    useEffect(() => {
-        if (data?.meta) onMeta?.(data.meta);
-        else {
-            onMeta?.({
-                total: sortedRows.length,
-                last_page: Math.max(1, Math.ceil(sortedRows.length / rowsPerPage)),
-            });
-        }
-    }, [data?.meta, sortedRows.length, rowsPerPage, onMeta]);
+    const openEdit = (row) => {
+        setSelectedRow(row);
+        setEditOpen(true);
+    };
 
-    if (isLoading) return <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>;
-    if (isError) return <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>خطأ: {error?.message}</Box>;
+    const closeEdit = () => {
+        setEditOpen(false);
+        setSelectedRow(null);
+    };
+
+    const afterUpdated = () => {
+        queryClient.invalidateQueries({ queryKey: ["teacher-exam-results"] });
+        closeEdit();
+    };
 
     const columns = [
-        { key: "code", label: "المعرف", sortable: true },
-        { key: "student_name", label: "باسم الطالب", sortable: true },
+        { key: "student_prefix", label: "رقم الطالب", sortable: true },
+        { key: "student_name", label: "اسم الطالب", sortable: true },
         { key: "term", label: "الفصل", sortable: true },
-        { key: "grade", label: "الصف", sortable: true },
-        { key: "stage", label: "المرحلة", sortable: true },
-        { key: "exam_name", label: "اسم الامتحان", sortable: true },
-        { key: "subject_name", label: "المادة", sortable: true },
-        { key: "exam_type_name", label: "نوع الامتحان", sortable: true },
-        { key: "date", label: "التاريخ", sortable: true },
         { key: "start_time", label: "وقت البداية", sortable: true },
         { key: "end_time", label: "وقت النهاية", sortable: true },
-        { key: "score", label: "الدرجة", sortable: true },
         { key: "max_score", label: "العلامة الكاملة", sortable: true },
         { key: "weight", label: "الوزن", sortable: true },
+        { key: "score", label: "الدرجة", sortable: true },
         { key: "actions", label: "الإجراءات", sortable: false },
     ];
 
@@ -80,10 +129,7 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
         <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <Table
-                        aria-label="نتائج الامتحانات"
-                        sx={{ minWidth: 1200, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}
-                    >
+                    <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
                         <TableHead>
                             <TableRow sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)" }}>
                                 {columns.map((col) => (
@@ -111,37 +157,43 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                         </TableHead>
 
                         <TableBody>
-                            {viewRows.length === 0 ? (
+                            {loading ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} align="center">
-                                        <Typography color="text.secondary">لا توجد نتائج حالياً.</Typography>
+                                        <Box sx={{ py: 4 }}><CircularProgress /></Box>
+                                    </TableCell>
+                                </TableRow>
+                            ) : preparedRows.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} align="center">
+                                        <Typography color="text.secondary">
+                                            {errorMessage ? `لا يوجد بيانات (${errorMessage})` : "لا يوجد بيانات"}
+                                        </Typography>
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                viewRows.map((row, idx) => (
+                                preparedRows.map((row, idx) => (
                                     <TableRow key={`${row.id}-${idx}`} hover>
-                                        <TableCell>{row.code}</TableCell>
-                                        <TableCell><Typography sx={{ fontWeight: 600, color: "#22385F" }}>{row.student_name}</Typography></TableCell>
+                                        <TableCell>{row.student_prefix}</TableCell>
+                                        <TableCell>
+                                            <Typography sx={{ fontWeight: 600, color: "#22385F", textAlign: "center" }}>
+                                                {row.student_name}
+                                            </Typography>
+                                        </TableCell>
                                         <TableCell>{row.term}</TableCell>
-                                        <TableCell>{row.grade}</TableCell>
-                                        <TableCell>{row.stage}</TableCell>
-                                        <TableCell>{row.exam_name}</TableCell>
-                                        <TableCell>{row.subject_name}</TableCell>
-                                        <TableCell>{row.exam_type_name}</TableCell>
-                                        <TableCell>{row.date}</TableCell>
                                         <TableCell>{row.start_time}</TableCell>
                                         <TableCell>{row.end_time}</TableCell>
-                                        <TableCell>{row.score}</TableCell>
                                         <TableCell>{row.max_score}</TableCell>
                                         <TableCell>{row.weight}%</TableCell>
+                                        <TableCell>{row.score}</TableCell>
                                         <TableCell>
                                             <Tooltip title="تعديل">
-                                                <IconButton size="small" onClick={() => onEdit?.(row)}>
+                                                <IconButton size="small" onClick={() => openEdit(row)}>
                                                     <EditCalendarRoundedIcon fontSize="inherit" />
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="حذف">
-                                                <IconButton size="small" color="error" onClick={() => onDelete?.(row)}>
+                                                <IconButton size="small" color="error" onClick={() => askDelete(row)}>
                                                     <DeleteRoundedIcon fontSize="inherit" />
                                                 </IconButton>
                                             </Tooltip>
@@ -153,6 +205,32 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta, onEdit, onDelete }) => {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            <UpdateExamResultModal
+                open={editOpen}
+                onClose={closeEdit}
+                onUpdated={afterUpdated}
+                examResult={selectedRow}   // يحتوي الآن exam/student/classroom أو _raw كفاية
+                title="تعديل درجة امتحان"
+            />
+
+            <ConfirmDeleteModal
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="هل أنت متأكد من حذف الدرجة؟"
+                message="سيتم حذف بيانات الدرجة من النظام."
+                isLoading={deleteMutation.isLoading}
+            />
+
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف الدرجة بنجاح!"
+                    message="تمت إزالة بيانات الدرجة من النظام."
+                    severity="error"
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </Box>
     );
 };

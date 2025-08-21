@@ -132,20 +132,19 @@ const teacherMenu = [
     { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/parentDashboard/subjects' },
     { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/parentDashboard/classrooms' },
     { text: 'الجداول', icon: <ScheduleIcon />, url: '/parentDashboard/calendarSchedule' },
+    {
+        text: 'الامتحانات',
+        icon: <AssignmentIcon />,
+        url: '/parentDashboard/exams',
+        children: [
+            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/parentDashboard/exam/classesLists' },
+            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/parentDashboard/exam/examlists' },
+            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/parentDashboard/exam/typesExams' },
+            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/parentDashboard/exam/resultsExams' },
+        ]
+    },
 
-    // {
-    //     text: 'الامتحانات',
-    //     icon: <AssignmentIcon />,
-    //     url: '/parentDashboard/exams',
-    //     children: [
-    //         { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/parentDashboard/exam/classesLists' },
-    //         { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/parentDashboard/exam/examlists' },
-    //         { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/parentDashboard/exam/typesExams' },
-    //         { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/parentDashboard/exam/resultsExams' },
-    //     ]
-    // },
-
-    // { text: 'الدرجات', icon: <GradeIcon />, url: '/parentDashboard/grades' },
+    { text: 'الدرجات', icon: <GradeIcon />, url: '/parentDashboard/grades' },
 ];
 
 

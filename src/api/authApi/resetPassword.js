@@ -5,7 +5,7 @@ import { resetPassword } from "../../api/authApi/passwordApi";
 function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
-  const email = searchParams.get("email"); // إذا مررت الإيميل كرابط أيضاً
+  const email = searchParams.get("email"); 
 
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
