@@ -60,6 +60,14 @@ import ParentDrawer from './layout/parentDrawer/index';
 import ParentProfile from "./components/ParentRole/ProfilePage";
 import ParentSettingNavigation from "./components/ParentRole/ParentSettings/settingNavigation";
 import ParentStudents from "./pages/ParentRole/Student";
+import ParentExamLists from "./pages/ParentRole/Exams/Examlists";
+import AdminClassesLists from "./pages/Exams/Classes";
+import AdminExamLists from './pages/Exams/Examlists';
+import AdminTypesExams from "./pages/Exams/TypesExams";
+import AdminResultsExam from "./pages/Exams/ExamGrades";
+import ParentTeacher from "./components/ParentRole/Teachers/Section1";
+import ParentPayments from "./pages/ParentRole/Payments";
+import PGradesList from "./pages/ParentRole/Grades";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -85,12 +93,17 @@ const dashboardRoutes = [
   { path: "fees", element: <Fees /> },
   { path: "reports", element: <Reports /> },
   { path: "classes", element: <Classes /> },
+  { path: "exam/classesLists", element: <AdminClassesLists /> },
+  { path: "exam/examlists", element: <AdminExamLists /> },
+  { path: "exam/typesExams", element: <AdminTypesExams /> },
+  { path: "exam/resultsExams", element: <AdminResultsExam /> },
   { path: "studentsAttending", element: <StudentsAttending /> },
   { path: "schoolTransportation", element: <SchoolTransportation /> },
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },
   { path: "student/studentFormAdd", element: <StudentForm /> },
   { path: "student/studentManagement/:id", element: <StudentManagement /> },
   { path: "student/updateStudent/:id", element: <StudentEditForm /> },
+
 ];
 
 
@@ -110,7 +123,7 @@ const teacherDashboardRoutes = [
   { path: "exam/examlists", element: <TeacherExamLists /> },
   { path: "exam/typesExams", element: <TeacherTypesExams /> },
   { path: "exam/resultsExams", element: <TeacherResultsExam /> },
-  { path: "grades", element: <TeacherGrades/> },
+  { path: "grades", element: <TeacherGrades /> },
 ];
 
 
@@ -119,6 +132,10 @@ const parentDashboardRoutes = [
   { path: "profile", element: <ParentProfile /> },
   { path: "settings", element: <ParentSettingNavigation /> },
   { path: "students", element: <ParentStudents /> },
+  { path: "teachers", element: <ParentTeacher /> },
+  { path: "exam/examlists", element: <ParentExamLists /> },
+  { path: "grades", element: <PGradesList /> },
+  { path: "payments", element: <ParentPayments /> },
   // { path: "students/tStudentDetails/:id", element: <TStudentDetails /> },
   // { path: "parents", element: <TeacherParents /> },
   // { path: "parents/tParentDetails/:id", element: <TParentDetails /> },
@@ -126,8 +143,6 @@ const parentDashboardRoutes = [
   // { path: "subjects", element: <TeacherSubjects /> },
   // { path: "classrooms", element: <TeacherClassrooms /> },
   // { path: "calendarSchedule", element: <NavigationCalendarSchedule /> },
-  // { path: "exam/classesLists", element: <TeacherClassesLists /> },
-  // { path: "exam/examlists", element: <TeacherExamLists /> },
   // { path: "exam/typesExams", element: <TeacherTypesExams /> },
   // { path: "exam/resultsExams", element: <TeacherResultsExam /> },
   // { path: "grades", element: <TeacherGrades/> },

@@ -49,6 +49,9 @@ import { Collapse } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import { clearToken } from '../../api/authApi/tokenManager';
 import { getUserById } from '../../api/Admin/Users/getUserById';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CategoryIcon from '@mui/icons-material/Category';
+import GradeIcon from '@mui/icons-material/Grade';
 
 
 const drawerWidth = 240;
@@ -161,6 +164,18 @@ const menuItems = [
             { text: 'الأدوار', icon: <AdminPanelSettingsIcon />, url: '/dashboard/users/roles' },
             { text: 'الصلاحيات', icon: <SecurityIcon />, url: '/dashboard/users/permissions' },
             { text: 'القوائم', icon: <ListAltIcon />, url: '/dashboard/users' },
+        ]
+    },
+
+    {
+        text: 'الامتحانات',
+        icon: <AssignmentIcon />,
+        url: '/teacherDashboard/exams',
+        children: [
+            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/dashboard/exam/classesLists' },
+            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/dashboard/exam/examlists' },
+            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/dashboard/exam/typesExams' },
+            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/dashboard/exam/resultsExams' },
         ]
     },
 

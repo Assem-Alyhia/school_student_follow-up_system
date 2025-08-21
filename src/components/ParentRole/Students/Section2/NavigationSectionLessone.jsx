@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { Box, Button, Paper } from '@mui/material';
 import NavigationStudentDetails from './NavigationStudentDetails';
 import NavigationDailySchedule from './NavigationDailySchedule';
+import NavigationMonthlySchedule from './NavigationMonthlySchedule';
+import NavigationWeeklySchedule from './NavigationWeeklySchedule';
 
-// import NavigationStudentDetails from './StudentDetails/NavigationStudentDetails';
-// import NavigationDailySchedule from './DailySchedule/NavigationDailySchedule';
-// import NavigationFees from './Fees/NavigationFees';
-// import NavigationExamResults from './ExamResults/NavigationExamResults';
 
 const NavigationSectionStudent = () => {
     const [activeButton, setActiveButton] = useState('تفاصيل الطالب');
@@ -34,16 +32,42 @@ const NavigationSectionStudent = () => {
 
                     <Button
                         variant="contained"
-                        onClick={() => handleButtonClick('الجدول اليومي')}
+                        onClick={() => handleButtonClick('التقويم الشهري')}
                         sx={{
-                            bgcolor: isActive('الجدول اليومي') ? '#22385F' : '#35AFBC',
+                            bgcolor: isActive('التقويم الشهري') ? '#22385F' : '#35AFBC',
                             '&:hover': { bgcolor: '#30BA9F' },
                             fontSize: '14px',
                             px: 2, py: 0.75,
                             flexGrow: 1,
                         }}
                     >
-                        الجدول اليومي
+                        التقويم الشهري
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleButtonClick('التقويم الاسبوعي')}
+                        sx={{
+                            bgcolor: isActive('الجدول الاسبوعي') ? '#22385F' : '#35AFBC',
+                            '&:hover': { bgcolor: '#30BA9F' },
+                            fontSize: '14px',
+                            px: 2, py: 0.75,
+                            flexGrow: 1,
+                        }}
+                    >
+                        التقويم الاسبوعي
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleButtonClick('التقويم اليومي')}
+                        sx={{
+                            bgcolor: isActive('التقويم اليومي') ? '#22385F' : '#35AFBC',
+                            '&:hover': { bgcolor: '#30BA9F' },
+                            fontSize: '14px',
+                            px: 2, py: 0.75,
+                            flexGrow: 1,
+                        }}
+                    >
+                        التقويم اليومي
                     </Button>
 
                     <Button
@@ -60,36 +84,27 @@ const NavigationSectionStudent = () => {
                         الرسوم
                     </Button>
 
-                    <Button
-                        variant="contained"
-                        onClick={() => handleButtonClick('نتائج الامتحانات')}
-                        sx={{
-                            bgcolor: isActive('نتائج الامتحانات') ? '#22385F' : '#35AFBC',
-                            '&:hover': { bgcolor: '#30BA9F' },
-                            fontSize: '14px',
-                            px: 2, py: 0.75,
-                            flexGrow: 1,
-                        }}
-                    >
-                        نتائج الامتحانات
-                    </Button>
                 </Box>
 
                 <Box sx={{ mt: 3 }}>
                     {activeButton === 'تفاصيل الطالب' &&
                         <NavigationStudentDetails />
                     }
-                    {activeButton === 'الجدول اليومي' &&
+                    {activeButton === 'التقويم الشهري' &&
+                        <NavigationMonthlySchedule />
+                    }
+                    {activeButton === 'التقويم الاسبوعي' &&
+                        <NavigationWeeklySchedule />
+                    }
+                    {activeButton === 'التقويم اليومي' &&
                         <NavigationDailySchedule />
                     }
 
                     {/* {activeButton === 'الرسوم' &&
                         <NavigationFees />
 
-                    }
-                    {activeButton === 'نتائج الامتحانات' &&
-                        <NavigationExamResults />
                     } */}
+
                 </Box>
             </Paper>
         </Box>

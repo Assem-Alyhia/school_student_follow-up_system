@@ -12,6 +12,7 @@ export default defineConfig({
       "@mui/material",
       "@mui/icons-material",
       "date-fns",
+      "react/jsx-dev-runtime"
     ],
   },
   resolve: {

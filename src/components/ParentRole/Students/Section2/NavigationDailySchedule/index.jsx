@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
+// src/components/TeacherRole/Schedules/DailyCalendar/NavigationDailySchedule.jsx
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Box, Typography, Paper, Grid,
-    IconButton, Select, MenuItem, FormControl,
-    useMediaQuery, useTheme, Popover
+    Box, Typography, Paper, Grid, IconButton,
+    useMediaQuery, useTheme, Select, MenuItem, FormControl, Popover, Chip
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Today, ChevronLeft, ChevronRight, SettingsRounded } from '@mui/icons-material';
 import { getParentSchedules } from '../../../../../api/Parent/Schedule/getParentSchedules';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-/* ألوان بحسب النوع */
 const TYPE_COLORS = {
     daily: '#90CAF9',  // درس يومي
     event: '#A5D6A7',  // فعالية
@@ -33,215 +31,223 @@ const formatTime = (iso) => {
     return `${h}:${m} ${am ? 'ص' : 'م'}`;
 };
 
-const NavigationDailySchedule = ({ parentId }) => {
+const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+
+const startOfWeekSunday = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();        // 0..6
+    const diff = d.getDate() - day + 0; // الأحد = 0
+    return new Date(d.setDate(diff));
+};
+
+export default function NavigationDailySchedule({ parentId }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const navigate = useNavigate();
 
     const today = new Date();
+    const [currentDate, setCurrentDate] = useState(today);
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-    const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
-    const [events, setEvents] = useState([]);
 
-    // لحوار التفاصيل
+    const [rawEvents, setRawEvents] = useState([]);
+
+    // Popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
-    const handleOpenPopover = (ev, event) => { setAnchorEl(ev.currentTarget); setSelectedEvent(event); };
-    const handleClosePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
+    const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
+    const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    const fetchParentSchedules = async () => {
-        try {
-            const res = await getParentSchedules({ parent_id: parentId });
-            const list = res?.data || res || [];
-
-            const parsed = list.map((item) => {
-                const startISO = item.start_time || item.start || item.date_start || item.date;
-                const endISO = item.end_time || item.end || item.date_end || null;
-                const d = new Date(startISO);
-                const type = String(item.type || item.kind || item.category || 'daily').toLowerCase();
-                const color = TYPE_COLORS[type] || TYPE_COLORS.default;
-
-                return {
-                    id: item.id,
-                    title: item.title || item.name || 'حدث',
-                    start: startISO,
-                    end: endISO,
-                    dayIndex: d.getDay(),
-                    date: d.getDate(),
-                    month: d.getMonth(),
-                    year: d.getFullYear(),
-                    type,
-                    color,
-                };
-            });
-
-            setEvents(parsed);
-        } catch (err) {
-            console.error('فشل في جلب تقويم وليّ الأمر:', err?.message);
-            setEvents([]);
-        }
-    };
-
+    // جلب أحداث وليّ الأمر
     useEffect(() => {
-        fetchParentSchedules();
+        (async () => {
+            try {
+                const res = await getParentSchedules({ parent_id: parentId });
+                const arr =
+                    Array.isArray(res) ? res
+                        : Array.isArray(res?.data) ? res.data
+                            : res?.data ? [res.data]
+                                : res ? [res]
+                                    : [];
+                setRawEvents(arr);
+            } catch (e) {
+                console.error('فشل في جلب الأحداث:', e?.message || e);
+                setRawEvents([]);
+            }
+        })();
     }, [parentId]);
 
-    const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
-    const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+    // توحيد البيانات + الألوان
+    const events = useMemo(() => {
+        return (rawEvents || []).map((item) => {
+            const startISO = item.start_time ?? item.start ?? item.date_start ?? item.date;
+            const endISO = item.end_time ?? item.end ?? item.date_end ?? item.date;
 
-    const generateCalendarWeeks = () => {
-        const daysInMonth = getDaysInMonth(selectedYearValue, selectedMonth);
-        const firstDay = getFirstDayOfMonth(selectedYearValue, selectedMonth);
-        const weeks = [];
-        let week = [];
+            const start = new Date(startISO);
+            const type = String(item.type || item.kind || item.category || 'daily').toLowerCase();
+            const color = TYPE_COLORS[type] || TYPE_COLORS.default;
 
-        for (let i = 0; i < firstDay; i++) week.push(null);
-        for (let day = 1; day <= daysInMonth; day++) {
-            week.push(day);
-            if (week.length === 7) { weeks.push(week); week = []; }
+            return {
+                id: item.id,
+                title: item.title || item.name || 'حدث',
+                startTime: startISO,
+                endTime: endISO,
+                dateObj: start,
+                y: isNaN(start) ? null : start.getFullYear(),
+                m: isNaN(start) ? null : start.getMonth(),
+                d: isNaN(start) ? null : start.getDate(),
+                type, color,
+            };
+        });
+    }, [rawEvents]);
+
+    // أحداث اليوم الحالي
+    const dayEvents = useMemo(() => {
+        const y = currentDate.getFullYear();
+        const m = currentDate.getMonth();
+        const d = currentDate.getDate();
+        return events.filter(ev => ev.y === y && ev.m === m && ev.d === d);
+    }, [events, currentDate]);
+
+    // شريط الأسبوع العلوي
+    const weekDays = useMemo(() => {
+        const start = startOfWeekSunday(currentDate);
+        const arr = [];
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(start);
+            day.setDate(day.getDate() + i);
+            arr.push(day);
         }
-        if (week.length > 0) { while (week.length < 7) week.push(null); weeks.push(week); }
-        while (weeks.length < 5) weeks.push(Array(7).fill(null));
-        return weeks;
-    };
+        return arr;
+    }, [currentDate]);
 
-    const handlePrevMonth = () => {
-        if (selectedMonth === 0) {
-            setSelectedMonth(11);
-            setSelectedYearValue(prev => prev - 1);
-        } else setSelectedMonth(prev => prev - 1);
+    // تنقل اليوم
+    const handlePrevDay = () => {
+        const prev = new Date(currentDate);
+        prev.setDate(prev.getDate() - 1);
+        setCurrentDate(prev);
+        setSelectedMonth(prev.getMonth());
     };
-
-    const handleNextMonth = () => {
-        if (selectedMonth === 11) {
-            setSelectedMonth(0);
-            setSelectedYearValue(prev => prev + 1);
-        } else setSelectedMonth(prev => prev + 1);
+    const handleNextDay = () => {
+        const next = new Date(currentDate);
+        next.setDate(next.getDate() + 1);
+        setCurrentDate(next);
+        setSelectedMonth(next.getMonth());
     };
-
     const handleToday = () => {
         const now = new Date();
-        setSelectedYearValue(now.getFullYear());
+        setCurrentDate(now);
         setSelectedMonth(now.getMonth());
     };
 
-    const calendarWeeks = generateCalendarWeeks();
+    // تغيير الشهر/اليوم من القوائم
+    const handleMonthChange = (m) => {
+        const nd = new Date(currentDate);
+        nd.setMonth(m);
+        const dim = daysInMonth(nd.getFullYear(), m);
+        if (nd.getDate() > dim) nd.setDate(dim);
+        setCurrentDate(nd);
+        setSelectedMonth(m);
+    };
+    const handleDayChange = (day) => {
+        const nd = new Date(currentDate);
+        nd.setDate(day);
+        setCurrentDate(nd);
+    };
+
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const monthDays = daysInMonth(currentYear, currentMonth);
 
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
-            <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: '#fff', direction: 'rtl' }}>
-                {/* شريط التنقل */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
-                        <FormControl variant="standard" size="small">
-                            <Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-                                {arabicMonths.map((m, idx) => (
-                                    <MenuItem key={idx} value={idx}>{m}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <IconButton onClick={handleNextMonth}><ChevronLeft /></IconButton>
-                    </Box>
-                    <IconButton onClick={handleToday}><Today /></IconButton>
+            <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
+                {/* فلاتر التاريخ (شهر/يوم) */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                    <FormControl sx={{ minWidth: 140 }}>
+                        <Typography variant="caption" color="gray">الشهر</Typography>
+                        <Select size="small" value={selectedMonth} onChange={(e) => handleMonthChange(e.target.value)}>
+                            {arabicMonths.map((m, idx) => (
+                                <MenuItem key={idx} value={idx}>{m}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl sx={{ minWidth: 120 }}>
+                        <Typography variant="caption" color="gray">اليوم</Typography>
+                        <Select size="small" value={currentDate.getDate()} onChange={(e) => handleDayChange(e.target.value)}>
+                            {Array.from({ length: monthDays }, (_, i) => i + 1).map(d => (
+                                <MenuItem key={d} value={d}>{d}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                 </Box>
 
-                {/* أسماء الأيام */}
-                <Grid container spacing={1} sx={{ mb: 1 }}>
-                    {arabicDays.map(day => (
-                        <Grid item xs key={day} sx={{ textAlign: 'center' }}>
-                            <Typography fontWeight="bold" color="#308A9F">{day}</Typography>
-                        </Grid>
-                    ))}
+                {/* شريط التنقّل لليوم الحالي + عدّاد أحداث اليوم */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton onClick={handlePrevDay}><ChevronRight /></IconButton>
+                        <Typography variant="h6" fontWeight="bold" color="#22385F">
+                            {arabicDays[currentDate.getDay()]} - {currentDate.getDate()} {arabicMonths[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        </Typography>
+                        <IconButton onClick={handleNextDay}><ChevronLeft /></IconButton>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip size="small" label={`${dayEvents.length} حدث`} color="info" sx={{ bgcolor: '#308A9F', color: '#fff' }} />
+                        <IconButton onClick={handleToday}><Today /></IconButton>
+                    </Box>
+                </Box>
+
+                {/* شريط أسبوعي علوي للإشارة السريعة لليوم الحالي */}
+                <Grid container spacing={1} sx={{ mb: 2 }}>
+                    {weekDays.map((date, i) => {
+                        const isActive =
+                            date.getDate() === currentDate.getDate() &&
+                            date.getMonth() === currentDate.getMonth() &&
+                            date.getFullYear() === currentDate.getFullYear();
+                        return (
+                            <Grid item xs key={i} sx={{ textAlign: 'center' }}>
+                                <Typography fontWeight={isActive ? 'bold' : 'normal'} color={isActive ? '#308A9F' : 'inherit'}>
+                                    {arabicDays[date.getDay()]} {date.getDate()}
+                                </Typography>
+                            </Grid>
+                        );
+                    })}
                 </Grid>
 
-                {/* التقويم */}
-                <Box>
-                    {calendarWeeks.map((week, wi) => (
-                        <Grid container spacing={1} key={wi}>
-                            {week.map((day, di) => {
-                                const dayEvents = events.filter(
-                                    e => e.date === day && e.month === selectedMonth && e.year === selectedYearValue
-                                );
-                                const count = dayEvents.length;
-
-                                return (
-                                    <Grid item xs key={di}>
-                                        <Box
-                                            sx={{
-                                                border: day ? '1px solid #ddd' : 'none',
-                                                minHeight: isMobile ? '14vh' : '16vh',
-                                                bgcolor: '#fff',
-                                                p: 1,
-                                                borderRadius: 1
-                                            }}
-                                        >
-                                            {day && (
-                                                <>
-                                                    {/* رقم اليوم + عدّاد الأحداث */}
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        {count > 0 && (
-                                                            <Box
-                                                                sx={{
-                                                                    px: 1,
-                                                                    py: 0.2,
-                                                                    borderRadius: 2,
-                                                                    fontSize: 12,
-                                                                    fontWeight: 700,
-                                                                    backgroundColor: '#35afbc',
-                                                                    color: '#fff',
-                                                                    lineHeight: 1.6,
-                                                                }}
-                                                            >
-                                                                - {count} -
-                                                            </Box>
-                                                        )}
-                                                        <Typography fontWeight="bold" color="#22385F">{day}</Typography>
-                                                    </Box>
-
-                                                    {/* أحداث اليوم ملوّنة حسب النوع + زر الضبط */}
-                                                    <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
-                                                        {dayEvents.map((event, idx) => (
-                                                            <Box
-                                                                key={event.id ?? idx}
-                                                                sx={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'space-between',
-                                                                    bgcolor: event.color,
-                                                                    p: 0.5,
-                                                                    mb: 0.5,
-                                                                    borderRadius: 1,
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                                onDoubleClick={() =>
-                                                                    navigate(
-                                                                        `/dashboard/parent-schedule-details/${selectedYearValue}/${selectedMonth + 1}/${day}`
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
-                                                                    {event.title}
-                                                                </Typography>
-
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}
-                                                                >
-                                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
-                                                                </IconButton>
-                                                            </Box>
-                                                        ))}
-                                                    </Box>
-                                                </>
-                                            )}
+                {/* مساحة اليوم: قائمة الأحداث */}
+                <Box sx={{ border: '1px solid #ddd', minHeight: '50vh', bgcolor: '#fff', p: 2, borderRadius: 1 }}>
+                    {dayEvents.length === 0 ? (
+                        <Typography color="gray" textAlign="center">لا توجد أحداث في هذا اليوم</Typography>
+                    ) : (
+                        <Grid container spacing={2}>
+                            {dayEvents.map((ev) => (
+                                <Grid item xs={12} key={ev.id}>
+                                    <Box
+                                        sx={{
+                                            bgcolor: ev.color,
+                                            p: 2,
+                                            borderRadius: 2,
+                                            color: '#fff',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            flexWrap: 'wrap'
+                                        }}
+                                    >
+                                        <Typography fontWeight="bold">{ev.title}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Typography fontSize="0.9rem">
+                                                {formatTime(ev.startTime)}{ev.endTime ? ` - ${formatTime(ev.endTime)}` : ''}
+                                            </Typography>
+                                            <IconButton size="small" onClick={(e) => openPopover(e, ev)}>
+                                                <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                            </IconButton>
                                         </Box>
-                                    </Grid>
-                                );
-                            })}
+                                    </Box>
+                                </Grid>
+                            ))}
                         </Grid>
-                    ))}
+                    )}
                 </Box>
             </Paper>
 
@@ -249,7 +255,7 @@ const NavigationDailySchedule = ({ parentId }) => {
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
-                onClose={handleClosePopover}
+                onClose={closePopover}
                 anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 PaperProps={{ sx: { p: 2, borderRadius: 3, width: 260 } }}
@@ -262,17 +268,19 @@ const NavigationDailySchedule = ({ parentId }) => {
                         <Typography variant="body2" sx={{ color: 'text.secondary', my: .5 }}>
                             نوع الحدث: {typeLabel(selectedEvent.type)}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            يوم {arabicDays[selectedEvent.dayIndex ?? 0]}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
-                            {formatTime(selectedEvent.start)}{selectedEvent.end ? ` - ${formatTime(selectedEvent.end)}` : ''}
-                        </Typography>
+                        {selectedEvent.dateObj && (
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                يوم {arabicDays[selectedEvent.dateObj.getDay()]} - {selectedEvent.dateObj.getDate()} {arabicMonths[selectedEvent.dateObj.getMonth()]}
+                            </Typography>
+                        )}
+                        {(selectedEvent.startTime || selectedEvent.endTime) && (
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                                {formatTime(selectedEvent.startTime)}{selectedEvent.endTime ? ` - ${formatTime(selectedEvent.endTime)}` : ''}
+                            </Typography>
+                        )}
                     </Box>
                 )}
             </Popover>
         </Box>
     );
-};
-
-export default NavigationDailySchedule;
+}

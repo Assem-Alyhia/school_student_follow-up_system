@@ -23,15 +23,13 @@ import GradeIcon from '@mui/icons-material/Grade';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import GroupsIcon from '@mui/icons-material/Groups';
-import LayersIcon from '@mui/icons-material/Layers';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import ClassIcon from '@mui/icons-material/Class';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import ListAltIcon from '@mui/icons-material/ListAlt';
-import CategoryIcon from '@mui/icons-material/Category';
 import { clearToken } from '../../api/authApi/tokenManager';
-
+import PeopleIcon from "@mui/icons-material/People";         
+import SchoolIcon from "@mui/icons-material/School";         
+import FactCheckIcon from "@mui/icons-material/FactCheck";    
+import TransferWithinAStationIcon from "@mui/icons-material/TransferWithinAStation";
+import PaymentIcon from "@mui/icons-material/Payment";       
 const drawerWidth = 240;
 
 const openedMixin = (theme) => ({
@@ -122,29 +120,37 @@ const getStoredUser = () => {
 };
 
 const hasRole = (user, role) => Array.isArray(user?.roles) && user.roles.some(r => r.name === role);
+const parentMenu = [
+    { text: "لوحة التحكم", icon: <DashboardIcon />, url: "/parentDashboard" },
 
-const teacherMenu = [
-    { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/parentDashboard' },
+    { text: "الطلاب", icon: <PeopleIcon />, url: "/parentDashboard/students" },
+    { text: "المعلمون", icon: <SchoolIcon />, url: "/parentDashboard/teachers" },
 
-    { text: 'الطلاب', icon: <PersonIcon />, url: '/parentDashboard/students' },
-    { text: 'أولياء الأمور', icon: <GroupsIcon />, url: '/parentDashboard/parents' },
-    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/parentDashboard/levels' },
-    { text: 'المواد الدراسية', icon: <MenuBookIcon />, url: '/parentDashboard/subjects' },
-    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/parentDashboard/classrooms' },
-    { text: 'الجداول', icon: <ScheduleIcon />, url: '/parentDashboard/calendarSchedule' },
     {
-        text: 'الامتحانات',
+        text: "الامتحانات",
         icon: <AssignmentIcon />,
-        url: '/parentDashboard/exams',
+        url: "/parentDashboard/exams",
         children: [
-            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/parentDashboard/exam/classesLists' },
-            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/parentDashboard/exam/examlists' },
-            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/parentDashboard/exam/typesExams' },
-            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/parentDashboard/exam/resultsExams' },
-        ]
+            {
+                text: "قوائم الامتحانات",
+                icon: <ListAltIcon />,
+                url: "/parentDashboard/exam/examlists",
+            },
+            {
+                text: "نتائج الامتحانات",
+                icon: <FactCheckIcon />,
+                url: "/parentDashboard/exam/resultsExams",
+            },
+        ],
     },
 
-    { text: 'الدرجات', icon: <GradeIcon />, url: '/parentDashboard/grades' },
+    { text: "الدرجات", icon: <GradeIcon />, url: "/parentDashboard/grades" },
+    {
+        text: "النقل المدرسي",
+        icon: <TransferWithinAStationIcon />,
+        url: "/parentDashboard/schoolTransport",
+    },
+    { text: "الدفع", icon: <PaymentIcon />, url: "/parentDashboard/payments" },
 ];
 
 
@@ -160,7 +166,7 @@ export default function ParentDrawer() {
     const user = getStoredUser();
     const isTeacher = hasRole(user, 'teacher');
 
-    const menuItems = React.useMemo(() => (teacherMenu), [isTeacher]);
+    const menuItems = React.useMemo(() => (parentMenu), [isTeacher]);
 
     const hideDrawerRoutes = ['/some-other-route'];
     const shouldHideDrawer = hideDrawerRoutes.includes(location.pathname);

@@ -79,7 +79,6 @@ const apiEndpoints = {
   // نتائج الامتحانات
   getStudentExamResults: (studentId) =>
     `admin/exam-results?student_id=${studentId}`,
-  getAllExamResults: "admin/exam-results",
 
   // الدرجات
   getAllGrades: "admin/grades",
@@ -130,6 +129,33 @@ const apiEndpoints = {
   subjects: "/admin/subjects",
   subjectById: (id) => `/admin/subjects/${id}`,
 
+  //الامتحانات
+  getAdminExams: "admin/exams",
+  createAdminExam: "admin/exams",
+  getAdminExamById: (gradeId) => `teacher/exams/${gradeId}`,
+  deleteAdminExam: (gradeId) => `teacher/exams/${gradeId}`,
+  updateAdminExam: (gradeId) => `teacher/exams/${gradeId}`,
+
+  //انواع الامتحانات
+  getAllExamTypes: "admin/exam-types",
+  getAllExamTypesNoPaginate: "admin/exam-types/get-all",
+  getExamTypeById: (id) => `admin/exam-types/${id}`,
+  createExamType: "admin/exam-types",
+  updateExamType: (id) => `admin/exam-types/${id}`,
+  deleteExamType: (id) => `admin/exam-types/${id}`,
+
+  //نتائج الامتحانات
+  getAllExamResults: "admin/exam-results",
+  getAllExamResultsNoPaginate: "admin/exam-results/get-all",
+  getExamResultById: (id) => `admin/exam-results/${id}`,
+  createExamResult: "admin/exam-results",
+  updateExamResult: (id) => `admin/exam-results/${id}`,
+  deleteExamResult: (id) => `admin/exam-results/${id}`,
+
+  // الطلاب ضمن الصف
+  getAdminStudentsInClassroom: (classroomId) =>
+    `/admin/students/get-in-classroom/${classroomId}`,
+
   // ******************************************************************************
   // ******************************{techers}*****************************************
   // *****************************************************************************
@@ -173,7 +199,6 @@ const apiEndpoints = {
   getTeacherExamResultById: (id) => `/teacher/exam-results/${id}`,
   updateTeacherExamResult: (id) => `/teacher/exam-results/${id}`,
   deleteTeacherExamResult: (id) => `/teacher/exam-results/${id}`,
-
   getTeacherExamTypes: "/teacher/exam-types",
 
   // الدرجات
@@ -195,6 +220,18 @@ const apiEndpoints = {
 
   // المدفوعات
   getParentPayments: "parent/payments",
+
+  // الامتحانات
+  getParentExams: "parent/exams",
+
+  // المعلمين
+  getParentTeachers: "parent/teachers",
+
+  // الدرجات
+  getParentGrades: "/parent/grades",
+
+  //الاولاد الطلاب
+  getParentStudents: "/parent/students",
 };
 
 export default apiEndpoints;
