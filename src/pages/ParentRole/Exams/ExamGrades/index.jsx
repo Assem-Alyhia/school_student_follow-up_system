@@ -1,14 +1,13 @@
+import Section3 from "../../../../components/ParentRole/Exam/ExamGrades/Section3";
 
 
 
-
-
-const TeacherResultsExam = () => {
+const ParentResultsExam = () => {
     return (
         <>
-
+            <Section3/>
         </>
     );
 }
 
-export default TeacherResultsExam;
+export default ParentResultsExam;

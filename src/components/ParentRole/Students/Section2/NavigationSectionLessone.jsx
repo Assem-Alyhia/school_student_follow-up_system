@@ -47,7 +47,7 @@ const NavigationSectionStudent = () => {
                         variant="contained"
                         onClick={() => handleButtonClick('التقويم الاسبوعي')}
                         sx={{
-                            bgcolor: isActive('الجدول الاسبوعي') ? '#22385F' : '#35AFBC',
+                            bgcolor: isActive('التقويم الاسبوعي') ? '#22385F' : '#35AFBC',
                             '&:hover': { bgcolor: '#30BA9F' },
                             fontSize: '14px',
                             px: 2, py: 0.75,

@@ -2,18 +2,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Grid, IconButton,
-    useMediaQuery, useTheme, Select, MenuItem, FormControl, Popover, Chip
+    useMediaQuery, useTheme, Select, MenuItem, FormControl, InputLabel,
+    Popover, Chip, CircularProgress, Alert
 } from '@mui/material';
 import { Today, ChevronLeft, ChevronRight, SettingsRounded } from '@mui/icons-material';
-import { getParentSchedules } from '../../../../../api/Parent/Schedule/getParentSchedules';
+
+import { getParentStudents } from '../../../../../api/Parent/Students/getParentStudents';
+import { getParentSchedulesByClassroom } from '../../../../../api/Parent/Schedule/getParentSchedulesByClassroom';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 const TYPE_COLORS = {
-    daily: '#90CAF9',  // درس يومي
-    event: '#A5D6A7',  // فعالية
-    exam: '#F48FB1',  // اختبار
+    daily: '#90CAF9',  
+    event: '#A5D6A7', 
+    exam: '#F48FB1', 
     default: '#CE93D8',
 };
 
@@ -35,12 +38,12 @@ const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
 
 const startOfWeekSunday = (date) => {
     const d = new Date(date);
-    const day = d.getDay();        // 0..6
-    const diff = d.getDate() - day + 0; // الأحد = 0
+    const day = d.getDay();         
+    const diff = d.getDate() - day + 0; 
     return new Date(d.setDate(diff));
 };
 
-export default function NavigationDailySchedule({ parentId }) {
+export default function NavigationDailySchedule() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -48,7 +51,20 @@ export default function NavigationDailySchedule({ parentId }) {
     const [currentDate, setCurrentDate] = useState(today);
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
 
+    // الطلاب + الصف المختار
+    const [students, setStudents] = useState([]);
+    const [studentsLoading, setStudentsLoading] = useState(true);
+    const [studentsErr, setStudentsErr] = useState('');
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const selectedClassroomId = useMemo(() => {
+        const s = students.find(st => st.id === selectedStudentId);
+        return s?.classroom?.id ?? null;
+    }, [students, selectedStudentId]);
+
+    // الأحداث الخام (جدول الصف)
     const [rawEvents, setRawEvents] = useState([]);
+    const [schedLoading, setSchedLoading] = useState(false);
+    const [schedErr, setSchedErr] = useState('');
 
     // Popover
     const [anchorEl, setAnchorEl] = useState(null);
@@ -57,31 +73,52 @@ export default function NavigationDailySchedule({ parentId }) {
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    // جلب أحداث وليّ الأمر
+    // 1) جلب الطلاب
     useEffect(() => {
         (async () => {
             try {
-                const res = await getParentSchedules({ parent_id: parentId });
-                const arr =
-                    Array.isArray(res) ? res
-                        : Array.isArray(res?.data) ? res.data
-                            : res?.data ? [res.data]
-                                : res ? [res]
-                                    : [];
-                setRawEvents(arr);
+                setStudentsLoading(true);
+                const res = await getParentStudents(1, 100);
+                const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+                setStudents(list);
+                if (list.length) setSelectedStudentId(list[0].id);
             } catch (e) {
-                console.error('فشل في جلب الأحداث:', e?.message || e);
-                setRawEvents([]);
+                setStudentsErr(e?.message || 'تعذّر جلب الطلاب');
+                setStudents([]);
+            } finally {
+                setStudentsLoading(false);
             }
         })();
-    }, [parentId]);
+    }, []);
+
+    // 2) جلب جدول الصف عند تغيّر classroom
+    useEffect(() => {
+        if (!selectedClassroomId) { setRawEvents([]); return; }
+        (async () => {
+            try {
+                setSchedLoading(true);
+                setSchedErr('');
+                const res = await getParentSchedulesByClassroom(selectedClassroomId);
+                const list =
+                    Array.isArray(res?.data) ? res.data :
+                        Array.isArray(res) ? res :
+                            res?.data ? [res.data] :
+                                [];
+                setRawEvents(list);
+            } catch (e) {
+                setSchedErr(e?.message || 'تعذّر جلب جدول الصف');
+                setRawEvents([]);
+            } finally {
+                setSchedLoading(false);
+            }
+        })();
+    }, [selectedClassroomId]);
 
     // توحيد البيانات + الألوان
     const events = useMemo(() => {
         return (rawEvents || []).map((item) => {
             const startISO = item.start_time ?? item.start ?? item.date_start ?? item.date;
             const endISO = item.end_time ?? item.end ?? item.date_end ?? item.date;
-
             const start = new Date(startISO);
             const type = String(item.type || item.kind || item.category || 'daily').toLowerCase();
             const color = TYPE_COLORS[type] || TYPE_COLORS.default;
@@ -108,17 +145,7 @@ export default function NavigationDailySchedule({ parentId }) {
         return events.filter(ev => ev.y === y && ev.m === m && ev.d === d);
     }, [events, currentDate]);
 
-    // شريط الأسبوع العلوي
-    const weekDays = useMemo(() => {
-        const start = startOfWeekSunday(currentDate);
-        const arr = [];
-        for (let i = 0; i < 7; i++) {
-            const day = new Date(start);
-            day.setDate(day.getDate() + i);
-            arr.push(day);
-        }
-        return arr;
-    }, [currentDate]);
+
 
     // تنقل اليوم
     const handlePrevDay = () => {
@@ -161,26 +188,55 @@ export default function NavigationDailySchedule({ parentId }) {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
-                {/* فلاتر التاريخ (شهر/يوم) */}
-                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-                    <FormControl sx={{ minWidth: 140 }}>
-                        <Typography variant="caption" color="gray">الشهر</Typography>
-                        <Select size="small" value={selectedMonth} onChange={(e) => handleMonthChange(e.target.value)}>
-                            {arabicMonths.map((m, idx) => (
-                                <MenuItem key={idx} value={idx}>{m}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
 
-                    <FormControl sx={{ minWidth: 120 }}>
-                        <Typography variant="caption" color="gray">اليوم</Typography>
-                        <Select size="small" value={currentDate.getDate()} onChange={(e) => handleDayChange(e.target.value)}>
-                            {Array.from({ length: monthDays }, (_, i) => i + 1).map(d => (
-                                <MenuItem key={d} value={d}>{d}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
+                {/* اختيار الطالب */}
+                <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Grid item xs={12} md={4}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="student-select-label">اختر الطالب</InputLabel>
+                            <Select
+                                labelId="student-select-label"
+                                value={selectedStudentId || ''}
+                                label="اختر الطالب"
+                                onChange={(e) => setSelectedStudentId(e.target.value)}
+                                disabled={studentsLoading}
+                                sx={{ bgcolor: '#fff', borderRadius: 1 }}
+                            >
+                                {students.map(s => (
+                                    <MenuItem key={s.id} value={s.id}>
+                                        {s.name} • {s.classroom?.name || '—'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    {/* فلاتر التاريخ (شهر/يوم) */}
+                    <Grid item xs={12} md="auto">
+                        <FormControl sx={{ minWidth: 140 }}>
+                            <Typography variant="caption" color="gray">الشهر</Typography>
+                            <Select size="small" value={selectedMonth} onChange={(e) => handleMonthChange(e.target.value)}>
+                                {arabicMonths.map((m, idx) => (
+                                    <MenuItem key={idx} value={idx}>{m}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md="auto">
+                        <FormControl sx={{ minWidth: 120 }}>
+                            <Typography variant="caption" color="gray">اليوم</Typography>
+                            <Select size="small" value={currentDate.getDate()} onChange={(e) => handleDayChange(e.target.value)}>
+                                {Array.from({ length: monthDays }, (_, i) => i + 1).map(d => (
+                                    <MenuItem key={d} value={d}>{d}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                </Grid>
+
+                {studentsErr && <Alert severity="error" sx={{ mb: 1.5 }}>{studentsErr}</Alert>}
+                {schedErr && <Alert severity="warning" sx={{ mb: 1.5 }}>{schedErr}</Alert>}
 
                 {/* شريط التنقّل لليوم الحالي + عدّاد أحداث اليوم */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
@@ -199,7 +255,12 @@ export default function NavigationDailySchedule({ parentId }) {
 
                 {/* شريط أسبوعي علوي للإشارة السريعة لليوم الحالي */}
                 <Grid container spacing={1} sx={{ mb: 2 }}>
-                    {weekDays.map((date, i) => {
+                    {useMemo(() => {
+                        const start = startOfWeekSunday(currentDate);
+                        return Array.from({ length: 7 }, (_, i) => {
+                            const day = new Date(start); day.setDate(day.getDate() + i); return day;
+                        });
+                    }, [currentDate]).map((date, i) => {
                         const isActive =
                             date.getDate() === currentDate.getDate() &&
                             date.getMonth() === currentDate.getMonth() &&
@@ -216,7 +277,9 @@ export default function NavigationDailySchedule({ parentId }) {
 
                 {/* مساحة اليوم: قائمة الأحداث */}
                 <Box sx={{ border: '1px solid #ddd', minHeight: '50vh', bgcolor: '#fff', p: 2, borderRadius: 1 }}>
-                    {dayEvents.length === 0 ? (
+                    {schedLoading ? (
+                        <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>
+                    ) : dayEvents.length === 0 ? (
                         <Typography color="gray" textAlign="center">لا توجد أحداث في هذا اليوم</Typography>
                     ) : (
                         <Grid container spacing={2}>

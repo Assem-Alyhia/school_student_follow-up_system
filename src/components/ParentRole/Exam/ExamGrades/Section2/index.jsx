@@ -1,19 +1,26 @@
-// src/components/TeacherRole/ExamResults/ResultsTable.jsx
+// src/components/ParentRole/ExamResults/ResultsTable.jsx
 import React, { useMemo, useState } from "react";
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, TableSortLabel, Typography, CircularProgress, IconButton, Tooltip
+    TableRow, TableSortLabel, Typography, CircularProgress,
+    Grid, TextField, Button, FormControl, Select, MenuItem
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
-import EditCalendarRoundedIcon from "@mui/icons-material/EditCalendarRounded";
-import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import ConfirmDeleteModal from "../../../../../layout/ConfirmDeleteModal";
-import SuccessAlert from "../../../../../layout/SuccessAlert";
-import UpdateExamResultModal from "../UpdateExamResultModal";
+// نفس الألوان/التدرج المستخدمة مسبقًا
+const HEADER_GRADIENT = "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)";
 
-import { deleteTeacherExamResult } from "../../../../../api/Teacher/Exam/ExamResults/deleteTeacherExamResult";
+const TERM_OPTIONS = [
+    { label: "الكل", value: "" },
+    { label: "الفصل الأول", value: "term 1" },
+    { label: "الفصل الثاني", value: "term 2" },
+    { label: "الفصل الثالث", value: "term 3" },
+];
+
+const fieldSx = {
+    "& .MuiOutlinedInput-root": { height: 40, backgroundColor: "#F9FAFB" },
+    "& .MuiInputBase-input": { textAlign: "right", padding: "10px 12px" },
+};
 
 const onlyTime = (iso) => {
     if (!iso) return "";
@@ -22,28 +29,34 @@ const onlyTime = (iso) => {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
+const timeToMinutes = (t) => {
+    // t: "HH:MM" أو Date ISO
+    if (!t) return null;
+    if (typeof t === "string" && t.includes(":") && t.length <= 5) {
+        const [h, m] = t.split(":").map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return null;
+        return h * 60 + m;
+    }
+    // ISO -> استخرج الوقت
+    const d = new Date(t);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.getHours() * 60 + d.getMinutes();
+};
+
+export default function ResultsTable({
+    rows = [],
+    loading = false,
+    errorMessage = null,
+}) {
     const [order, setOrder] = useState("asc");
     const [orderBy, setOrderBy] = useState("student_name");
 
-    const [openDeleteModal, setOpenDeleteModal] = useState(false);
-    const [selectedRow, setSelectedRow] = useState(null);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
+    // فلاتر: بحث + فصل + نطاق وقت (من/إلى)
+    const [filters, setFilters] = useState({ q: "", term: "", fromTime: "", toTime: "" });
+    const set = (k) => (e) => setFilters((s) => ({ ...s, [k]: e.target.value }));
+    const resetFilters = () => setFilters({ q: "", term: "", fromTime: "", toTime: "" });
 
-    const queryClient = useQueryClient();
-
-    const deleteMutation = useMutation({
-        mutationFn: (id) => deleteTeacherExamResult(id),
-        onSuccess: () => {
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 2500);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["teacher-exam-results"] });
-        },
-    });
-
+    // تجهيز الصفوف من الـ props
     const preparedRows = useMemo(() => {
         const mapped = rows.map((item) => {
             const startISO = item?.exam?.start_time ?? "";
@@ -61,16 +74,44 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                 student_prefix: item?.student?.prefix ?? "",
                 student_id: item?.student?.id ?? "",
                 student_name: item?.student?.name ?? "",
-                // نمرّر بيانات أصلية للموديال ليستعملها كـ fallback
-                _raw: item,
-                exam_id: item?.exam_id ?? item?.exam?.id ?? "",
-                exam: item?.exam ?? null,
-                classroom: item?.classroom ?? item?.exam?.classroom ?? null,
-                student: item?.student ?? null,
             };
         });
+        return mapped;
+    }, [rows]);
 
-        return mapped.sort((a, b) => {
+    // تطبيق الفلاتر محليًا (حسب البيانات الموجودة)
+    const filteredRows = useMemo(() => {
+        const q = (filters.q || "").toLowerCase().trim();
+        const term = filters.term || "";
+        const fromMin = filters.fromTime ? timeToMinutes(filters.fromTime) : null;
+        const toMin = filters.toTime ? timeToMinutes(filters.toTime) : null;
+
+        return preparedRows.filter((r) => {
+            // الفصل
+            if (term && r.term !== term) return false;
+
+            // البحث: رقم الطالب + اسم الطالب
+            if (q) {
+                const hay = `${r.student_prefix || ""} ${r.student_name || ""}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+
+            // نطاق الوقت (يعتمد على start_time_raw)
+            if (fromMin !== null || toMin !== null) {
+                const startMinutes = timeToMinutes(r.start_time_raw);
+                if (startMinutes === null) return false;
+                if (fromMin !== null && startMinutes < fromMin) return false;
+                if (toMin !== null && startMinutes > toMin) return false;
+            }
+
+            return true;
+        });
+    }, [preparedRows, filters]);
+
+    // الفرز
+    const sortedRows = useMemo(() => {
+        const arr = [...filteredRows];
+        arr.sort((a, b) => {
             const key =
                 orderBy === "start_time" ? "start_time_raw" :
                     orderBy === "end_time" ? "end_time_raw" :
@@ -80,37 +121,13 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
             if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
             return av < bv ? 1 : av > bv ? -1 : 0;
         });
-    }, [rows, order, orderBy]);
+        return arr;
+    }, [filteredRows, order, orderBy]);
 
     const handleRequestSort = (prop) => {
         const isAsc = orderBy === prop && order === "asc";
         setOrder(isAsc ? "desc" : "asc");
         setOrderBy(prop);
-    };
-
-    const askDelete = (row) => {
-        setSelectedRow(row);
-        setOpenDeleteModal(true);
-    };
-
-    const confirmDelete = () => {
-        if (selectedRow?.id) deleteMutation.mutate(selectedRow.id);
-        setOpenDeleteModal(false);
-    };
-
-    const openEdit = (row) => {
-        setSelectedRow(row);
-        setEditOpen(true);
-    };
-
-    const closeEdit = () => {
-        setEditOpen(false);
-        setSelectedRow(null);
-    };
-
-    const afterUpdated = () => {
-        queryClient.invalidateQueries({ queryKey: ["teacher-exam-results"] });
-        closeEdit();
     };
 
     const columns = [
@@ -122,16 +139,70 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
         { key: "max_score", label: "العلامة الكاملة", sortable: true },
         { key: "weight", label: "الوزن", sortable: true },
         { key: "score", label: "الدرجة", sortable: true },
-        { key: "actions", label: "الإجراءات", sortable: false },
     ];
 
     return (
         <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
+                {/* الفلاتر */}
+                <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Grid item xs={12} md={4}>
+                        <TextField
+                            value={filters.q}
+                            onChange={set("q")}
+                            placeholder="بحث برقم/اسم الطالب..."
+                            fullWidth
+                            sx={fieldSx}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                        <FormControl fullWidth sx={fieldSx}>
+                            <Select value={filters.term} onChange={set("term")} displayEmpty>
+                                {TERM_OPTIONS.map((t) => (
+                                    <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    {/* من/إلى بالوقت */}
+                    <Grid item xs={6} md={2}>
+                        <TextField
+                            type="time"
+                            value={filters.fromTime}
+                            onChange={set("fromTime")}
+                            fullWidth
+                            sx={fieldSx}
+                            placeholder="من (وقت)"
+                            inputProps={{ step: 60 }} // دقيقة
+                        />
+                    </Grid>
+
+                    <Grid item xs={6} md={2}>
+                        <TextField
+                            type="time"
+                            value={filters.toTime}
+                            onChange={set("toTime")}
+                            fullWidth
+                            sx={fieldSx}
+                            placeholder="إلى (وقت)"
+                            inputProps={{ step: 60 }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={1} sx={{ display: "flex", justifyContent: "flex-start" }}>
+                        <Button variant="outlined" onClick={resetFilters} sx={{ borderRadius: 2 }}>
+                            مسح
+                        </Button>
+                    </Grid>
+                </Grid>
+
+                {/* الجدول */}
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
                     <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
                         <TableHead>
-                            <TableRow sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)" }}>
+                            <TableRow sx={{ background: HEADER_GRADIENT }}>
                                 {columns.map((col) => (
                                     <TableCell key={col.key} sx={{ color: "#fff", fontWeight: "bold", whiteSpace: "nowrap" }}>
                                         {col.sortable ? (
@@ -163,7 +234,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                                         <Box sx={{ py: 4 }}><CircularProgress /></Box>
                                     </TableCell>
                                 </TableRow>
-                            ) : preparedRows.length === 0 ? (
+                            ) : sortedRows.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} align="center">
                                         <Typography color="text.secondary">
@@ -172,7 +243,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                preparedRows.map((row, idx) => (
+                                sortedRows.map((row, idx) => (
                                     <TableRow key={`${row.id}-${idx}`} hover>
                                         <TableCell>{row.student_prefix}</TableCell>
                                         <TableCell>
@@ -186,18 +257,6 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                                         <TableCell>{row.max_score}</TableCell>
                                         <TableCell>{row.weight}%</TableCell>
                                         <TableCell>{row.score}</TableCell>
-                                        <TableCell>
-                                            <Tooltip title="تعديل">
-                                                <IconButton size="small" onClick={() => openEdit(row)}>
-                                                    <EditCalendarRoundedIcon fontSize="inherit" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="حذف">
-                                                <IconButton size="small" color="error" onClick={() => askDelete(row)}>
-                                                    <DeleteRoundedIcon fontSize="inherit" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -205,34 +264,6 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                     </Table>
                 </TableContainer>
             </Paper>
-
-            <UpdateExamResultModal
-                open={editOpen}
-                onClose={closeEdit}
-                onUpdated={afterUpdated}
-                examResult={selectedRow}   // يحتوي الآن exam/student/classroom أو _raw كفاية
-                title="تعديل درجة امتحان"
-            />
-
-            <ConfirmDeleteModal
-                open={openDeleteModal}
-                onClose={() => setOpenDeleteModal(false)}
-                onConfirm={confirmDelete}
-                title="هل أنت متأكد من حذف الدرجة؟"
-                message="سيتم حذف بيانات الدرجة من النظام."
-                isLoading={deleteMutation.isLoading}
-            />
-
-            {showSuccess && (
-                <SuccessAlert
-                    title="تم حذف الدرجة بنجاح!"
-                    message="تمت إزالة بيانات الدرجة من النظام."
-                    severity="error"
-                    onClose={() => setShowSuccess(false)}
-                />
-            )}
         </Box>
     );
-};
-
-export default Section2;
+}

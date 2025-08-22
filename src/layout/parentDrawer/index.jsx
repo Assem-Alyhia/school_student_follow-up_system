@@ -124,6 +124,7 @@ const parentMenu = [
     { text: "لوحة التحكم", icon: <DashboardIcon />, url: "/parentDashboard" },
 
     { text: "الطلاب", icon: <PeopleIcon />, url: "/parentDashboard/students" },
+    { text: "تفاصيل الطلاب", icon: <PeopleIcon />, url: "/parentDashboard/students/studentDetails" },
     { text: "المعلمون", icon: <SchoolIcon />, url: "/parentDashboard/teachers" },
 
     {

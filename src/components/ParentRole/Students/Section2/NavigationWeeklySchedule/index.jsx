@@ -2,12 +2,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
-    IconButton, Select, MenuItem, FormControl,
-    useMediaQuery, useTheme, Popover
+    IconButton, Select, MenuItem, FormControl, InputLabel,
+    useMediaQuery, useTheme, Popover, CircularProgress, Alert
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getParentSchedules } from '../../../../../api/Parent/Schedule/getParentSchedules';
+
+import { getParentStudents } from '../../../../../api/Parent/Students/getParentStudents';
+import { getParentSchedulesByClassroom } from '../../../../../api/Parent/Schedule/getParentSchedulesByClassroom';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -17,7 +19,7 @@ const TYPE_COLORS = {
     daily: '#90CAF9',   // درس يومي
     event: '#A5D6A7',   // فعالية
     exam: '#F48FB1',   // اختبار
-    default: '#CE93D8', // افتراضي
+    default: '#CE93D8',   // افتراضي
 };
 
 const LEGEND = [
@@ -26,8 +28,7 @@ const LEGEND = [
     { key: 'exam', label: 'اختبار', color: TYPE_COLORS.exam },
 ];
 
-const typeLabel = (t) =>
-    t === 'daily' ? 'درس يومي' : t === 'event' ? 'فعالية' : t === 'exam' ? 'اختبار' : '—';
+const typeLabel = (t) => t === 'daily' ? 'درس يومي' : t === 'event' ? 'فعالية' : t === 'exam' ? 'اختبار' : '—';
 
 const formatTime = (iso) => {
     if (!iso) return '—';
@@ -40,15 +41,15 @@ const formatTime = (iso) => {
     return `${h}:${m} ${am ? 'ص' : 'م'}`;
 };
 
-// بداية الأسبوع (الأحد)
+// بداية الأسبوع (الأحد = 0)
 const startOfWeekSunday = (date) => {
     const d = new Date(date);
-    const day = d.getDay(); // 0..6
-    const diff = d.getDate() - day + 0; // الأحد = 0
+    const day = d.getDay();                 // 0..6
+    const diff = d.getDate() - day + 0;     // الأحد = 0
     return new Date(d.setDate(diff));
 };
 
-const NavigationWeeklySchedule = ({ parentId }) => {
+export default function NavigationWeeklySchedule() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
@@ -58,8 +59,22 @@ const NavigationWeeklySchedule = ({ parentId }) => {
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeekSunday(today));
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
 
-    // الأحداث
+    // طلاب وليّ الأمر
+    const [students, setStudents] = useState([]);
+    const [studentsLoading, setStudentsLoading] = useState(true);
+    const [studentsErr, setStudentsErr] = useState('');
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+
+    // الصف المختار من الطالب
+    const selectedClassroomId = useMemo(() => {
+        const s = students.find(st => st.id === selectedStudentId);
+        return s?.classroom?.id ?? null;
+    }, [students, selectedStudentId]);
+
+    // الأحداث الخام القادمة من السيرفر
     const [rawEvents, setRawEvents] = useState([]);
+    const [schedLoading, setSchedLoading] = useState(false);
+    const [schedErr, setSchedErr] = useState('');
 
     // Popover للتفاصيل
     const [anchorEl, setAnchorEl] = useState(null);
@@ -68,24 +83,49 @@ const NavigationWeeklySchedule = ({ parentId }) => {
     const handleOpenPopover = (ev, event) => { setAnchorEl(ev.currentTarget); setSelectedEvent(event); };
     const handleClosePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    // جلب جداول وليّ الأمر
+    // 1) جلب الطلاب
     useEffect(() => {
         (async () => {
             try {
-                const res = await getParentSchedules({ parent_id: parentId });
-                const list =
-                    Array.isArray(res) ? res
-                        : Array.isArray(res?.data) ? res.data
-                            : res?.data ? [res.data]
-                                : res ? [res]
-                                    : [];
-                setRawEvents(list);
-            } catch (err) {
-                console.error('فشل في جلب تقويم وليّ الأمر:', err?.message);
-                setRawEvents([]);
+                setStudentsLoading(true);
+                const res = await getParentStudents(1, 100);
+                const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+                setStudents(list);
+                if (list.length) setSelectedStudentId(list[0].id); // أول طالب تلقائيًا
+            } catch (e) {
+                setStudentsErr(e?.message || 'تعذّر جلب الطلاب');
+                setStudents([]);
+            } finally {
+                setStudentsLoading(false);
             }
         })();
-    }, [parentId]);
+    }, []);
+
+    // 2) جلب جداول صف الطالب المختار
+    useEffect(() => {
+        if (!selectedClassroomId) { setRawEvents([]); return; }
+        (async () => {
+            try {
+                setSchedLoading(true);
+                setSchedErr('');
+                // لو API يدعم نطاق أسبوع، مرّر week_start:
+                // const res = await getParentSchedulesByClassroom(selectedClassroomId, { week_start: currentWeekStart.toISOString().slice(0,10) });
+                const res = await getParentSchedulesByClassroom(selectedClassroomId);
+                const list =
+                    Array.isArray(res?.data) ? res.data :
+                        Array.isArray(res) ? res :
+                            res?.data ? [res.data] :
+                                [];
+
+                setRawEvents(list);
+            } catch (e) {
+                setSchedErr(e?.message || 'تعذّر جلب جدول الصف');
+                setRawEvents([]);
+            } finally {
+                setSchedLoading(false);
+            }
+        })();
+    }, [selectedClassroomId]);
 
     // توحيد شكل الأحداث + ألوان
     const events = useMemo(() => {
@@ -95,7 +135,6 @@ const NavigationWeeklySchedule = ({ parentId }) => {
             const d = new Date(startISO);
             const type = String(item.type || item.kind || item.category || 'daily').toLowerCase();
             const color = TYPE_COLORS[type] || TYPE_COLORS.default;
-
             return {
                 id: item.id,
                 title: item.title || item.name || 'حدث',
@@ -122,6 +161,14 @@ const NavigationWeeklySchedule = ({ parentId }) => {
         }
         return arr;
     }, [currentWeekStart]);
+
+    // فلترة أحداث الأسبوع الحالي فقط (اختياري ولكن يقلّل العرض)
+    const weekEvents = useMemo(() => {
+        const start = startOfWeekSunday(currentWeekStart);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7); // غير شامل
+        return events.filter(e => e.dateObj >= start && e.dateObj < end);
+    }, [events, currentWeekStart]);
 
     // تنقل الأسبوع
     const handlePrevWeek = () => {
@@ -156,9 +203,30 @@ const NavigationWeeklySchedule = ({ parentId }) => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: '#fff', direction: 'rtl' }}>
-                {/* شريط التنقّل الأسبوعي + وسيلة الإيضاح + اختيار الشهر */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+
+                {/* صف علوي: اختيار الطالب + تنقّل أسبوع/شهر + وسيلة الإيضاح + اليوم */}
+                <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Grid item xs={12} md={4}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="student-select-label">اختر الطالب</InputLabel>
+                            <Select
+                                labelId="student-select-label"
+                                value={selectedStudentId || ''}
+                                label="اختر الطالب"
+                                onChange={(e) => setSelectedStudentId(e.target.value)}
+                                disabled={studentsLoading}
+                                sx={{ bgcolor: '#fff', borderRadius: 1 }}
+                            >
+                                {students.map(s => (
+                                    <MenuItem key={s.id} value={s.id}>
+                                        {s.name} • {s.classroom?.name || '—'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={5} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevWeek}><ChevronRight /></IconButton>
                         <FormControl variant="standard" size="small">
                             <Select value={selectedMonth} onChange={(e) => handleMonthChange(e.target.value)}>
@@ -167,93 +235,77 @@ const NavigationWeeklySchedule = ({ parentId }) => {
                                 ))}
                             </Select>
                         </FormControl>
+                        <Typography sx={{ mx: 1, fontWeight: 700, color: '#22385F' }}>
+                            {currentWeekStart.getFullYear()}
+                        </Typography>
                         <IconButton onClick={handleNextWeek}><ChevronLeft /></IconButton>
-                    </Box>
+                    </Grid>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 2, flexWrap: 'wrap' }}>
                         {LEGEND.map((it) => (
                             <Box key={it.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: it.color, boxShadow: '0 0 0 2px rgba(0,0,0,0.05)' }} />
-                                <Typography variant="caption" sx={{ color: '#6b7a90', fontWeight: 700 }}>
-                                    {it.label}
-                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#6b7a90', fontWeight: 700 }}>{it.label}</Typography>
                             </Box>
                         ))}
-                    </Box>
+                        <IconButton onClick={handleToday}><Today /></IconButton>
+                    </Grid>
+                </Grid>
 
-                    <IconButton onClick={handleToday}><Today /></IconButton>
-                </Box>
+                {studentsErr && <Alert severity="error" sx={{ mb: 1.5 }}>{studentsErr}</Alert>}
+                {schedErr && <Alert severity="warning" sx={{ mb: 1.5 }}>{schedErr}</Alert>}
 
                 {/* شبكة الأسبوع */}
-                <Grid container spacing={1} columns={7}>
-                    {weekDays.map((date, i) => {
-                        const dayEvents = events.filter(
-                            e => e.day === date.getDate() && e.m === date.getMonth() && e.y === date.getFullYear()
-                        );
-                        const count = dayEvents.length; // ← عدّاد الأحداث مثل عرض الشهر
+                {schedLoading ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>
+                ) : (
+                    <Grid container spacing={1} columns={7}>
+                        {weekDays.map((date, i) => {
+                            const dayEvents = weekEvents.filter(
+                                e => e.day === date.getDate() && e.m === date.getMonth() && e.y === date.getFullYear()
+                            );
+                            const count = dayEvents.length;
 
-                        return (
-                            <Grid item xs={7} sm={7} md={1} lg={1} key={i}>
-                                <Box sx={{ border: '1px solid #ddd', minHeight: isMobile ? '16vh' : '18vh', bgcolor: '#fff', p: 1, borderRadius: 1 }}>
-                                    {/* الهيدر: عدّاد + اليوم/التاريخ (تمامًا مثل نسخة الشهر) */}
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        {count > 0 && (
-                                            <Box
-                                                sx={{
-                                                    px: 1,
-                                                    py: 0.2,
-                                                    borderRadius: 2,
-                                                    fontSize: 12,
-                                                    fontWeight: 700,
-                                                    backgroundColor: '#308A9F',
-                                                    color: '#fff',
-                                                    lineHeight: 1.6,
-                                                }}
-                                            >
-                                                {count}
-                                            </Box>
-                                        )}
-                                        <Typography fontWeight="bold" color="#22385F">
-                                            {arabicDays[date.getDay()]} - {date.getDate()}
-                                        </Typography>
-                                    </Box>
+                            return (
+                                <Grid item xs={7} sm={7} md={1} lg={1} key={i}>
+                                    <Box sx={{ border: '1px solid #ddd', minHeight: isMobile ? '16vh' : '18vh', bgcolor: '#fff', p: 1, borderRadius: 1 }}>
+                                        {/* الهيدر: عدّاد + اليوم/التاريخ */}
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            {count > 0 && (
+                                                <Box sx={{ px: 1, py: 0.2, borderRadius: 2, fontSize: 12, fontWeight: 700, backgroundColor: '#308A9F', color: '#fff', lineHeight: 1.6 }}>
+                                                    {count}
+                                                </Box>
+                                            )}
+                                            <Typography fontWeight="bold" color="#22385F">
+                                                {arabicDays[date.getDay()]} - {date.getDate()}
+                                            </Typography>
+                                        </Box>
 
-                                    {/* الأحداث لليوم */}
-                                    <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
-                                        {dayEvents.map((event, idx) => (
-                                            <Box
-                                                key={event.id ?? idx}
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    bgcolor: event.color,
-                                                    p: 0.5,
-                                                    mb: 0.5,
-                                                    borderRadius: 1,
-                                                    cursor: 'pointer'
-                                                }}
-                                                onDoubleClick={() =>
-                                                    navigate(`/dashboard/parent-schedule-details/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`)
-                                                }
-                                            >
-                                                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
-                                                    {event.title}
-                                                </Typography>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}
+                                        {/* الأحداث لليوم */}
+                                        <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
+                                            {dayEvents.map((event, idx) => (
+                                                <Box
+                                                    key={event.id ?? idx}
+                                                    sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: event.color, p: 0.5, mb: 0.5, borderRadius: 1, cursor: 'pointer' }}
+                                                    onDoubleClick={() =>
+                                                        navigate(`/parentDashboard/calendarSchedule?y=${date.getFullYear()}&m=${date.getMonth() + 1}&d=${date.getDate()}`)
+                                                    }
                                                 >
-                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
-                                                </IconButton>
-                                            </Box>
-                                        ))}
+                                                    <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
+                                                        {event.title}
+                                                    </Typography>
+                                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}>
+                                                        <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                                    </IconButton>
+                                                </Box>
+                                            ))}
+                                        </Box>
                                     </Box>
-                                </Box>
-                            </Grid>
-                        );
-                    })}
-                </Grid>
+                                </Grid>
+                            );
+                        })}
+                    </Grid>
+                )}
             </Paper>
 
             {/* Popover التفاصيل */}
@@ -288,6 +340,4 @@ const NavigationWeeklySchedule = ({ parentId }) => {
             </Popover>
         </Box>
     );
-};
-
-export default NavigationWeeklySchedule;
+}

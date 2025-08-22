@@ -8,7 +8,6 @@ import ResetPassword from "./auth/resetPassword/ResetPassword";
 import PasswordResetSuccess from "./auth/passwordResetSuccess/PasswordResetSuccess";
 import PrivateRoute from "./auth/privateRoute/PrivateRoute";
 
-// صفحات الـ Dashboard
 import Dashboard from './pages/dashboard';
 import User from "./pages/user";
 import Roles from "./pages/user/roles";
@@ -68,6 +67,17 @@ import AdminResultsExam from "./pages/Exams/ExamGrades";
 import ParentTeacher from "./components/ParentRole/Teachers/Section1";
 import ParentPayments from "./pages/ParentRole/Payments";
 import PGradesList from "./pages/ParentRole/Grades";
+import ParentResultsExam from "./pages/ParentRole/Exams/ExamGrades";
+import NavigationSectionStudent from "./components/ParentRole/Students/Section2/NavigationSectionLessone";
+import SupervisorDrawer from "./layout/supervisorDrawer";
+import SupervisorProfile from "./components/SupervisorRole/ProfilePage";
+import SupervisorDashboard from "./pages/SupervisorRole/dashboard";
+import SupervisorStudents from "./pages/SupervisorRole/Students";
+import StudentDetails from "./components/SupervisorRole/Students/studentDetails";
+import ErrorPage from "./components/common/ErrorPage";
+import SupervisorParents from "./pages/SupervisorRole/Parent";
+import SupervisorBuses from "./pages/SupervisorRole/Buses";
+import Supervisor from "./pages/Supervisor";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -82,6 +92,7 @@ const dashboardRoutes = [
   { path: "users/permissions", element: <Permissions /> },
   { path: "students", element: <Students /> },
   { path: "teachers", element: <Teachers /> },
+  { path: "supervisor", element: <Supervisor /> },
   { path: "teachers/teacherFormAdd", element: <TeacherForAdd /> },
   { path: "teacher/updateTeacher/:id", element: <TeacherFormUpdate /> },
   { path: "guardian", element: <Guardian /> },
@@ -132,20 +143,23 @@ const parentDashboardRoutes = [
   { path: "profile", element: <ParentProfile /> },
   { path: "settings", element: <ParentSettingNavigation /> },
   { path: "students", element: <ParentStudents /> },
+  { path: "students/studentDetails", element: <NavigationSectionStudent /> },
   { path: "teachers", element: <ParentTeacher /> },
   { path: "exam/examlists", element: <ParentExamLists /> },
+  { path: "exam/resultsExams", element: <ParentResultsExam /> },
   { path: "grades", element: <PGradesList /> },
   { path: "payments", element: <ParentPayments /> },
-  // { path: "students/tStudentDetails/:id", element: <TStudentDetails /> },
-  // { path: "parents", element: <TeacherParents /> },
-  // { path: "parents/tParentDetails/:id", element: <TParentDetails /> },
-  // { path: "levels", element: <TLevelsSection /> },
-  // { path: "subjects", element: <TeacherSubjects /> },
-  // { path: "classrooms", element: <TeacherClassrooms /> },
-  // { path: "calendarSchedule", element: <NavigationCalendarSchedule /> },
-  // { path: "exam/typesExams", element: <TeacherTypesExams /> },
-  // { path: "exam/resultsExams", element: <TeacherResultsExam /> },
-  // { path: "grades", element: <TeacherGrades/> },
+];
+
+
+const supervisorDashboard = [
+  { path: "", element: <SupervisorDashboard /> },
+  { path: "profile", element: <SupervisorProfile /> },
+  { path: "settings", element: <ParentSettingNavigation /> },
+  { path: "students", element: <SupervisorStudents /> },
+  { path: "supervisorStudent/studentDetails/:id", element: <StudentDetails /> },
+  { path: "parents", element: <SupervisorParents /> },
+  { path: "buses", element: <SupervisorBuses /> },
 ];
 
 
@@ -157,6 +171,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <PrivateRoute />,
+    errorElement: <ErrorPage />, 
     children: [
       {
         path: "",
@@ -168,6 +183,7 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: <PrivateRoute />,
+    errorElement: <ErrorPage />, 
     children: [
       {
         path: "",
@@ -183,6 +199,7 @@ export const router = createBrowserRouter([
   {
     path: "/teacherDashboard",
     element: <PrivateRoute />,
+    errorElement: <ErrorPage />, 
     children: [
       {
         path: "",
@@ -198,11 +215,29 @@ export const router = createBrowserRouter([
   {
     path: "/parentDashboard",
     element: <PrivateRoute />,
+    errorElement: <ErrorPage />, 
     children: [
       {
         path: "",
         element: <ParentDrawer />,
         children: parentDashboardRoutes,
+      },
+    ],
+  },
+
+
+
+
+
+  {
+    path: "/supervisorDashboard",
+    element: <PrivateRoute />,
+    errorElement: <ErrorPage />, 
+    children: [
+      {
+        path: "",
+        element: <SupervisorDrawer />,
+        children: supervisorDashboard,
       },
     ],
   },

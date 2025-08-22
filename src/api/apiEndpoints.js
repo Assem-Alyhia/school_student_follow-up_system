@@ -46,6 +46,9 @@ const apiEndpoints = {
   getAllSupervisors: "admin/supervisors",
   getAllSupervisorsNoPaginate: "admin/supervisors/get-all",
   getSupervisorById: (id) => `admin/supervisors/${id}`,
+  createSupervisor: "admin/supervisors",
+  updateSupervisor: (id) => `admin/supervisors/${id}`,
+  deleteSupervisor: (id) => `admin/supervisors/${id}`,
   // الرسوم
   getAllSchoolFees: "admin/school-fees",
   getAllSchoolFeesNoPaginate: "admin/school-fees/get-all",
@@ -156,8 +159,8 @@ const apiEndpoints = {
   getAdminStudentsInClassroom: (classroomId) =>
     `/admin/students/get-in-classroom/${classroomId}`,
 
-  // ******************************************************************************
-  // ******************************{techers}*****************************************
+  // *****************************************************************************
+  // ******************************{techers}**************************************
   // *****************************************************************************
 
   // الصفحة الشخصية
@@ -208,8 +211,8 @@ const apiEndpoints = {
   deleteTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
   updateTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
 
-  // ******************************************************************************
-  // ******************************{parent}*****************************************
+  // *****************************************************************************
+  // ******************************{parent}***************************************
   // *****************************************************************************
 
   // الصفحة الشخصية
@@ -217,12 +220,14 @@ const apiEndpoints = {
 
   // التقارير
   getParentSchedules: "parent/schedules",
+  getParentSchedulesByClassroom: "parent/schedules/classroom",
 
   // المدفوعات
   getParentPayments: "parent/payments",
 
   // الامتحانات
   getParentExams: "parent/exams",
+  getParentExamResults: "parent/exam-results",
 
   // المعلمين
   getParentTeachers: "parent/teachers",
@@ -232,6 +237,25 @@ const apiEndpoints = {
 
   //الاولاد الطلاب
   getParentStudents: "/parent/students",
+
+  // *****************************************************************************
+  // ******************************{supervisor}***********************************
+  // *****************************************************************************
+
+  // الصفحة الشخصية
+  getSupervisorProfile: "supervisor/profile",
+
+  // الطلاب
+  getSupervisorStudents: "supervisor/students",
+  getSupervisorStudentsNoPaginate: "supervisor/students/get-all",
+  getSupervisorStudentById: (id) => `supervisor/students/${id}`,
+  updateSupervisorStudent: (id) => `supervisor/students/${id}`,
+
+  // الآباء
+  getSupervisorParents: "supervisor/parents",
+
+  // الباصات
+  getSupervisorBuses: "supervisor/buses",
 };
 
 export default apiEndpoints;

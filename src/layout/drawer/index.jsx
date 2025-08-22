@@ -166,7 +166,13 @@ const menuItems = [
             { text: 'القوائم', icon: <ListAltIcon />, url: '/dashboard/users' },
         ]
     },
-
+    { text: 'الطلاب', icon: <GroupsIcon />, url: '/dashboard/students' },
+    { text: 'المعلمون', icon: <SchoolIcon />, url: '/dashboard/teachers' },
+    { text: 'المشرفون', icon: <SchoolIcon />, url: '/dashboard/supervisor' },
+    { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
+    { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },
     {
         text: 'الامتحانات',
         icon: <AssignmentIcon />,
@@ -178,13 +184,6 @@ const menuItems = [
             { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/dashboard/exam/resultsExams' },
         ]
     },
-
-    { text: 'الطلاب', icon: <GroupsIcon />, url: '/dashboard/students' },
-    { text: 'المعلمون', icon: <SchoolIcon />, url: '/dashboard/teachers' },
-    { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
-    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
-    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
-    { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },
     { text: 'الدرجات', icon: <GradingIcon />, url: '/dashboard/grades' },
     { text: 'الحضور والغياب', icon: <HowToRegIcon />, url: '/dashboard/studentsAttending' },
     { text: 'النقل المدرسي', icon: <DirectionsBusIcon />, url: '/dashboard/schoolTransportation' },

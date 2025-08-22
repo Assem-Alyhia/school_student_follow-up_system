@@ -44,6 +44,8 @@ function Login() {
                 navigate("/teacherDashboard");
             } else if (roles.includes("parent")) {
                 navigate("/parentDashboard");
+            } else if (roles.includes("supervisor")) {
+                navigate("/supervisorDashboard");
             } else {
                 setError("لا يوجد صلاحية معروفة لهذا المستخدم.");
             }
@@ -101,7 +103,7 @@ function Login() {
                     sx={{ mb: 2 }}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="off"                
+                    autoComplete="off"
                     inputProps={{
                         autoCorrect: "off",
                         autoCapitalize: "none",
@@ -118,7 +120,7 @@ function Login() {
                     sx={{ mb: 2 }}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"        
+                    autoComplete="new-password"
                     inputProps={{
                         autoCorrect: "off",
                         autoCapitalize: "none",
