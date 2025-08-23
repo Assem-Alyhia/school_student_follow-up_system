@@ -78,6 +78,21 @@ import ErrorPage from "./components/common/ErrorPage";
 import SupervisorParents from "./pages/SupervisorRole/Parent";
 import SupervisorBuses from "./pages/SupervisorRole/Buses";
 import Supervisor from "./pages/Supervisor";
+import StudentDrawer from "./layout/studentDrawer";
+import StudentProfile from "./components/StudentRole/ProfilePage";
+import StudentDashboard from "./pages/StudentRole/dashboard";
+import StudentStudents from "./pages/StudentRole/Students";
+import StudentTeachers from "./pages/StudentRole/Teachers";
+import StudentSubjects from "./pages/StudentRole/Subjects";
+import StudentClassrooms from "./pages/StudentRole/Classrooms";
+import StudentSchedules from "./pages/StudentRole/Schedules";
+import StudentExamsList from "./pages/StudentRole/Exam/Examlists";
+import StudentExamGrades from "./pages/StudentRole/Exam/ExamGrades";
+import StudentGrades from "./pages/StudentRole/Grades";
+import StudentBuses from "./pages/StudentRole/Buses";
+import FinancialDrawer from "./layout/financialDrawer";
+import FinancialProfile from "./components/FinancialRole/ProfilePage";
+import FinancialDashboard from "./pages/FinancialRole/dashboard";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -164,6 +179,34 @@ const supervisorDashboard = [
 
 
 
+const studentDashboard = [
+  { path: "", element: <StudentDashboard /> },
+  { path: "profile", element: <StudentProfile /> },
+  { path: "settings", element: <ParentSettingNavigation /> },
+  { path: "students", element: <StudentStudents /> },
+  { path: "teachers", element: <StudentTeachers /> },
+  { path: "subjects", element: <StudentSubjects /> },
+  { path: "classrooms", element: <StudentClassrooms /> },
+  { path: "schedules", element: <StudentSchedules /> },
+  { path: "exams/lists", element: <StudentExamsList /> },
+  { path: "exams/results", element: <StudentExamGrades /> },
+  { path: "grades", element: <StudentGrades /> },
+  { path: "buses", element: <StudentBuses /> },
+];
+
+
+
+
+const financialDashboard = [
+  { path: "", element: <FinancialDashboard /> },
+  { path: "profile", element: <FinancialProfile /> },
+  { path: "settings", element: <ParentSettingNavigation /> },
+  { path: "students", element: <StudentStudents /> },
+  { path: "teachers", element: <StudentTeachers /> },
+];
+
+
+
 
 
 export const router = createBrowserRouter([
@@ -171,7 +214,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <PrivateRoute />,
-    errorElement: <ErrorPage />, 
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
@@ -183,7 +226,7 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: <PrivateRoute />,
-    errorElement: <ErrorPage />, 
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
@@ -199,7 +242,7 @@ export const router = createBrowserRouter([
   {
     path: "/teacherDashboard",
     element: <PrivateRoute />,
-    errorElement: <ErrorPage />, 
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
@@ -215,7 +258,7 @@ export const router = createBrowserRouter([
   {
     path: "/parentDashboard",
     element: <PrivateRoute />,
-    errorElement: <ErrorPage />, 
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
@@ -232,12 +275,45 @@ export const router = createBrowserRouter([
   {
     path: "/supervisorDashboard",
     element: <PrivateRoute />,
-    errorElement: <ErrorPage />, 
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "",
         element: <SupervisorDrawer />,
         children: supervisorDashboard,
+      },
+    ],
+  },
+
+
+
+
+  {
+    path: "/studentDashboard",
+    element: <PrivateRoute />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: "",
+        element: <StudentDrawer />,
+        children: studentDashboard,
+      },
+    ],
+  },
+
+
+
+
+
+  {
+    path: "/financialDashboard",
+    element: <PrivateRoute />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: "",
+        element: <FinancialDrawer />,
+        children: financialDashboard,
       },
     ],
   },

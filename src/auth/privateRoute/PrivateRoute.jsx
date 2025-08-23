@@ -31,6 +31,8 @@ const pathAllowedForRoles = (path, roles) => {
         teacher: ["/teacherDashboard"],
         parent: ["/parentDashboard"],
         supervisor: ["/supervisorDashboard"],
+        student: ["/studentDashboard"],
+        financial: ["/financialDashboard"],
     };
     return roles.some(role =>
         (map[role] || []).some(prefix => path.startsWith(prefix))

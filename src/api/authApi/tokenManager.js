@@ -18,8 +18,18 @@ export const setToken = (token, expiresAtMs) => {
   scheduleLogoutCheck();
 };
 
-export const getToken = () => localStorage.getItem(ACCESS_TOKEN_KEY) || null;
+export const getToken = () => {
+  const raw = localStorage.getItem(ACCESS_TOKEN_KEY);
 
+  if (!raw) return null; 
+
+  const val = raw.trim();
+  if (val === "" || val === "null" || val === "undefined") {
+    return null;
+  }
+
+  return val; 
+};
 export const getExpiry = () =>
   Number(localStorage.getItem(EXPIRES_AT_KEY) || 0);
 
@@ -27,8 +37,8 @@ export const isExpired = () => getExpiry() <= Date.now();
 
 export const clearToken = () => {
   try {
-    localStorage.removeItem("token"); 
-    localStorage.removeItem(ACCESS_TOKEN_KEY); 
+    localStorage.removeItem("token");
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(EXPIRES_AT_KEY);
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(USER_OBJ_KEY);

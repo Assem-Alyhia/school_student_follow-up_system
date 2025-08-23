@@ -256,6 +256,58 @@ const apiEndpoints = {
 
   // الباصات
   getSupervisorBuses: "supervisor/buses",
+
+  // *****************************************************************************
+  // ******************************{student}**************************************
+  // *****************************************************************************
+
+  // الصفحة الشخصية - الطالب
+  getStudentProfile: "student/profile",
+
+  // الطلاب - قائمة
+  getStudents: "student/students",
+
+  // المعلمون (للطلاب)
+  getStudentTeachers: "student/teachers",
+
+  // مواد الطالب
+  getStudentSubjects: "student/subjects",
+
+  // صفوف الطالب
+  getStudentClassrooms: "student/classrooms",
+
+  // جداول الطالب (الحصص/الجدول اليومي/الأسبوعي)
+  getStudentSchedules: "student/schedules",
+
+  // الامتحانات
+  getStudentExams: "student/exams",
+  getStudentExamGrades: "student/exam-results",
+
+  // الدرجات
+  getStudentGrades: "student/grades",
+
+  // الباصات
+  getStudentBuses: "student/buses",
+
+  // *****************************************************************************
+  // ******************************{Financial}************************************
+  // *****************************************************************************
+
+  // Profile
+  finGetProfile: "financial/profile",
+  
+  // Students
+  finGetStudents: "financial/students",
+  finGetAllStudents: "financial/students/get-all",
+
+  // Teachers
+  finGetTeachers: "financial/teachers",
+  finGetAllTeachers: "financial/teachers/get-all",
+
+  // Parents
+  finGetParents: "financial/parents",
+  finGetAllParents: "financial/parents/get-all",
+  finGetParentById: (parentId) => `financial/parents/${parentId}`,
 };
 
 export default apiEndpoints;

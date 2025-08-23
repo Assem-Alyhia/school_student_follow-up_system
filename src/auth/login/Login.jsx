@@ -46,6 +46,10 @@ function Login() {
                 navigate("/parentDashboard");
             } else if (roles.includes("supervisor")) {
                 navigate("/supervisorDashboard");
+            } else if (roles.includes("student")) {
+                navigate("/studentDashboard");
+            } else if (roles.includes("financial")) {
+                navigate("/financialDashboard");
             } else {
                 setError("لا يوجد صلاحية معروفة لهذا المستخدم.");
             }
