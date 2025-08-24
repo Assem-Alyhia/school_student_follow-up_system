@@ -1,48 +1,53 @@
-import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { resetPassword } from "../../api/authApi/passwordApi";
+import axiosInstance, { AUTH_SKIP_HEADER } from "../axiosInstance";
+import apiEndpoints from "../apiEndpoints";
 
-function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
-  const email = searchParams.get("email"); 
+export const resetPassword = async (
+  token,
+  email,
+  password,
+  password_confirmation
+) => {
+  const endpoint = apiEndpoints?.resetPassword ?? "reset-password";
+  const payload = { token, email, password, password_confirmation };
 
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const navigate = useNavigate();
+  const postOnce = () =>
+    axiosInstance.post(endpoint, payload, {
+      headers: {
+        [AUTH_SKIP_HEADER]: true,
+        Authorization: undefined,
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
 
-  const handleSubmit = async () => {
-    setError("");
-    setMessage("");
-    try {
-      await resetPassword(token, email, password, passwordConfirmation);
-      setMessage("تم تغيير كلمة المرور بنجاح.");
-      setTimeout(() => navigate("/login"), 2000);
-    } catch (err) {
-      setError(err.message);
+  try {
+    const res = await postOnce();
+
+    if (res?.data?.status === "failed" || ![200, 204].includes(res?.status)) {
+      throw new Error(res?.data?.message || "فشل في إعادة تعيين كلمة المرور");
     }
-  };
 
-  return (
-    <>
-      <input
-        type="password"
-        placeholder="كلمة المرور الجديدة"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="تأكيد كلمة المرور"
-        value={passwordConfirmation}
-        onChange={(e) => setPasswordConfirmation(e.target.value)}
-      />
-      <button onClick={handleSubmit}>تغيير كلمة المرور</button>
+    return res.data;
+  } catch (err) {
+    if (err?.response?.status === 419) {
+      await axiosInstance.get("/sanctum/csrf-cookie", {
+        headers: { [AUTH_SKIP_HEADER]: true },
+        withCredentials: true,
+      });
+      const retry = await postOnce();
+      if (retry?.data?.status === "failed") {
+        throw new Error(
+          retry?.data?.message || "فشل في إعادة تعيين كلمة المرور"
+        );
+      }
+      return retry.data;
+    }
 
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </>
-  );
-}
+    throw new Error(
+      err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "حدث خطأ أثناء إعادة التعيين"
+    );
+  }
+};

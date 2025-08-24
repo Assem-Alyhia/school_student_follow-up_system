@@ -2,7 +2,6 @@
 import axiosInstance from "../../axiosInstance";
 import api from "../../apiEndpoints";
 
-/** جلب أولياء الأمور مع الترقيم/الفلترة */
 export const getFinancialParents = async (params = {}) => {
   try {
     const res = await axiosInstance.get(api.finGetParents, { params });

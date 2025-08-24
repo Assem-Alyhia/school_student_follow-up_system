@@ -295,7 +295,7 @@ const apiEndpoints = {
 
   // Profile
   finGetProfile: "financial/profile",
-  
+
   // Students
   finGetStudents: "financial/students",
   finGetAllStudents: "financial/students/get-all",
@@ -308,6 +308,19 @@ const apiEndpoints = {
   finGetParents: "financial/parents",
   finGetAllParents: "financial/parents/get-all",
   finGetParentById: (parentId) => `financial/parents/${parentId}`,
+
+  // School Fees
+  finGetSchoolFees: "financial/school-fees",
+  finGetAllSchoolFees: "financial/school-fees/get-all",
+
+  // Payments
+  finGetPayments: "financial/payments",
+  finCreatePayment: "financial/payments", 
+  finGetAllPayments: "financial/payments/get-all", 
+  finGetPaymentsByStudent: (studentId) =>
+    `financial/payments/get-by-student/${studentId}`, 
+  finGetPaymentById: (paymentId) => `financial/payments/${paymentId}`, 
+  finUpdatePayment: (paymentId) => `financial/payments/${paymentId}`, 
 };
 
 export default apiEndpoints;

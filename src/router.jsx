@@ -93,6 +93,8 @@ import StudentBuses from "./pages/StudentRole/Buses";
 import FinancialDrawer from "./layout/financialDrawer";
 import FinancialProfile from "./components/FinancialRole/ProfilePage";
 import FinancialDashboard from "./pages/FinancialRole/dashboard";
+import FinancialStudents from "./pages/FinancialRole/Students";
+import FinancialParents from "./pages/FinancialRole/Parents";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -201,8 +203,8 @@ const financialDashboard = [
   { path: "", element: <FinancialDashboard /> },
   { path: "profile", element: <FinancialProfile /> },
   { path: "settings", element: <ParentSettingNavigation /> },
-  { path: "students", element: <StudentStudents /> },
-  { path: "teachers", element: <StudentTeachers /> },
+  { path: "students", element: <FinancialStudents /> },
+  { path: "parents", element: <FinancialParents /> },
 ];
 
 

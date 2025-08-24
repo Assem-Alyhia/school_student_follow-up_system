@@ -23,15 +23,8 @@ import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { clearToken } from '../../api/authApi/tokenManager';
 import PeopleIcon from "@mui/icons-material/People";
 import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
-import DirectionsBusFilledIcon from "@mui/icons-material/DirectionsBusFilled";
+import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
 import CoPresentIcon from "@mui/icons-material/CoPresent";       
-import MenuBookIcon from "@mui/icons-material/MenuBook";           
-import ClassIcon from "@mui/icons-material/Class";                 
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth"; 
-import AssignmentIcon from "@mui/icons-material/Assignment";       
-import ListAltIcon from "@mui/icons-material/ListAlt";            
-import FactCheckIcon from "@mui/icons-material/FactCheck";        
-import GradeIcon from "@mui/icons-material/Grade";                
 
 
 const drawerWidth = 240;
@@ -127,7 +120,8 @@ const hasRole = (user, role) => Array.isArray(user?.roles) && user.roles.some(r 
 export const financialMenu = [
     { text: "لوحة التحكم", icon: <SpaceDashboardIcon />, url: "/financialDashboard" },
     { text: "الطلاب", icon: <PeopleIcon />, url: "/financialDashboard/students" },
-    { text: "المعلمون", icon: <CoPresentIcon />, url: "/financialDashboard/teachers" },
+    { text: "الآباء", icon: <CoPresentIcon />, url: "/financialDashboard/parents" },
+    { text: "المراحل الدراسية", icon: <SchoolRoundedIcon />, url: "/financialDashboard/levels" },
 ];
 
 

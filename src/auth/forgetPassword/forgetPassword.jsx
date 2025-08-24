@@ -1,27 +1,123 @@
-import { Box, Card, TextField, Button, Typography, Alert } from "@mui/material";
+// ========================
+// src/pages/auth/forgetPassword/index.jsx
+// ========================
+import {
+    Box,
+    Card,
+    TextField,
+    Button,
+    Typography,
+    Alert,
+    Link,
+} from "@mui/material";
 import { useState } from "react";
-import { Link } from "@mui/material";
-import { forgotPassword } from "../../api/authApi/passwordApi"; // تأكد من المسار
+import { useNavigate } from "react-router-dom";
+import { forgotPassword } from "./../../api/authApi/forgetPasswordApi";
 
 function ForgetPassword() {
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    // بسيط لاستخراج التوكن من أي URL قد يعيده السيرفر
+    const extractFromUrl = (url) => {
+        try {
+            const u = new URL(url);
+            const qsToken = u.searchParams.get("token");
+            const qsEmail = u.searchParams.get("email");
+            const parts = u.pathname.split("/").filter(Boolean);
+            const idx = parts.findIndex((p) =>
+                p.toLowerCase().includes("reset-password")
+            );
+            const pathToken = idx >= 0 ? parts[idx + 1] : null;
+            return {
+                token: qsToken || pathToken || null,
+                email: qsEmail || null,
+            };
+        } catch {
+            return { token: null, email: null };
+        }
+    };
+
+    const isValidEmail = (val) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 
     const handleSubmit = async () => {
         setError("");
         setSuccessMessage("");
+
+        const cleanEmail = email.trim();
+        if (!cleanEmail) {
+            setError("من فضلك أدخل البريد الإلكتروني");
+            return;
+        }
+        if (!isValidEmail(cleanEmail)) {
+            setError("صيغة البريد الإلكتروني غير صحيحة");
+            return;
+        }
+
         setLoading(true);
         try {
-            await forgotPassword(email);
-            setSuccessMessage("تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.");
+            // استدعاء API
+            const res = await forgotPassword(cleanEmail);
+
+            // رسالة نجاح للمستخدم
+            setSuccessMessage(
+                "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني."
+            );
+
+            // محاولة جلب التوكن/الإيميل من استجابة الـAPI
+            let token = res?.token || res?.data?.token || null;
+            let emailFromApi = res?.email || cleanEmail;
+            const resetUrl =
+                res?.reset_url || res?.url || res?.data?.reset_url || null;
+
+            if (!token && resetUrl) {
+                const parsed = extractFromUrl(resetUrl);
+                token = parsed.token;
+                emailFromApi = parsed.email || emailFromApi;
+            }
+
+            // إن توفر التوكن وجّه المستخدم مباشرةً لصفحة إعادة التعيين
+            if (token) {
+                setTimeout(() => {
+                    navigate(
+                        `/auth/reset-password?token=${encodeURIComponent(
+                            token
+                        )}&email=${encodeURIComponent(emailFromApi)}`
+                    );
+                }, 900);
+            }
         } catch (err) {
-            setError(err.message);
+            // تجميع أخطاء 4xx من الباك (Laravel validation)
+            const apiErrors = err?.response?.data?.errors;
+            if (apiErrors && typeof apiErrors === "object") {
+                const msgs = Object.values(apiErrors)
+                    .flat()
+                    .filter(Boolean)
+                    .join(" / ");
+                setError(
+                    msgs ||
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "حدث خطأ غير متوقع"
+                );
+            } else {
+                setError(
+                    err?.response?.data?.message ||
+                    err?.response?.data?.error ||
+                    err?.message ||
+                    "حدث خطأ غير متوقع"
+                );
+            }
         } finally {
             setLoading(false);
         }
     };
+
+    const disabled = loading || !email.trim() || !isValidEmail(email);
 
     return (
         <Box
@@ -38,7 +134,7 @@ function ForgetPassword() {
         >
             <Card
                 sx={{
-                    width: "30%",
+                    width: { xs: "92%", sm: "75%", md: "50%", lg: "30%" },
                     p: 4,
                     textAlign: "center",
                     boxShadow: 5,
@@ -81,6 +177,13 @@ function ForgetPassword() {
                     fullWidth
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !disabled) handleSubmit();
+                    }}
+                    error={!!email && !isValidEmail(email)}
+                    helperText={
+                        !!email && !isValidEmail(email) ? "صيغة البريد الإلكتروني غير صحيحة" : " "
+                    }
                     sx={{
                         mb: 3,
                         "& .MuiOutlinedInput-root": {
@@ -102,24 +205,13 @@ function ForgetPassword() {
                         },
                     }}
                     onClick={handleSubmit}
-                    disabled={loading || !email}
+                    disabled={disabled}
                 >
                     {loading ? "جاري الإرسال..." : "متابعة"}
                 </Button>
 
                 <Typography variant="body2" color="textSecondary">
-                    <Link
-                        href="/login"
-                        underline="none"
-                        sx={{
-                            textTransform: "none",
-                            color: "#FF3939",
-                            cursor: "pointer",
-                            "&:hover": {
-                                textDecoration: "underline",
-                            },
-                        }}
-                    >
+                    <Link href="/login" underline="none" sx={{ color: "#FF3939" }}>
                         العودة إلى تسجيل الدخول
                     </Link>
                 </Typography>

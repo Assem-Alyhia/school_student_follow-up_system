@@ -1,48 +1,35 @@
-import { useState } from "react";
-import { changePassword } from "../../api/authApi/passwordApi";
+import axiosInstance, { SESSION_EXPIRED_CODE } from "../axiosInstance";
+import apiEndpoints from "../apiEndpoints";
 
-function ChangePassword() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
-  const handleSubmit = async () => {
-    setError("");
-    setMessage("");
-    try {
-      await changePassword(currentPassword, newPassword, newPasswordConfirm);
-      setMessage("تم تغيير كلمة المرور بنجاح.");
-    } catch (err) {
-      setError(err.message);
+export const changePassword = async (
+  current_password,
+  password,
+  password_confirmation
+) => {
+  const endpoint = apiEndpoints?.changePassword ?? "change-password";
+
+  try {
+    const res = await axiosInstance.post(endpoint, {
+      current_password,
+      password,
+      password_confirmation,
+    });
+
+    if (res?.data?.status === "failed" || res?.status !== 200) {
+      throw new Error(res?.data?.message || "فشل تغيير كلمة المرور");
     }
-  };
 
-  return (
-    <>
-      <input
-        type="password"
-        placeholder="كلمة المرور الحالية"
-        value={currentPassword}
-        onChange={(e) => setCurrentPassword(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="كلمة المرور الجديدة"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="تأكيد كلمة المرور الجديدة"
-        value={newPasswordConfirm}
-        onChange={(e) => setNewPasswordConfirm(e.target.value)}
-      />
-      <button onClick={handleSubmit}>تغيير كلمة المرور</button>
-
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </>
-  );
-}
+    return res.data;
+  } catch (error) {
+    if (error?.code === SESSION_EXPIRED_CODE) {
+      throw new Error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.");
+    }
+    throw new Error(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "حدث خطأ أثناء تغيير كلمة المرور"
+    );
+  }
+};
