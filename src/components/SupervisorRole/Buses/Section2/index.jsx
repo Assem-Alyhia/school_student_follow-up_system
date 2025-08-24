@@ -7,7 +7,7 @@ import { getSupervisorBuses } from "../../../../api/Supervisor/Buses/getSupervis
 
 export default function Section2() {
     const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(9); // 3×3 مثل الصورة
+    const [rowsPerPage, setRowsPerPage] = useState(10); 
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["supervisor-buses", page, rowsPerPage],

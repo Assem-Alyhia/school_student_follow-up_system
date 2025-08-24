@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     Box, Grid, Card, Typography, Avatar, Skeleton, Alert,
     TextField, InputAdornment, Select, MenuItem, FormControl, Button, Chip,
-    Stack, Divider, Tooltip, Paper
+    Stack, Paper, Tooltip, IconButton, Divider
 } from "@mui/material";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
@@ -15,7 +15,10 @@ import BadgeRoundedIcon from "@mui/icons-material/BadgeRounded";
 import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
 import WcRoundedIcon from "@mui/icons-material/WcRounded";
 import MedicalServicesRoundedIcon from "@mui/icons-material/MedicalServicesRounded";
+import MapRoundedIcon from "@mui/icons-material/MapRounded";
+
 import { getParentStudents } from "./../../../../api/Parent/Students/getParentStudents";
+import MapDialogStudent from "../MapDialog";
 
 const GRADIENT = "linear-gradient(180deg,#35AFBC 0%,#308A9F 45%,#22385F 100%)";
 const COLORS = {
@@ -28,7 +31,6 @@ const COLORS = {
     textMain: "#22385F",
     textSub: "#6B7A90",
     border: "1px solid rgba(53,175,188,0.28)",
-    borderSoft: "1px solid rgba(48,138,159,0.18)",
 };
 
 const getName = (s) => s?.name || s?.user?.name || "—";
@@ -56,10 +58,14 @@ export default function ParentStudentCards({ onSelect }) {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
 
-    // فلاتر
-    const [q, setQ] = useState("");
-    const [level, setLevel] = useState("");
-    const [gender, setGender] = useState("");
+    // فلاتر (مخفية حاليًا)
+    const [q] = useState("");
+    const [level] = useState("");
+    const [gender] = useState("");
+
+    // حالة الماب مودال
+    const [mapOpen, setMapOpen] = useState(false);
+    const [mapStudent, setMapStudent] = useState(null);
 
     useEffect(() => {
         (async () => {
@@ -77,11 +83,6 @@ export default function ParentStudentCards({ onSelect }) {
         })();
     }, []);
 
-    const levelOptions = useMemo(
-        () => [...new Set(rows.map(getLevel).filter(Boolean))],
-        [rows]
-    );
-
     const data = useMemo(() => {
         const nameMatch = (s) => !q || getName(s).toLowerCase().includes(q.trim().toLowerCase());
         const levelMatch = (s) => !level || getLevel(s) === level;
@@ -89,106 +90,13 @@ export default function ParentStudentCards({ onSelect }) {
         return rows.filter((s) => nameMatch(s) && levelMatch(s) && sexMatch(s));
     }, [rows, q, level, gender]);
 
-    const reset = () => { setQ(""); setLevel(""); setGender(""); };
+    const openMapFor = (student) => {
+        setMapStudent(student);
+        setMapOpen(true);
+    };
 
     return (
-        <Box
-            sx={{
-                direction: "rtl",
-                px: { xs: 2.5, sm: 4.5, md: 7 },
-                py: { xs: 3, md: 4 },
-                bgcolor: COLORS.softBg,
-            }}
-        >
-            {/* العنوان وأدوات البحث */}
-            <Stack
-                direction={{ xs: "column", md: "row" }}
-                alignItems={{ xs: "stretch", md: "center" }}
-                justifyContent="space-between"
-                spacing={3}
-                sx={{ mb: 3.5 }}
-            >
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <Typography
-                        variant="h6"
-                        sx={{
-                            fontWeight: 900,
-                            letterSpacing: 0.2,
-                            background: GRADIENT,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            fontSize: { xs: 18, md: 20 }
-                        }}
-                    >
-                        طلاب وليّ الأمر
-                    </Typography>
-                    <Chip
-                        label={`${data.length} طالب`}
-                        sx={{
-                            bgcolor: COLORS.brand2,
-                            color: "#fff",
-                            fontWeight: 800,
-                            px: 1.25,
-                            height: 28,
-                            borderRadius: 2
-                        }}
-                    />
-                </Stack>
-
-                <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={1.5}
-                    useFlexGap
-                    sx={{ width: "100%", maxWidth: 1200 }}
-                >
-                    <TextField
-                        size="medium"
-                        placeholder="ابحث بالاسم"
-                        value={q}
-                        onChange={(e) => setQ(e.target.value)}
-                        sx={{ minWidth: 300, flex: 1, bgcolor: COLORS.fieldBg }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchRoundedIcon sx={{ color: COLORS.brand2 }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <FormControl size="medium" sx={{ minWidth: 240, bgcolor: COLORS.fieldBg }}>
-                        <Select value={level} displayEmpty onChange={(e) => setLevel(e.target.value)}>
-                            <MenuItem value="">كل المراحل/الصفوف</MenuItem>
-                            {levelOptions.map((lv) => (
-                                <MenuItem key={lv} value={lv}>{lv}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <FormControl size="medium" sx={{ minWidth: 200, bgcolor: COLORS.fieldBg }}>
-                        <Select value={gender} displayEmpty onChange={(e) => setGender(e.target.value)}>
-                            <MenuItem value="">الكل (الجنس)</MenuItem>
-                            <MenuItem value="male">ذكر</MenuItem>
-                            <MenuItem value="female">أنثى</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <Button
-                        startIcon={<RestartAltRoundedIcon />}
-                        onClick={reset}
-                        sx={{
-                            fontWeight: 800,
-                            color: COLORS.brand3,
-                            bgcolor: "#fff",
-                            border: COLORS.border,
-                            px: 2,
-                            height: 40,
-                            borderRadius: 2,
-                            "&:hover": { bgcolor: "#fff" },
-                        }}
-                    >
-                        إعادة الضبط
-                    </Button>
-                </Stack>
-            </Stack>
-
+        <Box sx={{ direction: "rtl", px: { xs: 2.5, sm: 4.5, md: 7 }, py: { xs: 3, md: 4 }, bgcolor: COLORS.softBg }}>
             {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
 
             <Grid container spacing={3} columns={12} sx={{ m: 0 }}>
@@ -216,7 +124,7 @@ export default function ParentStudentCards({ onSelect }) {
                                     onClick={() => onSelect?.(s)}
                                     sx={{
                                         width: "100%",
-                                        minHeight: 420, // أعلى وأكثر راحة بصريًا
+                                        minHeight: 420,
                                         borderRadius: 4,
                                         border: COLORS.border,
                                         boxShadow: "0 12px 28px rgba(34,56,95,0.14)",
@@ -224,33 +132,29 @@ export default function ParentStudentCards({ onSelect }) {
                                         cursor: "pointer",
                                         transition: "transform .18s ease, box-shadow .18s ease",
                                         "&:hover": { transform: "translateY(-3px)", boxShadow: "0 18px 36px rgba(34,56,95,0.22)" },
+                                        display: "flex",
+                                        flexDirection: "column",
                                     }}
                                 >
                                     {/* شريط علوي */}
                                     <Box sx={{ height: 10, background: GRADIENT }} />
 
-                                    <Box sx={{ p: { xs: 3, md: 3.5 } }}>
+                                    {/* المحتوى */}
+                                    <Box sx={{ p: { xs: 3, md: 3.5 }, flex: 1 }}>
                                         <Stack
                                             direction={{ xs: "column", md: "row" }}
                                             spacing={{ xs: 3, md: 3.5 }}
                                             alignItems="stretch"
                                         >
-                                            {/* تعريف الطالب: الصورة أعلى، الاسم وتحته المراحل */}
-                                            <Stack
-                                                direction="column"
-                                                spacing={1.5}
-                                                sx={{ flex: 1, minWidth: 280, textAlign: "right" }}
-                                            >
+                                            {/* تعريف الطالب */}
+                                            <Stack direction="column" spacing={1.5} sx={{ flex: 1, minWidth: 280, textAlign: "right" }}>
                                                 <Avatar
                                                     src={getImg(s)}
                                                     alt={name}
                                                     variant="rounded"
                                                     sx={{
-                                                        width: 120,
-                                                        height: 120,
-                                                        borderRadius: 4,
-                                                        border: `3px solid ${COLORS.brand1}`,
-                                                        bgcolor: "#fff",
+                                                        width: 120, height: 120, borderRadius: 4,
+                                                        border: `3px solid ${COLORS.brand1}`, bgcolor: "#fff",
                                                         boxShadow: "0 8px 18px rgba(53,175,188,.25)",
                                                         alignSelf: "flex-start"
                                                     }}
@@ -260,13 +164,7 @@ export default function ParentStudentCards({ onSelect }) {
                                                     {name}
                                                 </Typography>
 
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    flexWrap="wrap"
-                                                    useFlexGap
-                                                    sx={{ mt: 0.25 }}
-                                                >
+                                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 0.25 }}>
                                                     <Chip
                                                         size="medium"
                                                         label={getLevel(s)}
@@ -280,18 +178,14 @@ export default function ParentStudentCards({ onSelect }) {
                                                             color="info"
                                                             label={code}
                                                             icon={<BadgeRoundedIcon />}
-                                                            sx={{ bgcolor: COLORS.brand2, color: "#fff", fontWeight: 800, width: '8rem' }}
+                                                            sx={{ bgcolor: COLORS.brand2, color: "#fff", fontWeight: 800, width: "8rem" }}
                                                         />
                                                     )}
                                                 </Stack>
                                             </Stack>
 
-                                            {/* وسط: بيانات الاتصال والتواريخ - صناديق أوضح */}
-                                            <Stack
-                                                direction="row"
-                                                spacing={{ xs: 2, md: 2.5 }}
-                                                sx={{ flex: 2, minWidth: 340, flexWrap: "wrap" }}
-                                            >
+                                            {/* وسط: بيانات الاتصال والتواريخ */}
+                                            <Stack direction="row" spacing={{ xs: 2, md: 2.5 }} sx={{ flex: 2, minWidth: 340, flexWrap: "wrap" }}>
                                                 <InfoItem icon={<EmailRoundedIcon />} label="البريد" value={getEmail(s)} wide />
                                                 <InfoItem icon={<PhoneIphoneRoundedIcon />} label="الهاتف" value={getPhone(s)} />
                                                 <InfoItem icon={<CalendarMonthRoundedIcon />} label="الميلاد" value={fmtDate(getDob(s))} />
@@ -304,20 +198,11 @@ export default function ParentStudentCards({ onSelect }) {
                                                     <Chip
                                                         size="medium"
                                                         label={
-                                                            status === "active"
-                                                                ? "في المدرسة"
-                                                                : status === "at_home"
-                                                                    ? "في المنزل"
-                                                                    : status === "on_way"
-                                                                        ? "على الطريق"
-                                                                        : status
+                                                            status === "active" ? "في المدرسة" :
+                                                                status === "at_home" ? "في المنزل" :
+                                                                    status === "on_way" ? "على الطريق" : status
                                                         }
-                                                        sx={{
-                                                            bgcolor: COLORS.softChip,
-                                                            color: COLORS.brand2,
-                                                            fontWeight: 800,
-                                                            px: 0.75
-                                                        }}
+                                                        sx={{ bgcolor: COLORS.softChip, color: COLORS.brand2, fontWeight: 800, px: 0.75 }}
                                                     />
                                                     <Chip
                                                         size="medium"
@@ -329,17 +214,8 @@ export default function ParentStudentCards({ onSelect }) {
                                                 </Stack>
 
                                                 <TinyLabel>العنوان</TinyLabel>
-                                                <Typography
-                                                    sx={{
-                                                        color: "#425466",
-                                                        fontSize: 15.5,
-                                                        whiteSpace: "pre-line",
-                                                        lineHeight: 1.95
-                                                    }}
-                                                >
-                                                    <LocationOnRoundedIcon
-                                                        sx={{ fontSize: 19, verticalAlign: "middle", ml: .85, color: COLORS.brand2 }}
-                                                    />
+                                                <Typography sx={{ color: "#425466", fontSize: 15.5, whiteSpace: "pre-line", lineHeight: 1.95 }}>
+                                                    <LocationOnRoundedIcon sx={{ fontSize: 19, verticalAlign: "middle", ml: .85, color: COLORS.brand2 }} />
                                                     {getAddr(s)}
                                                 </Typography>
 
@@ -348,19 +224,12 @@ export default function ParentStudentCards({ onSelect }) {
                                                         <TinyLabel>معلومة طبية</TinyLabel>
                                                         <Typography
                                                             sx={{
-                                                                color: COLORS.textSub,
-                                                                fontSize: 14.5,
-                                                                lineHeight: 2,
-                                                                display: "-webkit-box",
-                                                                WebkitLineClamp: 3,
-                                                                WebkitBoxOrient: "vertical",
-                                                                overflow: "hidden"
+                                                                color: COLORS.textSub, fontSize: 14.5, lineHeight: 2,
+                                                                display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden"
                                                             }}
                                                             title={getMed(s)}
                                                         >
-                                                            <MedicalServicesRoundedIcon
-                                                                sx={{ fontSize: 19, verticalAlign: "middle", ml: .85, color: COLORS.brand2 }}
-                                                            />
+                                                            <MedicalServicesRoundedIcon sx={{ fontSize: 19, verticalAlign: "middle", ml: .85, color: COLORS.brand2 }} />
                                                             {getMed(s)}
                                                         </Typography>
                                                     </>
@@ -368,44 +237,57 @@ export default function ParentStudentCards({ onSelect }) {
                                             </Stack>
                                         </Stack>
                                     </Box>
+
+                                    {/* فاصل شفاف أعلى زر الخريطة */}
+                                    <Divider sx={{ opacity: 0.15 }} />
+
+                                    {/* زر الخريطة أسفل الكارد */}
+                                    <Box sx={{ p: 2, pt: 1.5 }}>
+                                        <Button
+                                            onClick={(e) => { e.stopPropagation(); openMapFor(s); }}
+                                            fullWidth
+                                            variant="contained"
+                                            startIcon={<MapRoundedIcon sx={{ margin:"0 1rem" }}/>}
+                                            sx={{
+                                                bgcolor: COLORS.brand2,
+                                                "&:hover": { bgcolor: COLORS.brand3 },
+                                                height: 46,
+                                                borderRadius: 2,
+                                                fontWeight: 800,
+                                                letterSpacing: 0.3,
+                                            }}
+                                        >
+                                            عرض موقع الطالب على الخريطة
+                                        </Button>
+                                    </Box>
                                 </Card>
                             </Grid>
                         );
                     })}
             </Grid>
+
+            {/* موديول الخريطة للطالب */}
+            <MapDialogStudent
+                open={mapOpen}
+                onClose={() => setMapOpen(false)}
+                student={mapStudent}
+            />
         </Box>
     );
 }
 
-/* عناصر صغيرة منسّقة */
+/* عناصر صغيرة منسّقة — كما لديك */
 function InfoItem({ icon, label, value, wide = false }) {
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                p: 1.25,
-                px: 1.75,
-                borderRadius: 2.5,
-                bgcolor: "#fff",
-                minWidth: wide ? 320 : 240,
-                flexGrow: 1,
-            }}
-        >
+        <Paper elevation={0} sx={{ p: 1.25, px: 1.75, borderRadius: 2.5, bgcolor: "#fff", minWidth: wide ? 320 : 240, flexGrow: 1 }}>
             <Stack spacing={0.75}>
                 <TinyLabel>{label}</TinyLabel>
                 <Tooltip title={value || "—"}>
                     <Typography
                         sx={{
-                            color: COLORS.textMain,
-                            fontWeight: 800,
-                            fontSize: 15.5,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            maxWidth: 380,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            color: COLORS.textMain, fontWeight: 800, fontSize: 15.5,
+                            display: "flex", alignItems: "center", gap: 1, maxWidth: 380,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         }}
                     >
                         <Box component="span" sx={{ display: "inline-flex", alignItems: "center" }}>
@@ -421,10 +303,7 @@ function InfoItem({ icon, label, value, wide = false }) {
 
 function TinyLabel({ children }) {
     return (
-        <Typography
-            variant="caption"
-            sx={{ color: COLORS.textSub, fontWeight: 900, letterSpacing: 0.35, fontSize: 12.5 }}
-        >
+        <Typography variant="caption" sx={{ color: "#6B7A90", fontWeight: 900, letterSpacing: 0.35, fontSize: 12.5 }}>
             {children}
         </Typography>
     );
