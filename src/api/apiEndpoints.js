@@ -165,6 +165,7 @@ const apiEndpoints = {
 
   // الصفحة الشخصية
   getTeacherProfile: "teacher/profile",
+  updateTeacherProfile: (id) => `teacher/profile/${id}`,
 
   // الطلاب
   getTeacherStudents: "teacher/students",
@@ -217,6 +218,7 @@ const apiEndpoints = {
 
   // الصفحة الشخصية
   getParentProfile: "parent/profile",
+  updateParentProfile: (parentId) => `parent/profile/${parentId}`,
 
   // التقارير
   getParentSchedules: "parent/schedules",
@@ -244,6 +246,8 @@ const apiEndpoints = {
 
   // الصفحة الشخصية
   getSupervisorProfile: "supervisor/profile",
+  updateSupervisorProfile: (supervisorId) =>
+    `supervisor/profile/${supervisorId}`,
 
   // الطلاب
   getSupervisorStudents: "supervisor/students",
@@ -263,6 +267,7 @@ const apiEndpoints = {
 
   // الصفحة الشخصية - الطالب
   getStudentProfile: "student/profile",
+  updateStudentProfile: (studentId) => `student/profile/${studentId}`,
 
   // الطلاب - قائمة
   getStudents: "student/students",
@@ -295,6 +300,7 @@ const apiEndpoints = {
 
   // Profile
   finGetProfile: "financial/profile",
+  updateFinancialProfile: (financialId) => `financial/profile/${financialId}`,
 
   // Students
   finGetStudents: "financial/students",
@@ -315,12 +321,12 @@ const apiEndpoints = {
 
   // Payments
   finGetPayments: "financial/payments",
-  finCreatePayment: "financial/payments", 
-  finGetAllPayments: "financial/payments/get-all", 
+  finCreatePayment: "financial/payments",
+  finGetAllPayments: "financial/payments/get-all",
   finGetPaymentsByStudent: (studentId) =>
-    `financial/payments/get-by-student/${studentId}`, 
-  finGetPaymentById: (paymentId) => `financial/payments/${paymentId}`, 
-  finUpdatePayment: (paymentId) => `financial/payments/${paymentId}`, 
+    `financial/payments/get-by-student/${studentId}`,
+  finGetPaymentById: (paymentId) => `financial/payments/${paymentId}`,
+  finUpdatePayment: (paymentId) => `financial/payments/${paymentId}`,
 };
 
 export default apiEndpoints;

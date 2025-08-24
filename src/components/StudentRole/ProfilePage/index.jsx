@@ -1,34 +1,80 @@
-// src/components/Student/ProfilePage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
     Box,
     Paper,
     Typography,
     IconButton,
-    Chip,
     Divider,
     Switch,
     Avatar,
+    Button,
+    TextField,
+    MenuItem,
+    CircularProgress,
+    Stack,
 } from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
+import { Edit as EditIcon, Save, Close } from "@mui/icons-material";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
-// عدّل المسار حسب مشروعك
-import { getStudentProfile } from './../../../api/Student/Profile/getStudentProfile';
+import { useMutation } from "@tanstack/react-query";
+import { getStudentProfile } from "../../../api/Student/Profile/getStudentProfile";
+import { updateStudentProfile } from "../../../api/Student/Profile/updateStudentProfile";
+
+const mainColor = "#2ea394";
 
 const StudentProfile = () => {
     const [isAvailable, setIsAvailable] = useState(false);
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
-    const mainColor = "#2ea394";
+
+    // الحقول القابلة للتعديل حسب النهاية: image, email, password(+confirm), phone
+    const [form, setForm] = useState({
+        image: null,
+        email: "",
+        password: "",
+        password_confirmation: "",
+        phone: "",
+        // أدناه للعرض فقط
+        address: "",
+        name: "",
+        gender: "",
+        dob: "",
+        specialization: "",
+    });
+
+    // تحكم بالتحرير للحقول القابلة للتعديل فقط
+    const [editing, setEditing] = useState({
+        email: false,
+        password: false,
+        phone: false,
+    });
+    const [draft, setDraft] = useState({});
+    const [preview, setPreview] = useState("");
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 setLoading(true);
                 const res = await getStudentProfile();
-                // الـ API يعيد { data: {...student} }
-                setStudent(res?.data || null);
+                const s = res?.data || {};
+                const u = s?.user || {};
+
+                setStudent(s);
+
+                setForm((prev) => ({
+                    ...prev,
+                    email: u.email || "",
+                    phone: s.phone || "",
+                    // للعرض فقط
+                    address: s.address || "",
+                    name: s.name || u.name || "",
+                    gender: s.gender || "",
+                    dob: s.dob ? new Date(s.dob).toISOString().slice(0, 10) : "",
+                    specialization: s.specialization || "",
+                }));
+
+                setPreview(u.image || "/avatar.jpg");
             } catch (err) {
                 console.error("Error fetching student profile:", err);
                 setStudent(null);
@@ -39,71 +85,101 @@ const StudentProfile = () => {
         fetchProfile();
     }, []);
 
-    const Row = ({ label, value, hideDivider = false }) => (
-        <>
-            <Box display="flex" justifyContent="space-between" alignItems="center" py={1.5} px={1}>
-                <Box>
-                    {label && (
-                        <Typography variant="body2" color="text.secondary" mb={0.5}>
-                            {label}
-                        </Typography>
-                    )}
-                    {typeof value === "string" || typeof value === "number" ? (
-                        <Typography variant="body2">{value || "—"}</Typography>
-                    ) : (
-                        value
-                    )}
-                </Box>
-                <IconButton size="small" sx={{ color: mainColor }}>
-                    <EditIcon fontSize="small" />
-                </IconButton>
-            </Box>
-            {!hideDivider && <Divider sx={{ my: 1 }} />}
-        </>
-    );
+    const studentId = useMemo(() => student?.id, [student]);
 
-    const fmt = (d, pattern = "dd/MM/yyyy") => {
+    const { mutate: savePartial, isLoading: saving } = useMutation({
+        mutationFn: async (payload) => {
+            if (!studentId) throw new Error("لا يوجد معرّف طالب.");
+            return updateStudentProfile(studentId, payload);
+        },
+        onSuccess: (data) => {
+            const s = data?.data || student;
+            setStudent(s);
+
+            const u = s?.user || {};
+            setForm((prev) => ({
+                ...prev,
+                email: u.email ?? prev.email,
+                phone: s.phone ?? prev.phone,
+                image: null,
+                password: "",
+                password_confirmation: "",
+            }));
+            if (u.image) setPreview(u.image);
+
+            setEditing({ email: false, password: false, phone: false });
+            setDraft({});
+        },
+        onError: (e) => alert(e.message || "تعذّر حفظ التعديلات"),
+    });
+
+    const fmt = (d) => {
         if (!d) return "—";
         const dt = new Date(d);
-        return isNaN(dt) ? "—" : format(dt, pattern, { locale: arSA });
+        return isNaN(dt) ? "—" : format(dt, "dd/MM/yyyy", { locale: arSA });
+    };
+    const genderLabel = (g) => {
+        if (!g) return "—";
+        const v = String(g).toLowerCase();
+        if (v === "male" || v === "m" || v === "ذكر") return "ذكر";
+        if (v === "female" || v === "f" || v === "أنثى") return "أنثى";
+        return g;
     };
 
     const s = student || {};
     const u = s.user || {};
-
-    const statusLabel = (status) => {
-        switch (status) {
-            case "at_home":
-                return "في المنزل";
-            case "in_school":
-                return "في المدرسة";
-            case "absent":
-                return "غائب";
-            default:
-                return "—";
-        }
-    };
-
     const profileData = {
-        image: u.image || "/avatar.jpg",
-        fullName: s.name || u.name || "—",
+        image: preview || "/avatar.jpg",
+        fullName: u.name || s.name || "—",
         email: u.email || "—",
-
         userPrefix: u.prefix || "—",
         studentPrefix: s.prefix || "—",
-
         name: s.name || u.name || "—",
+        gender: genderLabel(s.gender),
         phone: s.phone || "—",
         address: s.address || "",
-        gender: s.gender || "",
         dob: fmt(s.dob),
-        enrollmentDate: fmt(s.enrollment_date),
+        specialization: s.specialization || "—",
+    };
 
-        status: statusLabel(s.status),
-        medicalInfo: s.medical_info || "—",
+    // أدوات التحرير للحقول المسموحة فقط
+    const startEdit = (field) => {
+        setDraft((d) => ({ ...d, [field]: form[field] ?? "" }));
+        setEditing((e) => ({ ...e, [field]: true }));
+    };
+    const cancelEdit = (field) => {
+        setForm((f) => ({ ...f, [field]: draft[field] ?? f[field] }));
+        setEditing((e) => ({ ...e, [field]: false }));
+        setDraft((d) => {
+            const { [field]: _, ...rest } = d;
+            return rest;
+        });
+    };
+    const saveField = (field) => {
+        const payload = {};
+        if (field === "password") {
+            payload.password = form.password;
+            payload.password_confirmation = form.password_confirmation;
+        } else {
+            payload[field] = form[field];
+        }
+        savePartial(payload);
+    };
 
-        createdAt: fmt(u.created_at, "dd/MM/yyyy HH:mm"),
-        updatedAt: fmt(u.updated_at, "dd/MM/yyyy HH:mm"),
+    const handleChange = (key) => (e) =>
+        setForm((st) => ({ ...st, [key]: e.target.value }));
+
+    // الصورة: اختيار + زر حفظ
+    const handlePickImage = () => fileInputRef.current?.click();
+    const handleImage = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setForm((st) => ({ ...st, image: file }));
+        setPreview(URL.createObjectURL(file));
+    };
+    const saveImage = () => {
+        if (!form.image) return;
+        savePartial({ image: form.image });
     };
 
     if (loading) {
@@ -118,28 +194,21 @@ const StudentProfile = () => {
 
     return (
         <Box sx={{ p: 3, direction: "rtl", bgcolor: "#f8f9fa" }}>
-            {/* المعلومات الشخصية */}
             <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
-                    المعلومات الشخصية للطالب
+                    المعلومات الشخصية
                 </Typography>
 
-                <Box display="flex" alignItems="center" mb={2}>
+                {/* الصورة + أزرار الاختيار/الحفظ */}
+                <Box display="flex" alignItems="center" mb={1.5}>
                     <Avatar
                         alt={profileData.fullName}
-                        src={profileData.image && profileData.image !== "" ? profileData.image : undefined}
-                        sx={{
-                            width: 60,
-                            height: 60,
-                            ml: 2,
-                            fontSize: "1.2rem",
-                            fontWeight: "bold",
-                            bgcolor: "#ccc",
-                        }}
+                        src={profileData.image || undefined}
+                        sx={{ width: 80, height: 80, ml: 2, fontSize: "1.2rem", fontWeight: "bold", bgcolor: "#ccc" }}
                     >
-                        {(!profileData.image || profileData.image === "") &&
-                            (profileData.fullName?.charAt(0) || "ط")}
+                        {!profileData.image && profileData.fullName?.charAt(0)}
                     </Avatar>
+
                     <Box>
                         <Typography variant="h5" color="text.secondary" display="block">
                             {profileData.fullName}
@@ -147,77 +216,200 @@ const StudentProfile = () => {
                         <Typography variant="body2" color="text.secondary" display="block">
                             {profileData.email}
                         </Typography>
+
+                        <Stack direction="row" spacing={1} mt={1}>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                onChange={handleImage}
+                            />
+                            <Button
+                                variant="outlined"
+                                onClick={handlePickImage}
+                                sx={{ borderColor: mainColor, color: mainColor }}
+                            >
+                                اختيار صورة
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={saveImage}
+                                disabled={!form.image || saving}
+                                sx={{ bgcolor: mainColor }}
+                                startIcon={saving ? <CircularProgress size={16} /> : <Save />}
+                            >
+                                حفظ الصورة
+                            </Button>
+                        </Stack>
+
+                        {form.image && (
+                            <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                                تم اختيار: {form.image.name}
+                            </Typography>
+                        )}
                     </Box>
                 </Box>
 
                 <Divider sx={{ my: 1.5 }} />
 
-                <Row label="الاسم" value={profileData.name} />
-                <Row
-                    label="الجنس"
-                    value={
-                        <Chip
-                            label={
-                                profileData.gender === "male"
-                                    ? "ذكر"
-                                    : profileData.gender === "female"
-                                        ? "أنثى"
-                                        : "—"
-                            }
-                            size="small"
-                        />
-                    }
+                {/* للعرض فقط - لا أزرار */}
+                <DisplayRow label="الاسم" value={profileData.name} />
+                <DisplayRow label="الجنس" value={profileData.gender} />
+                <DisplayRow label="العنوان" value={profileData.address || "—"} />
+                <DisplayRow label="تاريخ الميلاد" value={profileData.dob} />
+                <DisplayRow label="التخصص" value={profileData.specialization} />
+                <DisplayRow label="الرقم (Student)" value={profileData.studentPrefix} hideDivider />
+
+            </Paper>
+
+            <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
+                <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
+                    معلومات الحساب (قابلة للتعديل)
+                </Typography>
+
+                {/* قابلة للتعديل فقط: email, phone, password */}
+                <EditableRow
+                    label="البريد الإلكتروني"
+                    value={form.email}
+                    displayValue={profileData.email}
+                    editing={editing.email}
+                    onStart={() => startEdit("email")}
+                    onCancel={() => cancelEdit("email")}
+                    onSave={() => saveField("email")}
+                    onChange={handleChange("email")}
+                    saving={saving}
+                    type="email"
                 />
-                <Row label="الهاتف" value={profileData.phone} />
-                <Row label="العنوان" value={profileData.address || "—"} />
-                <Row label="تاريخ الميلاد" value={profileData.dob} />
-                <Row label="تاريخ الالتحاق" value={profileData.enrollmentDate} />
-                <Row label="الحالة الدراسية" value={<Chip label={profileData.status} size="small" />} />
-                <Row
-                    label="معلومات طبية"
-                    value={<Typography variant="body2">{profileData.medicalInfo}</Typography>}
+
+                <EditableRow
+                    label="الهاتف"
+                    value={form.phone}
+                    displayValue={profileData.phone}
+                    editing={editing.phone}
+                    onStart={() => startEdit("phone")}
+                    onCancel={() => cancelEdit("phone")}
+                    onSave={() => saveField("phone")}
+                    onChange={handleChange("phone")}
+                    saving={saving}
+                />
+
+                <EditableRow
+                    label="كلمة المرور الجديدة"
+                    value={form.password}
+                    displayValue={"••••••••"}
+                    editing={editing.password}
+                    onStart={() => startEdit("password")}
+                    onCancel={() => {
+                        setForm((f) => ({ ...f, password: "", password_confirmation: "" }));
+                        cancelEdit("password");
+                    }}
+                    onSave={() => saveField("password")}
+                    onChange={handleChange("password")}
+                    saving={saving}
+                    type="password"
+                    extraInput={{
+                        label: "تأكيد كلمة المرور",
+                        value: form.password_confirmation,
+                        onChange: handleChange("password_confirmation"),
+                    }}
                     hideDivider
                 />
             </Paper>
 
-            {/* معلومات المستخدم */}
-            <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }} elevation={1}>
-                <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
-                    معلومات المستخدم
-                </Typography>
-                <Row label="البريد الإلكتروني" value={profileData.email} />
-                <Row label="المعرّف (User Prefix)" value={profileData.userPrefix} />
-                <Row label="رقم الطالب (Student Prefix)" value={profileData.studentPrefix} />
-                <Row label="تاريخ إنشاء الحساب" value={profileData.createdAt} />
-                <Row label="آخر تحديث" value={profileData.updatedAt} hideDivider />
-            </Paper>
-
-            {/* الحالة (اختيارية) */}
             <Paper sx={{ p: 3, borderRadius: 3 }} elevation={1}>
                 <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                     <Typography fontWeight="bold" fontSize="1.1rem" color={mainColor}>
                         الحالة
                     </Typography>
                     <Box display="flex" alignItems="center">
-                        <Switch
-                            checked={isAvailable}
-                            onChange={() => setIsAvailable(!isAvailable)}
-                            color="success"
-                        />
-                        <Typography fontSize="0.9rem" fontWeight="medium">
-                            Available now
-                        </Typography>
+                        <Switch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} color="success" />
+                        <Typography fontSize="0.9rem" fontWeight="medium">Available now</Typography>
                     </Box>
                 </Box>
                 <Divider sx={{ mb: 1 }} />
-                <Row
-                    label="الحالة"
-                    value={<Chip label={isAvailable ? "متاح" : "غير متاح"} size="small" />}
-                    hideDivider
-                />
+                <Typography variant="body2">الحالة: {isAvailable ? "متاح" : "غير متاح"}</Typography>
             </Paper>
         </Box>
     );
 };
+
+/* صف عرض فقط (بدون أزرار) */
+const DisplayRow = ({ label, value, hideDivider = false }) => (
+    <>
+        <Box display="flex" justifyContent="space-between" alignItems="center" py={1.5} px={1}>
+            <Box>
+                {label && <Typography variant="body2" color="text.secondary" mb={0.5}>{label}</Typography>}
+                <Typography variant="body2">{value || "—"}</Typography>
+            </Box>
+        </Box>
+        {!hideDivider && <Divider sx={{ my: 1 }} />}
+    </>
+);
+
+/* صف قابل للتحرير للحقول المدعومة فقط */
+const EditableRow = ({
+    label,
+    value,
+    displayValue,
+    editing,
+    onStart,
+    onCancel,
+    onSave,
+    onChange,
+    saving,
+    type = "text",
+    extraInput,
+    hideDivider = false,
+}) => (
+    <>
+        <Box display="flex" justifyContent="space-between" alignItems="center" py={1.5} px={1}>
+            <Box flex={1} mr={2}>
+                {label && <Typography variant="body2" color="text.secondary" mb={0.5}>{label}</Typography>}
+                {!editing ? (
+                    <Typography variant="body2">{displayValue || "—"}</Typography>
+                ) : (
+                    <>
+                        <TextField
+                            size="small"
+                            fullWidth
+                            type={type}
+                            value={value ?? ""}
+                            onChange={onChange}
+                        />
+                        {extraInput && (
+                            <TextField
+                                sx={{ mt: 1 }}
+                                size="small"
+                                fullWidth
+                                type="password"
+                                label={extraInput.label}
+                                value={extraInput.value ?? ""}
+                                onChange={extraInput.onChange}
+                            />
+                        )}
+                    </>
+                )}
+            </Box>
+
+            {!editing ? (
+                <IconButton size="small" sx={{ color: mainColor }} onClick={onStart}>
+                    <EditIcon fontSize="small" />
+                </IconButton>
+            ) : (
+                <Stack direction="row" spacing={0.5}>
+                    <IconButton size="small" color="success" onClick={onSave} disabled={saving}>
+                        {saving ? <CircularProgress size={18} /> : <Save fontSize="small" />}
+                    </IconButton>
+                    <IconButton size="small" color="inherit" onClick={onCancel}>
+                        <Close fontSize="small" />
+                    </IconButton>
+                </Stack>
+            )}
+        </Box>
+
+        {!hideDivider && <Divider sx={{ my: 1 }} />}
+    </>
+);
 
 export default StudentProfile;
