@@ -1,5 +1,5 @@
 // src/components/SupervisorRole/Buses/Section1.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
     Box,
     Paper,
@@ -20,6 +20,8 @@ import {
     Badge as BadgeIcon,
 } from "@mui/icons-material";
 
+import MapDialogSupervisorStudent from "../MapDialog";
+
 const BORDER = "1px solid rgba(48,138,159,.45)";
 const CARD_SHADOW = "0 8px 24px rgba(34,56,95,.10)";
 const TITLE_COLOR = "#1aa1b3";
@@ -28,7 +30,25 @@ const MUTED = "#6c7a89";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 
-export default function Section1({ buses = [], onOpenMap }) {
+export default function Section1({ buses = [] }) {
+    const [mapOpen, setMapOpen] = useState(false);
+    const [mapTarget, setMapTarget] = useState(null);
+
+    const openMapForSupervisor = (bus) => {
+        const sup = bus?.supervisor || {};
+        const mockStudent = {
+            name: sup.name || "—",
+            user: { image: "" }, 
+            supervisor: {
+                id: sup.id,
+                name: sup.name,
+                prefix: sup.prefix,
+            },
+        };
+        setMapTarget(mockStudent);
+        setMapOpen(true);
+    };
+
     return (
         <Box sx={{ px: { xs: 1.5, md: 3 }, py: { xs: 2, md: 3 }, direction: "rtl" }}>
             <Grid container spacing={3}>
@@ -51,7 +71,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                     const supervisorCode = b?.supervisor?.prefix || "—";
 
                     return (
-                        // عنصر واحد بعرض الصفحة
                         <Grid item xs={12} sm={12} md={12} key={`${id}-${reg}`}>
                             <Paper
                                 elevation={0}
@@ -69,7 +88,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                                     width: "100%",
                                 }}
                             >
-                                {/* رقم أعلى يسار */}
                                 <Typography
                                     variant="caption"
                                     sx={{ position: "absolute", top: 14, left: 16, color: "#A0A8B0" }}
@@ -77,7 +95,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                                     {reg}
                                 </Typography>
 
-                                {/* شارة الأيقونة أعلى يمين */}
                                 <Box
                                     sx={{
                                         position: "absolute",
@@ -96,7 +113,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                                     <BusIcon sx={{ fontSize: 22, color: "#308A9F" }} />
                                 </Box>
 
-                                {/* العنوان + حالة */}
                                 <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
                                     <Typography
                                         sx={{
@@ -128,7 +144,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                                     </Box>
                                 </Grid>
 
-                                {/* سطر تعريف إضافي: المشرف + تاريخ الإضافة */}
                                 <Grid container spacing={2} sx={{ mb: 2 }}>
                                     <Grid item xs={12} md={8}>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, flexWrap: "wrap" }}>
@@ -148,7 +163,6 @@ export default function Section1({ buses = [], onOpenMap }) {
                                     </Grid>
                                 </Grid>
 
-                                {/* تفاصيل الباص: السائق / الهاتف / السعة / النوع */}
                                 <Grid container spacing={3} sx={{ mb: 2 }}>
                                     <Grid item xs={12} md={6}>
                                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, flexWrap: "wrap" }}>
@@ -203,12 +217,11 @@ export default function Section1({ buses = [], onOpenMap }) {
 
                                 <Divider sx={{ my: 2 }} />
 
-                                {/* رابط الخريطة — سطر كامل بعرض الحاوية */}
                                 <Box
-                                    onClick={() => onOpenMap?.(b)}
+                                    onClick={() => openMapForSupervisor(b)}
                                     role="button"
                                     tabIndex={0}
-                                    onKeyDown={(e) => (e.key === "Enter" ? onOpenMap?.(b) : null)}
+                                    onKeyDown={(e) => (e.key === "Enter" ? openMapForSupervisor(b) : null)}
                                     sx={{
                                         display: "block",
                                         width: "100%",
@@ -229,6 +242,12 @@ export default function Section1({ buses = [], onOpenMap }) {
                     );
                 })}
             </Grid>
+
+            <MapDialogSupervisorStudent
+                open={mapOpen}
+                onClose={() => setMapOpen(false)}
+                student={mapTarget}
+            />
         </Box>
     );
 }

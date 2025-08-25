@@ -14,9 +14,9 @@ const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأ�
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 const TYPE_COLORS = {
-    daily: '#90CAF9',  // درس يومي
-    event: '#A5D6A7',  // فعالية
-    exam: '#F48FB1',  // اختبار
+    daily: '#90CAF9',  
+    event: '#A5D6A7', 
+    exam: '#F48FB1',  
     default: '#CE93D8',
 };
 
@@ -30,7 +30,6 @@ const formatTime = (iso) => {
     return `${h}:${m} ${am ? 'ص' : 'م'}`;
 };
 
-// استخراج اليوم/الشهر/اليوم_بالأسبوع بأمان من أي سلسلة تاريخ
 const pickDateParts = (val) => {
     const d = new Date(val);
     if (isNaN(d)) return { date: null, month: null, dayIndex: null };

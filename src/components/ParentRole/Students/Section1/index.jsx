@@ -17,8 +17,10 @@ import WcRoundedIcon from "@mui/icons-material/WcRounded";
 import MedicalServicesRoundedIcon from "@mui/icons-material/MedicalServicesRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 
-import { getParentStudents } from "./../../../../api/Parent/Students/getParentStudents";
 import MapDialogStudent from "../MapDialog";
+
+
+import { getParentStudents } from './../../../../api/Parent/Students/getParentStudents';
 
 const GRADIENT = "linear-gradient(180deg,#35AFBC 0%,#308A9F 45%,#22385F 100%)";
 const COLORS = {
@@ -46,6 +48,7 @@ const getEnroll = (s) => s?.enrollment_date || "";
 const getAddr = (s) => s?.address || "—";
 const getCode = (s) => s?.prefix || "—";
 const getMed = (s) => s?.medical_info || "";
+const getSupervisorId = (s) => s?.supervisor?.id ?? null;
 
 const fmtDate = (iso) => {
     if (!iso) return "—";
@@ -65,7 +68,7 @@ export default function ParentStudentCards({ onSelect }) {
 
     // حالة الماب مودال
     const [mapOpen, setMapOpen] = useState(false);
-    const [mapStudent, setMapStudent] = useState(null);
+    const [supervisorId, setSupervisorId] = useState(null); // 👈 الجديد
 
     useEffect(() => {
         (async () => {
@@ -90,8 +93,10 @@ export default function ParentStudentCards({ onSelect }) {
         return rows.filter((s) => nameMatch(s) && levelMatch(s) && sexMatch(s));
     }, [rows, q, level, gender]);
 
-    const openMapFor = (student) => {
-        setMapStudent(student);
+    // فتح الخريطة بإرسال id المشرف
+    const openMapForSupervisor = (id) => {
+        if (!id) return; // لا تفتح لو ما في مشرف
+        setSupervisorId(id);
         setMapOpen(true);
     };
 
@@ -117,6 +122,8 @@ export default function ParentStudentCards({ onSelect }) {
                             getGender(s) === "male" ? "ذكر" :
                                 getGender(s) === "female" ? "أنثى" : "—";
                         const status = getStatus(s);
+                        const supId = getSupervisorId(s);
+                        const noSup = !supId;
 
                         return (
                             <Grid item key={s.id ?? code} xs={12}>
@@ -136,10 +143,8 @@ export default function ParentStudentCards({ onSelect }) {
                                         flexDirection: "column",
                                     }}
                                 >
-                                    {/* شريط علوي */}
                                     <Box sx={{ height: 10, background: GRADIENT }} />
 
-                                    {/* المحتوى */}
                                     <Box sx={{ p: { xs: 3, md: 3.5 }, flex: 1 }}>
                                         <Stack
                                             direction={{ xs: "column", md: "row" }}
@@ -184,7 +189,7 @@ export default function ParentStudentCards({ onSelect }) {
                                                 </Stack>
                                             </Stack>
 
-                                            {/* وسط: بيانات الاتصال والتواريخ */}
+                                            {/* وسط: اتصال وتواريخ */}
                                             <Stack direction="row" spacing={{ xs: 2, md: 2.5 }} sx={{ flex: 2, minWidth: 340, flexWrap: "wrap" }}>
                                                 <InfoItem icon={<EmailRoundedIcon />} label="البريد" value={getEmail(s)} wide />
                                                 <InfoItem icon={<PhoneIphoneRoundedIcon />} label="الهاتف" value={getPhone(s)} />
@@ -238,27 +243,31 @@ export default function ParentStudentCards({ onSelect }) {
                                         </Stack>
                                     </Box>
 
-                                    {/* فاصل شفاف أعلى زر الخريطة */}
                                     <Divider sx={{ opacity: 0.15 }} />
 
-                                    {/* زر الخريطة أسفل الكارد */}
+                                    {/* زر الخريطة (يرسل id المشرف) */}
                                     <Box sx={{ p: 2, pt: 1.5 }}>
-                                        <Button
-                                            onClick={(e) => { e.stopPropagation(); openMapFor(s); }}
-                                            fullWidth
-                                            variant="contained"
-                                            startIcon={<MapRoundedIcon sx={{ margin:"0 1rem" }}/>}
-                                            sx={{
-                                                bgcolor: COLORS.brand2,
-                                                "&:hover": { bgcolor: COLORS.brand3 },
-                                                height: 46,
-                                                borderRadius: 2,
-                                                fontWeight: 800,
-                                                letterSpacing: 0.3,
-                                            }}
-                                        >
-                                            عرض موقع الطالب على الخريطة
-                                        </Button>
+                                        <Tooltip title={noSup ? "لا يوجد مشرف مرتبط بهذا الطالب" : "اعرض موقع المشرف على الخريطة"}>
+                                            <span>
+                                                <Button
+                                                    onClick={(e) => { e.stopPropagation(); openMapForSupervisor(supId); }}
+                                                    fullWidth
+                                                    variant="contained"
+                                                    startIcon={<MapRoundedIcon sx={{ margin: "0 1rem" }} />}
+                                                    disabled={noSup}
+                                                    sx={{
+                                                        bgcolor: COLORS.brand2,
+                                                        "&:hover": { bgcolor: COLORS.brand3 },
+                                                        height: 46,
+                                                        borderRadius: 2,
+                                                        fontWeight: 800,
+                                                        letterSpacing: 0.3,
+                                                    }}
+                                                >
+                                                    عرض موقع المشرف على الخريطة
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
                                     </Box>
                                 </Card>
                             </Grid>
@@ -266,17 +275,15 @@ export default function ParentStudentCards({ onSelect }) {
                     })}
             </Grid>
 
-            {/* موديول الخريطة للطالب */}
             <MapDialogStudent
                 open={mapOpen}
                 onClose={() => setMapOpen(false)}
-                student={mapStudent}
+                supervisorId={supervisorId} 
             />
         </Box>
     );
 }
 
-/* عناصر صغيرة منسّقة — كما لديك */
 function InfoItem({ icon, label, value, wide = false }) {
     return (
         <Paper elevation={0} sx={{ p: 1.25, px: 1.75, borderRadius: 2.5, bgcolor: "#fff", minWidth: wide ? 320 : 240, flexGrow: 1 }}>

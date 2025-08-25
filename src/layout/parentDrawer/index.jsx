@@ -28,7 +28,6 @@ import { clearToken } from '../../api/authApi/tokenManager';
 import PeopleIcon from "@mui/icons-material/People";         
 import SchoolIcon from "@mui/icons-material/School";         
 import FactCheckIcon from "@mui/icons-material/FactCheck";    
-import TransferWithinAStationIcon from "@mui/icons-material/TransferWithinAStation";
 import PaymentIcon from "@mui/icons-material/Payment";       
 const drawerWidth = 240;
 
@@ -146,11 +145,6 @@ const parentMenu = [
     },
 
     { text: "الدرجات", icon: <GradeIcon />, url: "/parentDashboard/grades" },
-    {
-        text: "النقل المدرسي",
-        icon: <TransferWithinAStationIcon />,
-        url: "/parentDashboard/schoolTransport",
-    },
     { text: "الدفع", icon: <PaymentIcon />, url: "/parentDashboard/payments" },
 ];
 

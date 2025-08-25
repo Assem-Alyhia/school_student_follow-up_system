@@ -1,23 +1,20 @@
+// src/components/SchoolTransportation/Section2.jsx
 import React, { useState } from 'react';
 import {
-    Box, Paper, Grid, Button, IconButton, TextField
+    Box, Paper, Grid, Button, IconButton, TextField, InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
 import SortIcon from '@mui/icons-material/Sort';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
+// import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import AddBusDialog from '../AddBus';
 
-const Section2 = () => {
+const Section2 = ({ searchTerm, onSearchChange, onCreated }) => {
     const [openAddDialog, setOpenAddDialog] = useState(false);
 
-    const handleOpen = () => {
-        console.log('فتح الموديول'); 
-        setOpenAddDialog(true);
-    };
-
+    const handleOpen = () => setOpenAddDialog(true);
     const handleClose = () => setOpenAddDialog(false);
 
     return (
@@ -42,10 +39,14 @@ const Section2 = () => {
                         </Button>
 
                         <TextField
-                            placeholder="بحث..."
+                            placeholder="بحث عن مسار/سائق..."
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             InputProps={{
                                 startAdornment: (
-                                    <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
+                                    </InputAdornment>
                                 ),
                             }}
                             sx={{
@@ -55,12 +56,7 @@ const Section2 = () => {
                         />
                     </Grid>
 
-                    <Grid
-                        item
-                        xs={12}
-                        md={6}
-                        sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
-                    >
+                    <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
@@ -69,22 +65,11 @@ const Section2 = () => {
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 mr: 2,
                             }}
-                            onClick={handleOpen} 
+                            onClick={handleOpen}
                         >
                             أضف مسار
                         </Button>
-{/* 
-                        <Button
-                            variant="contained"
-                            startIcon={<FileDownloadIcon />}
-                            sx={{
-                                backgroundColor: '#35AFBC',
-                                '&:hover': { backgroundColor: '#30BA9F' },
-                                mr: 2,
-                            }}
-                        >
-                            تصدير بيانات
-                        </Button> */}
+
 
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />
@@ -94,10 +79,11 @@ const Section2 = () => {
             </Paper>
 
             <AddBusDialog
-                open={openAddDialog}    
-                onClose={handleClose}   
+                open={openAddDialog}
+                onClose={handleClose}
                 onCreated={() => {
                     handleClose();
+                    onCreated?.(); // يخلي الأب يحدث القائمة
                 }}
             />
         </Box>

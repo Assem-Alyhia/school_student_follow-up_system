@@ -1,3 +1,4 @@
+// src/features/Exams/AddExamModal.jsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +15,7 @@ import { getAllSubjectsNoPaginate } from "../../../../api/Admin/Subjects/getAllS
 import { getAllExamTypesNoPaginate } from "../../../../api/Admin/examTypes/getAllExamTypesNoPaginate";
 import { getAllAcademicYears } from "../../../../api/Admin/AcademicYears/getAllAcademicYears";
 import { createAdminExam } from "../../../../api/Admin/Exams/createAdminExam";
+import SuccessAlert from "../../../../layout/SuccessAlert";
 
 const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -67,18 +69,36 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
     const [subjects, setSubjects] = useState([]);
     const [examTypes, setExamTypes] = useState([]);
 
+    // تنبيه عام (نجاح/فشل)
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertMsg, setAlertMsg] = useState("");
+    const [alertSeverity, setAlertSeverity] = useState("success"); // "success" | "error"
+
     const queryClient = useQueryClient();
+
+    // التقط أول رسالة خطأ حقلية إن وجدت
+    const pickFirstError = (resp) => {
+        const errs = resp?.errors;
+        if (!errs || typeof errs !== "object") return null;
+        for (const key of Object.keys(errs)) {
+            const v = errs[key];
+            if (Array.isArray(v) && v[0]) return v[0];
+        }
+        return null;
+    };
 
     // تحميل القوائم عند الفتح
     useEffect(() => {
         if (!open) return;
         setValues(INITIAL_VALUES);
+        setShowAlert(false);
+
         let alive = true;
         (async () => {
             try {
                 setLoadingLists(true);
                 const [years, cls, subs, types] = await Promise.all([
-                    getAllAcademicYears(),           // يدعم paginate أو لا — سنلتقط المصفوفة من data أو مباشرة
+                    getAllAcademicYears(),
                     getAllClassroomsNoPaginate(),
                     getAllSubjectsNoPaginate(),
                     getAllExamTypesNoPaginate(),
@@ -88,10 +108,19 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                 setClassrooms(Array.isArray(cls?.data) ? cls.data : (Array.isArray(cls) ? cls : []));
                 setSubjects(Array.isArray(subs?.data) ? subs.data : (Array.isArray(subs) ? subs : []));
                 setExamTypes(Array.isArray(types?.data) ? types.data : (Array.isArray(types) ? types : []));
+            } catch (e) {
+                if (!alive) return;
+                const resp = e?.response?.data;
+                const fieldMsg = pickFirstError(resp);
+                setAlertSeverity("error");
+                setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر تحميل القوائم.");
+                setShowAlert(true);
+                setAcademicYears([]); setClassrooms([]); setSubjects([]); setExamTypes([]);
             } finally {
                 if (alive) setLoadingLists(false);
             }
         })();
+
         return () => { alive = false; };
     }, [open]);
 
@@ -138,11 +167,22 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                 queryClient.invalidateQueries({ queryKey: ["admin-exams"] }),
                 queryClient.invalidateQueries({ queryKey: ["teacher-exams"] }),
             ]);
+
+            // نجاح ✅
+            setAlertSeverity("success");
+            setAlertMsg("تم إنشاء الامتحان بنجاح.");
+            setShowAlert(true);
+
             setValues(INITIAL_VALUES);
             onCreated?.(created);
-            handleClose();
+            // handleClose(); // إن أردت الإغلاق مباشرة
         } catch (e) {
-            console.error(e);
+            // فشل ❌
+            const resp = e?.response?.data;
+            const fieldMsg = pickFirstError(resp);
+            setAlertSeverity("error");
+            setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر إنشاء الامتحان.");
+            setShowAlert(true);
         } finally {
             setSaving(false);
         }
@@ -356,6 +396,15 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                     إلغاء
                 </Button>
             </Box>
+
+            {showAlert && (
+                <SuccessAlert
+                    title={alertSeverity === "success" ? "تم بنجاح" : "حدث خطأ"}
+                    message={alertMsg}
+                    severity={alertSeverity}  
+                    onClose={() => setShowAlert(false)}
+                />
+            )}
         </Dialog>
     );
 }

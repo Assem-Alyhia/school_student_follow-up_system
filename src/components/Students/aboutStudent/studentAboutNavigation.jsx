@@ -58,7 +58,7 @@ const StudentNavigation = () => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        الجدول اليومي
+                        التقويم الشهري
                     </Button>
                     <Button
                         variant="contained"
@@ -72,7 +72,7 @@ const StudentNavigation = () => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        الجدول الاسبوعي
+                        التقويم الاسبوعي
                     </Button>
                     <Button
                         variant="contained"
@@ -86,7 +86,7 @@ const StudentNavigation = () => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        الجدول اليومي
+                        التقويم اليومي
                     </Button>
 
                     <Button

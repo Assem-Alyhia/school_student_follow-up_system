@@ -1,26 +1,17 @@
 // src/components/Admin/Supervisors/Section1.jsx
 import React, { useState } from 'react';
 import {
-    Box,
-    Grid,
-    Button,
-    IconButton,
-    TextField,
-    Paper,
-    InputAdornment,
+    Box, Grid, Button, IconButton, TextField, Paper, InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
 import SortIcon from '@mui/icons-material/Sort';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
-// import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { useQueryClient } from '@tanstack/react-query';
-
-// تأكد من المسار حسب مكان الملف لديك
 import SupervisorCreateModal from '../SupervisorCreateModal';
 
-const Section1 = () => {
+const Section1 = ({ searchTerm, onSearchChange }) => {
     const [openCreate, setOpenCreate] = useState(false);
     const queryClient = useQueryClient();
 
@@ -46,7 +37,9 @@ const Section1 = () => {
                         </Button>
 
                         <TextField
-                            placeholder="بحث..."
+                            placeholder="بحث بالاسم..."
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -66,12 +59,7 @@ const Section1 = () => {
                         />
                     </Grid>
 
-                    <Grid
-                        item
-                        xs={12}
-                        md={6}
-                        sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
-                    >
+                    <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
@@ -92,7 +80,6 @@ const Section1 = () => {
                 </Grid>
             </Paper>
 
-            {/* موديول إنشاء مشرف */}
             <SupervisorCreateModal
                 open={openCreate}
                 onClose={() => setOpenCreate(false)}

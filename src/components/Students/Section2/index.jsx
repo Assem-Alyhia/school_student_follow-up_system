@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Box, Paper, Typography, Button, Grid, IconButton, Menu, MenuItem
+    Box, Paper, Typography, Button, Grid, IconButton, Menu, MenuItem, Avatar
 } from '@mui/material';
 import {
     MoreVert as MoreVertIcon,
@@ -68,23 +68,34 @@ const Section2 = ({ students }) => {
         setOpenPaymentModal(false);
     };
 
+    const asArGender = (g) => (g === 'male' ? 'ذكر' : g === 'female' ? 'أنثى' : '—');
+
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
                 {students.map((student) => {
-                    const user = student;
+                    // بعض الردود تكون student.user أو student نفسه يحتوي البيانات
+                    const user = student?.user ?? student ?? {};
+                    const name = user.name || '—';
+                    const email = user.email || '—';
+                    const imageRaw = user.image || ''; // قد يكون رابطًا كاملاً أو فارغًا
+                    const hasImage = Boolean(imageRaw && String(imageRaw).trim());
 
                     return (
                         <Grid item xs={12} sm={6} md={4} key={student.id}>
-                            <Paper elevation={3} sx={{
-                                padding: 2,
-                                height: '100%',
-                                textAlign: 'center',
-                                backgroundColor: '#F5F5F5',
-                                border: '1px solid #308A9F',
-                                maxWidth: '90%',
-                                margin: 'auto',
-                            }}>
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    padding: 2,
+                                    height: '100%',
+                                    textAlign: 'center',
+                                    backgroundColor: '#F5F5F5',
+                                    border: '1px solid #308A9F',
+                                    maxWidth: '90%',
+                                    margin: 'auto',
+                                }}
+                            >
+                                {/* الشريط العلوي (القائمة + الرقم) */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <IconButton onClick={(e) => handleMenuClick(e, student.id)}>
@@ -118,35 +129,35 @@ const Section2 = ({ students }) => {
                                                 <Typography sx={{ color: 'error.main' }}>حذف</Typography>
                                             </MenuItem>
                                         </Menu>
+
                                         <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
                                             {student.prefix}
                                         </Typography>
                                     </Box>
+
                                     <IconButton>
                                         <PersonIcon sx={{ color: '#22385F' }} />
                                     </IconButton>
                                 </Box>
 
-                                <Box sx={{
-                                    position: 'relative',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    marginBottom: 2,
-                                    overflow: 'hidden',
-                                    width: 100,
-                                    height: 100,
-                                    margin: 'auto',
-                                    borderRadius: '8px',
-                                }}>
-                                    <Box
-                                        component="img"
-                                        src={user.user.image}
+                                {/* الصورة — نفس أسلوب المشرفين */}
+                                <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mb: 2 }}>
+                                    <Avatar
+                                        src={hasImage ? imageRaw : undefined}
+                                        alt=""
+                                        variant="rounded"
                                         sx={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
+                                            width: 100,
+                                            height: 100,
+                                            bgcolor: '#fff',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 14px rgba(34,56,95,0.12)',
                                         }}
-                                    />
+                                    >
+                                        {!hasImage && <PersonIcon sx={{ color: '#9aa6b2', fontSize: 42 }} />}
+                                    </Avatar>
+
+                                    {/* مؤشر الحالة (اختياري إن كان لديك status) */}
                                     <Box
                                         sx={{
                                             position: 'absolute',
@@ -161,25 +172,30 @@ const Section2 = ({ students }) => {
                                     />
                                 </Box>
 
-                                <Typography variant="h6" sx={{
-                                    fontWeight: 'bold',
-                                    margin: "1rem 0 2rem",
-                                    color: '#308A9F',
-                                    textShadow: "0 1px  5px rgb(155, 155, 155)"
-                                }}>
-                                    {user.name}
+                                {/* الاسم */}
+                                <Typography
+                                    variant="h6"
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        margin: '1rem 0 2rem',
+                                        color: '#308A9F',
+                                        textShadow: '0 1px 5px rgb(155,155,155)',
+                                    }}
+                                >
+                                    {name}
                                 </Typography>
 
-                                <Box sx={{ margin: "2.5rem 0" }}>
+                                {/* صف معلومات مختصر */}
+                                <Box sx={{ margin: '2.5rem 0' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-evenly', marginBottom: 1 }}>
                                         <Typography sx={{ color: '#308A9F' }}><strong>رقم التسجيل:</strong></Typography>
                                         <Typography sx={{ color: '#308A9F' }}><strong>الجنس:</strong></Typography>
                                         <Typography sx={{ color: '#308A9F' }}><strong>تاريخ الانضمام:</strong></Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-evenly' }}>
-                                        <Typography variant="body2" sx={{ color: '#586E75' }}>{user.prefix}</Typography>
+                                        <Typography variant="body2" sx={{ color: '#586E75' }}>{student.prefix}</Typography>
                                         <Typography variant="body2" sx={{ color: '#586E75' }}>
-                                            {student.gender === 'male' ? 'ذكر' : 'أنثى'}
+                                            {asArGender(student.gender)}
                                         </Typography>
                                         <Typography variant="body2" sx={{ color: '#586E75' }}>
                                             {new Date(user.created_at).toLocaleDateString('ar-EG')}
@@ -187,23 +203,25 @@ const Section2 = ({ students }) => {
                                     </Box>
                                 </Box>
 
+                                {/* شريط البريد */}
                                 <Box
                                     sx={{
                                         background: 'linear-gradient(90deg, #35AFBC, #308A9F,#22385F)',
                                         padding: '.6rem 1rem',
                                         borderRadius: 1,
-                                        margin: "2.5rem auto",
-                                        width: "80%",
+                                        margin: '2.5rem auto',
+                                        width: '80%',
                                     }}
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <EmailIcon sx={{ color: '#fff', marginRight: 1, fontSize: '16px' }} />
-                                        <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px' }}>
-                                            {user.user.email}
+                                        <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px', direction: 'ltr' }}>
+                                            {email}
                                         </Typography>
                                     </Box>
                                 </Box>
 
+                                {/* الأزرار السفلية */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Button
                                         variant="contained"
@@ -233,6 +251,7 @@ const Section2 = ({ students }) => {
                 handleClose={handleClosePayment}
                 student={selectedStudent}
             />
+
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}
@@ -240,6 +259,7 @@ const Section2 = ({ students }) => {
                 title="هل أنت متأكد من حذف الطالب؟"
                 message="سيتم حذف بيانات الطالب من النظام."
             />
+
             {showSuccess && (
                 <SuccessAlert
                     title="تم حذف الطالب بنجاح!"

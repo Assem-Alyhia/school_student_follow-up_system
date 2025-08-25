@@ -1,3 +1,4 @@
+// src/components/TeacherRole/Classrooms/UpdateExamModal.jsx
 import { useEffect, useMemo, useState } from "react";
 import {
     Dialog, DialogContent, IconButton, Box, Typography, Grid,
@@ -12,6 +13,7 @@ import { getAllExamTypesNoPaginate } from "../../../../api/Admin/examTypes/getAl
 import { getAllAcademicYears } from "../../../../api/Admin/AcademicYears/getAllAcademicYears";
 import { getAdminExamById } from "../../../../api/Admin/Exams/getAdminExamById";
 import { updateAdminExam } from "../../../../api/Admin/Exams/updateAdminExam";
+import SuccessAlert from "../../../../layout/SuccessAlert";
 
 const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -43,7 +45,7 @@ const toApiDateTime = (v) => {
     return `${v.slice(0, 10)} 00:00:00`;
 };
 
-// تحويل ISO/SQL إلى قيمة مناسبة لـ input datetime-local
+// إلى قيمة مناسبة لـ input datetime-local
 const toLocalInput = (v) => {
     if (!v) return "";
     if (typeof v === "string" && v.includes(" ")) {
@@ -56,8 +58,19 @@ const toLocalInput = (v) => {
             const pad = (n) => String(n).padStart(2, "0");
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
-    } catch { ()=> console.log()} 
+    } catch { console.log() }
     return "";
+};
+
+// يلتقط أول رسالة خطأ من response.errors إن وُجدت
+const pickFirstError = (resp) => {
+    const errs = resp?.errors;
+    if (!errs || typeof errs !== "object") return null;
+    for (const k of Object.keys(errs)) {
+        const v = errs[k];
+        if (Array.isArray(v) && v[0]) return v[0];
+    }
+    return null;
 };
 
 export default function UpdateExamModal({
@@ -88,6 +101,12 @@ export default function UpdateExamModal({
     const [subjects, setSubjects] = useState([]);
     const [examTypes, setExamTypes] = useState([]);
 
+    // تنبيه عام (نجاح/فشل)
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertMsg, setAlertMsg] = useState("");
+    const [alertSeverity, setAlertSeverity] = useState("success"); // "success" | "error"
+
+    // تحميل القوائم عند الفتح
     useEffect(() => {
         if (!open) return;
         let alive = true;
@@ -105,6 +124,13 @@ export default function UpdateExamModal({
                 setClassrooms(Array.isArray(cls?.data) ? cls.data : (Array.isArray(cls) ? cls : []));
                 setSubjects(Array.isArray(subs?.data) ? subs.data : (Array.isArray(subs) ? subs : []));
                 setExamTypes(Array.isArray(types?.data) ? types.data : (Array.isArray(types) ? types : []));
+            } catch (e) {
+                const resp = e?.response?.data;
+                const fieldMsg = pickFirstError(resp);
+                setAlertSeverity("error");
+                setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر تحميل القوائم.");
+                setShowAlert(true);
+                setAcademicYears([]); setClassrooms([]); setSubjects([]); setExamTypes([]);
             } finally {
                 if (alive) setLoadingLists(false);
             }
@@ -133,6 +159,12 @@ export default function UpdateExamModal({
                     max_score: ex?.max_score != null ? Number(ex.max_score) : "",
                     weight: ex?.weight != null ? Number(ex.weight) : "",
                 });
+            } catch (e) {
+                const resp = e?.response?.data;
+                const fieldMsg = pickFirstError(resp);
+                setAlertSeverity("error");
+                setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر جلب بيانات الامتحان.");
+                setShowAlert(true);
             } finally {
                 if (alive) setLoadingExam(false);
             }
@@ -165,18 +197,30 @@ export default function UpdateExamModal({
             subject_id: Number(values.subject_id),
             exam_type_id: Number(values.exam_type_id),
             term: values.term,
-            start_time: toApiDateTime(values.start_time), // Y-m-d H:i:s
-            end_time: toApiDateTime(values.end_time),     // Y-m-d H:i:s
+            start_time: toApiDateTime(values.start_time),
+            end_time: toApiDateTime(values.end_time),
             max_score: Number(values.max_score),
             weight: Number(values.weight),
         };
         try {
             setSaving(true);
             const updated = await updateAdminExam(examId, payload);
+
+            // نجاح ✅
+            setAlertSeverity("success");
+            setAlertMsg("تم تحديث الامتحان بنجاح.");
+            setShowAlert(true);
+
             onUpdated?.(updated);
-            onClose?.();
+            // بإمكانك إغلاق المودال مباشرة إن رغبت:
+            // onClose?.();
         } catch (e) {
-            console.error(e);
+            // فشل ❌
+            const resp = e?.response?.data;
+            const fieldMsg = pickFirstError(resp);
+            setAlertSeverity("error");
+            setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر تحديث الامتحان.");
+            setShowAlert(true);
         } finally {
             setSaving(false);
         }
@@ -184,7 +228,6 @@ export default function UpdateExamModal({
 
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 9, md: 4 };
-    const longFieldCols = { xs: 9, md: 10 };
 
     return (
         <Dialog
@@ -335,7 +378,7 @@ export default function UpdateExamModal({
                             />
                         </Grid>
 
-                        {/* العلامة والوزن */}
+                        {/* العلامة الكاملة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>العلامة الكاملة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -350,6 +393,7 @@ export default function UpdateExamModal({
                             />
                         </Grid>
 
+                        {/* الوزن */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الوزن</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -366,11 +410,6 @@ export default function UpdateExamModal({
 
                         <Grid item xs={12} />
                         <Grid item {...labelCols} />
-                        <Grid item {...longFieldCols}>
-                            <Typography variant="body2" color="text.secondary" sx={{ pr: 1 }}>
-                                يتم حفظ الأوقات بصيغة <b>YYYY-MM-DD HH:mm:ss</b> حسب متطلبات الخادم.
-                            </Typography>
-                        </Grid>
                     </Grid>
                 )}
             </DialogContent>
@@ -393,6 +432,15 @@ export default function UpdateExamModal({
                     إلغاء
                 </Button>
             </Box>
+
+            {showAlert && (
+                <SuccessAlert
+                    title={alertSeverity === "success" ? "تم بنجاح" : "حدث خطأ"}
+                    message={alertMsg}
+                    severity={alertSeverity} // success=أخضر | error=أحمر
+                    onClose={() => setShowAlert(false)}
+                />
+            )}
         </Dialog>
     );
 }

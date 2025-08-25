@@ -10,10 +10,11 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { getAllTeacherClassrooms } from "../../../../../api/Teacher/Classrooms/getAllTeacherClassrooms";
-import { getTeacherSubjects } from "../../../../../api/Teacher/Subjects/getTeacherSubjects";
-import { getTeacherExamTypes } from "../../../../../api/Teacher/Exam/getTeacherExamTypes";
-import { createTeacherExam } from "../../../../../api/Teacher/Exam/ExamList/createTeacherExam";
+import { getAllTeacherClassrooms } from "./../../../../../api/Teacher/Classrooms/getAllTeacherClassrooms";
+import { getTeacherSubjects } from "./../../../../../api/Teacher/Subjects/getTeacherSubjects";
+import { getTeacherExamTypes } from "./../../../../../api/Teacher/Exam/getTeacherExamTypes";
+import SuccessAlert from './../../../../../layout/SuccessAlert';
+import { createTeacherExam } from './../../../../../api/Teacher/Exam/ExamList/createTeacherExam';
 
 const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -34,7 +35,7 @@ const TERM_OPTIONS = [
     { label: "الفصل الثالث", value: "term 3" },
 ];
 
-// من "YYYY-MM-DDTHH:mm" إلى "YYYY-MM-DD HH:mm:ss"
+// "YYYY-MM-DDTHH:mm" -> "YYYY-MM-DD HH:mm:ss"
 const toApiDateTime = (v) => {
     if (!v) return "";
     if (v.includes("T")) {
@@ -45,7 +46,6 @@ const toApiDateTime = (v) => {
     return `${v} 00:00:00`;
 };
 
-// قيم ابتدائية للموديل
 const INITIAL_VALUES = {
     classroom_id: "",
     subject_id: "",
@@ -71,12 +71,19 @@ export default function AddExamModal({
     const [subjects, setSubjects] = useState([]);
     const [examTypes, setExamTypes] = useState([]);
 
+    // تنبيه عام (نجاح/فشل)
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertMsg, setAlertMsg] = useState("");
+    const [alertSeverity, setAlertSeverity] = useState("success"); // "success" | "error"
+
     const queryClient = useQueryClient();
 
-    // عند كل فتح: صفّر الحقول ثم حمّل القوائم
+    // تحميل القوائم عند فتح المودال
     useEffect(() => {
         if (!open) return;
         setValues(INITIAL_VALUES);
+        setShowAlert(false);
+
         let alive = true;
         (async () => {
             try {
@@ -86,37 +93,54 @@ export default function AddExamModal({
                     getTeacherSubjects(),
                     getTeacherExamTypes(),
                 ]);
+
                 if (!alive) return;
-                setClassrooms(Array.isArray(cls?.data) ? cls.data : (Array.isArray(cls) ? cls : []));
-                setSubjects(Array.isArray(subs?.data) ? subs.data : (Array.isArray(subs) ? subs : []));
-                setExamTypes(Array.isArray(types?.data) ? types.data : (Array.isArray(types) ? types : []));
+                setClassrooms(Array.isArray(cls?.data) ? cls.data : Array.isArray(cls) ? cls : []);
+                setSubjects(Array.isArray(subs?.data) ? subs.data : Array.isArray(subs) ? subs : []);
+                setExamTypes(Array.isArray(types?.data) ? types.data : Array.isArray(types) ? types : []);
+            } catch (e) {
+                if (!alive) return;
+                setAlertSeverity("error");
+                setAlertMsg(e?.response?.data?.message || e?.message || "تعذر تحميل القوائم.");
+                setShowAlert(true);
+                setClassrooms([]); setSubjects([]); setExamTypes([]);
             } finally {
                 if (alive) setLoadingLists(false);
             }
         })();
+
         return () => { alive = false; };
     }, [open]);
 
     const change = (k) => (e) => setValues((s) => ({ ...s, [k]: e.target.value }));
 
-    const canSubmit = useMemo(() => {
-        return (
-            values.classroom_id &&
-            values.subject_id &&
-            values.exam_type_id &&
-            values.term &&
-            values.start_time &&
-            values.end_time &&
-            values.max_score !== "" &&
-            values.weight !== "" &&
-            !Number.isNaN(Number(values.max_score)) &&
-            !Number.isNaN(Number(values.weight))
-        );
-    }, [values]);
+    const canSubmit = useMemo(() => (
+        values.classroom_id &&
+        values.subject_id &&
+        values.exam_type_id &&
+        values.term &&
+        values.start_time &&
+        values.end_time &&
+        values.max_score !== "" &&
+        values.weight !== "" &&
+        !Number.isNaN(Number(values.max_score)) &&
+        !Number.isNaN(Number(values.weight))
+    ), [values]);
 
     const handleClose = () => {
         setValues(INITIAL_VALUES);
         onClose?.();
+    };
+
+    // استخراج رسالة أبسط من الأخطاء الحقلية إن وُجدت
+    const pickFirstError = (resp) => {
+        const errs = resp?.errors;
+        if (!errs || typeof errs !== "object") return null;
+        for (const key of Object.keys(errs)) {
+            const v = errs[key];
+            if (Array.isArray(v) && v[0]) return v[0];
+        }
+        return null;
     };
 
     const handleSave = async () => {
@@ -130,17 +154,28 @@ export default function AddExamModal({
             max_score: Number(values.max_score),
             weight: Number(values.weight),
         };
+
         try {
             setSaving(true);
             const created = await createTeacherExam(payload);
-
             await queryClient.invalidateQueries({ queryKey: ["teacher-exams"] });
+
+            // نجاح ✅
+            setAlertSeverity("success");
+            setAlertMsg("تم إنشاء الامتحان بنجاح.");
+            setShowAlert(true);
 
             setValues(INITIAL_VALUES);
             onCreated?.(created);
-            handleClose();
+            // بإمكانك إبقاء المودال مفتوحًا أو إغلاقه حسب رغبتك:
+            // handleClose();
         } catch (e) {
-            console.error(e);
+            // فشل ❌
+            const resp = e?.response?.data;
+            const fieldMsg = pickFirstError(resp);
+            setAlertSeverity("error");
+            setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر إنشاء الامتحان.");
+            setShowAlert(true);
         } finally {
             setSaving(false);
         }
@@ -258,7 +293,6 @@ export default function AddExamModal({
                                 fullWidth
                                 sx={fieldSx}
                                 disabled={saving}
-                                placeholder="YYYY-MM-DDTHH:mm"
                             />
                         </Grid>
 
@@ -271,7 +305,6 @@ export default function AddExamModal({
                                 fullWidth
                                 sx={fieldSx}
                                 disabled={saving}
-                                placeholder="YYYY-MM-DDTHH:mm"
                             />
                         </Grid>
 
@@ -328,6 +361,15 @@ export default function AddExamModal({
                     إلغاء
                 </Button>
             </Box>
+
+            {showAlert && (
+                <SuccessAlert
+                    title={alertSeverity === "success" ? "تم بنجاح" : "حدث خطأ"}
+                    message={alertMsg}
+                    severity={alertSeverity} // "success" أخضر / "error" أحمر
+                    onClose={() => setShowAlert(false)}
+                />
+            )}
         </Dialog>
     );
 }

@@ -2,15 +2,25 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
     IconButton, useMediaQuery, useTheme,
-    Select, MenuItem, FormControl
+    Select, MenuItem, FormControl, Popover
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getStudentById } from './../../../../../api/Admin/Students/getStudentById';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
+
+const formatTime = (iso) => {
+    const d = new Date(iso);
+    if (isNaN(d)) return '—';
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const am = h < 12;
+    h = h % 12 || 12;
+    return `${h}:${m} ${am ? 'ص' : 'م'}`;
+};
 
 const WeeklySchedule1 = ({ studentId }) => {
     const theme = useTheme();
@@ -22,6 +32,11 @@ const WeeklySchedule1 = ({ studentId }) => {
     const [selectedYear, setSelectedYear] = useState(today.getFullYear());
     const [currentWeekStart, setCurrentWeekStart] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [events, setEvents] = useState([]);
+
+    // Popover state
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
 
     function getFirstWeekOfMonth(year, month) {
         return new Date(year, month, 1);
@@ -49,12 +64,16 @@ const WeeklySchedule1 = ({ studentId }) => {
             const schedules = student.classroom?.schedules || [];
 
             const parsed = schedules.map((item, i) => {
-                const date = new Date(item.start_time);
+                const start = new Date(item.start_time);
+                const _end = new Date(item.end_time || item.start_time);
                 return {
                     id: item.id,
                     title: item.title,
-                    date: date,
+                    date: start, // Date object
                     color: colors[i % colors.length],
+                    startTime: item.start_time,
+                    endTime: item.end_time || item.start_time,
+                    dayIndex: start.getDay(),
                 };
             });
 
@@ -101,6 +120,9 @@ const WeeklySchedule1 = ({ studentId }) => {
     };
 
     const weekDays = getWeekDays(currentWeekStart);
+
+    const handleOpenPopover = (ev, event) => { setAnchorEl(ev.currentTarget); setSelectedEvent(event); };
+    const handleClosePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
@@ -153,10 +175,13 @@ const WeeklySchedule1 = ({ studentId }) => {
                                         {arabicDays[date.getDay()]} - {date.getDate()}
                                     </Typography>
                                     <Box sx={{ mt: 1, maxHeight: '12vh', overflowY: 'auto' }}>
-                                        {dayEvents.map((event, i) => (
+                                        {dayEvents.map((event) => (
                                             <Box
-                                                key={i}
+                                                key={event.id}
                                                 sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
                                                     bgcolor: event.color,
                                                     p: 0.5,
                                                     mb: 0.5,
@@ -169,9 +194,15 @@ const WeeklySchedule1 = ({ studentId }) => {
                                                     navigate(`/dashboard/student-schedule-details/${studentId}/${event.date.getFullYear()}/${event.date.getMonth() + 1}/${event.date.getDate()}`)
                                                 }
                                             >
-                                                <Typography variant="caption" sx={{ color: '#fff' }}>
+                                                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
                                                     {event.title}
                                                 </Typography>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}
+                                                >
+                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                                </IconButton>
                                             </Box>
                                         ))}
                                     </Box>
@@ -181,6 +212,33 @@ const WeeklySchedule1 = ({ studentId }) => {
                     })}
                 </Grid>
             </Paper>
+
+            {/* Popover لعرض تفاصيل الحدث */}
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={handleClosePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 260 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 700, mb: .5 }}>
+                            {selectedEvent.title || '—'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            التاريخ: {selectedEvent.date.getFullYear()}/{String(selectedEvent.date.getMonth() + 1).padStart(2, '0')}/{String(selectedEvent.date.getDate()).padStart(2, '0')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            اليوم: {arabicDays[selectedEvent.dayIndex ?? selectedEvent.date.getDay()]}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            الوقت: {formatTime(selectedEvent.startTime)} - {formatTime(selectedEvent.endTime)}
+                        </Typography>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

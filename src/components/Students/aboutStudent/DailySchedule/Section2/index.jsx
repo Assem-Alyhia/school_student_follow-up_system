@@ -2,25 +2,43 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
     IconButton, Select, MenuItem, FormControl,
-    useMediaQuery, useTheme
+    useMediaQuery, useTheme, Popover
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, Today } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Today, SettingsRounded } from '@mui/icons-material';
 import { getStudentById } from './../../../../../api/Admin/Students/getStudentById';
-import { useNavigate } from 'react-router-dom'; // ✅ مضاف
+import { useNavigate } from 'react-router-dom';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
 
+const formatTime = (iso) => {
+    const d = new Date(iso);
+    if (isNaN(d)) return '—';
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const am = h < 12;
+    h = h % 12 || 12;
+    return `${h}:${m} ${am ? 'ص' : 'م'}`;
+};
+
 const DailyScheduleAbout = ({ studentId }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const navigate = useNavigate(); // ✅ مضاف
+    const navigate = useNavigate();
 
     const today = new Date();
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
     const [selectedYearValue, setSelectedYearValue] = useState(today.getFullYear());
     const [events, setEvents] = useState([]);
+
+    // Popover state for event details
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
+
+    const handleOpenPopover = (ev, event) => { setAnchorEl(ev.currentTarget); setSelectedEvent(event); };
+    const handleClosePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     const fetchStudentSchedules = async () => {
         try {
@@ -28,14 +46,18 @@ const DailyScheduleAbout = ({ studentId }) => {
             const schedules = student.classroom?.schedules || [];
 
             const parsed = schedules.map((item, i) => {
-                const date = new Date(item.start_time);
+                const start = new Date(item.start_time);
+                const _end = new Date(item.end_time || item.start_time);
                 return {
                     id: item.id,
                     title: item.title,
-                    date: date.getDate(),
-                    month: date.getMonth(),
-                    year: date.getFullYear(),
+                    date: start.getDate(),
+                    month: start.getMonth(),
+                    year: start.getFullYear(),
+                    startTime: item.start_time,
+                    endTime: item.end_time || item.start_time,
                     color: colors[i % colors.length],
+                    dayIndex: start.getDay(),
                 };
             });
 
@@ -147,21 +169,30 @@ const DailyScheduleAbout = ({ studentId }) => {
                                                 <>
                                                     <Typography fontWeight="bold" textAlign="end" color="#22385F">{day}</Typography>
                                                     <Box sx={{ mt: 1, maxHeight: '9vh', overflowY: 'auto' }}>
-                                                        {dayEvents.map((event, i) => (
+                                                        {dayEvents.map((event) => (
                                                             <Box
-                                                                key={i}
+                                                                key={event.id}
                                                                 sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
                                                                     bgcolor: event.color,
                                                                     p: 0.5,
                                                                     mb: 0.5,
                                                                     borderRadius: 1,
                                                                     cursor: 'pointer'
                                                                 }}
-                                                                onClick={() => navigate(`/dashboard/student-schedule-details/${studentId}/${selectedYearValue}/${selectedMonth + 1}/${day}`)} // ✅ تحويل لرابط
+                                                                onClick={() => navigate(`/dashboard/student-schedule-details/${studentId}/${selectedYearValue}/${selectedMonth + 1}/${day}`)}
                                                             >
-                                                                <Typography variant="caption" sx={{ color: '#fff' }}>
+                                                                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
                                                                     {event.title}
                                                                 </Typography>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}
+                                                                >
+                                                                    <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                                                </IconButton>
                                                             </Box>
                                                         ))}
                                                     </Box>
@@ -175,6 +206,33 @@ const DailyScheduleAbout = ({ studentId }) => {
                     ))}
                 </Box>
             </Paper>
+
+            {/* Popover لعرض تفاصيل الحدث */}
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={handleClosePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 260 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 700, mb: .5 }}>
+                            {selectedEvent.title || '—'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            التاريخ: {selectedYearValue}/{String(selectedMonth + 1).padStart(2, '0')}/{String(selectedEvent.date).padStart(2, '0')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            اليوم: {arabicDays[selectedEvent.dayIndex ?? 0]}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            الوقت: {formatTime(selectedEvent.startTime)} - {formatTime(selectedEvent.endTime)}
+                        </Typography>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

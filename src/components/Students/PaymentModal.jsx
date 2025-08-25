@@ -5,7 +5,6 @@ import {
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 
-
 import SuccessAlert from "../../layout/SuccessAlert";
 import { getAllParentsNoPaginate } from "./../../api/Admin/Parents/getAllParentsNoPaginate";
 import { getAllStudentsNoPaginate } from "./../../api/Admin/Students/getAllStudentsNoPaginate";
@@ -63,16 +62,68 @@ function SelectAuto({ label, options, valueId, onChange, loading, getOptionLabel
     );
 }
 
-const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
+// ---------- Helpers ----------
+const isTruthy = (v) => v === true || v === 1 || v === "1" || v === "true";
+const nowYear = new Date().getFullYear();
+
+function pickCurrentAcademicYear(years) {
+    if (!Array.isArray(years) || years.length === 0) return null;
+
+    const flagged = years.find(y => isTruthy(y?.is_current) || isTruthy(y?.current) || isTruthy(y?.active));
+    if (flagged) return flagged;
+
+    const inRange = years.find(y => {
+        const s = Number(y?.start_year) || Number(String(y?.name || "").match(/\d{4}/)?.[0]);
+        const e = Number(y?.end_year) || Number(String(y?.name || "").match(/(\d{4})(?!.*\d)/)?.[0]);
+        if (!s || !e) return false;
+        return nowYear >= s && nowYear <= e;
+    });
+    if (inRange) return inRange;
+
+    const sorted = [...years].sort((a, b) => {
+        const ae = Number(a?.end_year) || 0, be = Number(b?.end_year) || 0;
+        if (be !== ae) return be - ae;
+        const as = Number(a?.start_year) || 0, bs = Number(b?.start_year) || 0;
+        return bs - as;
+    });
+    return sorted[0] || years[0];
+}
+
+function pickFeeForStudent(fees, initialStudent) {
+    if (!Array.isArray(fees) || fees.length === 0) return null;
+    const levelId = initialStudent?.classroom?.level?.id;
+    const gradeLevel = initialStudent?.classroom?.level?.grade_level;
+
+    const byLevelId = fees.find(f =>
+        String(f?.level_id) === String(levelId) ||
+        String(f?.class_level_id) === String(levelId)
+    );
+    if (byLevelId) return byLevelId;
+
+    const byGrade = fees.find(f =>
+        Number(f?.grade_level) === Number(gradeLevel) ||
+        (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
+            String(f?.name || f?.title || "").includes(String(gradeLevel)))
+    );
+    if (byGrade) return byGrade;
+
+    const flagged = fees.find(f => isTruthy(f?.is_default) || isTruthy(f?.active));
+    if (flagged) return flagged;
+
+    return fees[0];
+}
+
+const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated }) => {
     const [parents, setParents] = useState([]);
     const [students, setStudents] = useState([]);
     const [years, setYears] = useState([]);
     const [fees, setFees] = useState([]);
 
-    const [loading, setLoading] = useState({ parents: false, students: false, years: false, fees: false });
+    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [errors, setErrors] = useState({});
-    const [showSuccess, setShowSuccess] = useState(false);
+
+    // alert = { type: 'success' | 'error', message: string, title?: string }
+    const [alert, setAlert] = useState(null);
 
     const [form, setForm] = useState({
         parent_id: null,
@@ -86,33 +137,68 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
         status: "pending",
     });
 
-    // تهيئة من الطالب (اختياري)
-    useEffect(() => {
-        if (!initialStudent) return;
-        setForm(f => ({
-            ...f,
-            student_id: initialStudent?.id ?? f.student_id,
-            parent_id: initialStudent?.parent_id ?? initialStudent?.parent?.id ?? f.parent_id,
-        }));
-    }, [initialStudent]);
-
-    // جلب القوائم عند الفتح
+    // جلب القوائم + تعيين الطالب ووليه مباشرة
     useEffect(() => {
         if (!open) return;
-        const fetcher = async (key, api, setter) => {
+
+        const fetchAll = async () => {
+            setLoading(true);
             try {
-                setLoading(s => ({ ...s, [key]: true }));
-                const data = await api();
-                setter(Array.isArray(data) ? data : []);
+                const [p, s, y, f] = await Promise.all([
+                    getAllParentsNoPaginate(),
+                    getAllStudentsNoPaginate(),
+                    getAllAcademicYears(),
+                    getAllSchoolFeesNoPaginate(),
+                ]);
+
+                setParents(Array.isArray(p) ? p : (p?.data ?? []));
+                setStudents(Array.isArray(s) ? s : (s?.data ?? []));
+                setYears(Array.isArray(y) ? y : (y?.data ?? []));
+                setFees(Array.isArray(f) ? f : (f?.data ?? []));
+
+                // تعيين الطالب/ولي الأمر من initialStudent فورًا
+                setForm(prev => ({
+                    ...prev,
+                    student_id: initialStudent?.id ?? prev.student_id,
+                    parent_id: initialStudent?.parent?.id ?? prev.parent_id,
+                }));
+            } catch (e) {
+                setAlert({ type: "error", title: "خطأ في الجلب", message: e?.message || "تعذر جلب البيانات." });
             } finally {
-                setLoading(s => ({ ...s, [key]: false }));
+                setLoading(false);
             }
         };
-        fetcher("parents", getAllParentsNoPaginate, setParents);
-        fetcher("students", getAllStudentsNoPaginate, setStudents);
-        fetcher("years", getAllAcademicYears, setYears);
-        fetcher("fees", getAllSchoolFeesNoPaginate, setFees);
-    }, [open]);
+
+        fetchAll();
+    }, [open, initialStudent]);
+
+    // بعد توفّر القوائم اختَر سنة دراسية ورسوم بشكل تلقائي
+    useEffect(() => {
+        if (!open) return;
+        if (!years.length && !fees.length) return;
+
+        setForm(prev => {
+            const next = { ...prev };
+
+            if (!next.academic_year_id && years.length) {
+                const y = pickCurrentAcademicYear(years);
+                if (y?.id) next.academic_year_id = y.id;
+            }
+
+            if (!next.school_fee_id && fees.length) {
+                const fee = pickFeeForStudent(fees, initialStudent);
+                if (fee?.id) {
+                    next.school_fee_id = fee.id;
+                    const feeAmount = fee?.amount ?? fee?.value;
+                    if ((next.amount === "" || Number(next.amount) === 0) && feeAmount != null) {
+                        next.amount = String(feeAmount);
+                    }
+                }
+            }
+
+            return next;
+        });
+    }, [open, years, fees, initialStudent]);
 
     const statusColor = useMemo(() => (
         form.status === "completed" ? "rgba(76,175,80,.9)"
@@ -120,29 +206,23 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                 : "rgba(244,67,54,.9)"
     ), [form.status]);
 
-
-    const setField = (name, value) => {
-        setForm(f => ({ ...f, [name]: value }));
-        setErrors(e => ({ ...e, [name]: undefined }));
-    };
+    const setField = (name, value) => setForm(f => ({ ...f, [name]: value }));
 
     const onFeeChange = (id, feeObj) => {
         setField("school_fee_id", id);
         const feeAmount = feeObj?.amount ?? feeObj?.value;
-        if (feeAmount != null && (form.amount === "" || Number(form.amount) === 0)) {
+        if (feeAmount && (!form.amount || Number(form.amount) === 0)) {
             setField("amount", String(feeAmount));
         }
     };
 
     const validate = () => {
-        const e = {};
-        if (!form.parent_id) e.parent_id = "مطلوب";
-        if (!form.student_id) e.student_id = "مطلوب";
-        if (!form.academic_year_id) e.academic_year_id = "مطلوب";
-        if (!form.school_fee_id) e.school_fee_id = "مطلوب";
-        if (form.amount === "" || Number(form.amount) <= 0) e.amount = "أدخل مبلغًا صالحًا";
-        setErrors(e);
-        return Object.keys(e).length === 0;
+        if (!form.parent_id) return "يجب اختيار ولي الأمر.";
+        if (!form.student_id) return "يجب اختيار الطالب.";
+        if (!form.academic_year_id) return "يجب اختيار السنة الدراسية.";
+        if (!form.school_fee_id) return "يجب اختيار نوع الرسوم.";
+        if (form.amount === "" || Number(form.amount) <= 0) return "أدخل مبلغًا صالحًا.";
+        return null;
     };
 
     const formatDateTime = (d) => {
@@ -151,10 +231,13 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
     };
 
     const handleSubmit = async () => {
-        if (!validate()) return;
+        const localErr = validate();
+        if (localErr) {
+            setAlert({ type: "error", title: "حقول مطلوبة", message: localErr });
+            return;
+        }
 
-        const normalizedStatus =
-            STATUS_NORMALIZE[form.status] ?? "pending";
+        const normalizedStatus = STATUS_NORMALIZE[form.status] ?? "pending";
 
         let paidAtFormatted = null;
         if (form.paid_at) {
@@ -179,26 +262,31 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
 
         try {
             setSaving(true);
-            await createPayment(payload);
-            setShowSuccess(true); 
-            setForm({
-                parent_id: null, student_id: null, academic_year_id: null, school_fee_id: null,
-                amount: "", discount: "", discount_status: "none", paid_at: "", status: "pending",
-            });
-            setErrors({});
-        } catch (err) {
-            const apiErrors = err?.response?.data?.errors || {};
-            setErrors(e => ({
-                ...e,
-                status: apiErrors?.status?.[0],
-                discount_status: apiErrors?.discount_status?.[0],
-                amount: apiErrors?.amount?.[0],
-                parent_id: apiErrors?.parent_id?.[0],
-                student_id: apiErrors?.student_id?.[0],
-                academic_year_id: apiErrors?.academic_year_id?.[0],
-                school_fee_id: apiErrors?.school_fee_id?.[0],
+            const created = await createPayment(payload);
+
+            // نعرض نجاح + نحدّث الجدول فوريًا عبر onCreated (إن تم تمريره)
+            setAlert({ type: "success", title: "تمت العملية", message: "تم تسجيل عملية الدفع وحفظها في النظام." });
+            onCreated && onCreated(created || payload);
+
+            // إعادة ضبط الحقول الأساسية (إبقاء ولي الأمر/الطالب كما هما)
+            setForm(f => ({
+                ...f,
+                academic_year_id: f.academic_year_id,
+                school_fee_id: f.school_fee_id,
+                amount: "",
+                discount: "",
+                discount_status: "none",
+                paid_at: "",
+                status: "pending",
             }));
-            alert(err?.response?.data?.message || err?.message || "فشل إنشاء عملية الدفع");
+        } catch (err) {
+            // رسالة عامة + محاولة تجميع أخطاء الحقول من السيرفر
+            const apiMsg = err?.response?.data?.message || "فشل إنشاء عملية الدفع";
+            const apiErrors = err?.response?.data?.errors || {};
+            const fieldMsgs = Object.values(apiErrors).flat().join(" • ");
+            const finalMsg = fieldMsgs ? `${apiMsg}: ${fieldMsgs}` : apiMsg;
+
+            setAlert({ type: "error", title: "فشل العملية", message: finalMsg });
         } finally {
             setSaving(false);
         }
@@ -220,34 +308,30 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                         <SelectAuto
                             label="ولي الأمر" options={parents}
                             valueId={form.parent_id} onChange={(id) => setField("parent_id", id)}
-                            loading={loading.parents} getOptionLabel={(p) => p ? (p.name || p.full_name || p.email || `#${p.id}`) : ""}
+                            loading={loading} getOptionLabel={(p) => p?.name || ""}
                         />
-                        {errors.parent_id && <Typography color="error" variant="caption">{errors.parent_id}</Typography>}
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <SelectAuto
                             label="الطالب" options={students}
                             valueId={form.student_id} onChange={(id) => setField("student_id", id)}
-                            loading={loading.students} getOptionLabel={(s) => s ? (s.name || s.full_name || s.code || `#${s.id}`) : ""}
+                            loading={loading} getOptionLabel={(s) => s?.name || ""}
                         />
-                        {errors.student_id && <Typography color="error" variant="caption">{errors.student_id}</Typography>}
                     </Grid>
 
                     <Grid item xs={12} md={6}>
                         <SelectAuto
                             label="السنة الدراسية" options={years}
                             valueId={form.academic_year_id} onChange={(id) => setField("academic_year_id", id)}
-                            loading={loading.years} getOptionLabel={(y) => y ? (y.name || y.title || `${y.start_year ?? ""}-${y.end_year ?? ""}`) : ""}
+                            loading={loading} getOptionLabel={(y) => y?.name || ""}
                         />
-                        {errors.academic_year_id && <Typography color="error" variant="caption">{errors.academic_year_id}</Typography>}
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <SelectAuto
                             label="نوع الرسوم" options={fees}
                             valueId={form.school_fee_id} onChange={onFeeChange}
-                            loading={loading.fees} getOptionLabel={(f) => f ? `${f.name || f.title || `رسوم #${f.id}`} — ${f.amount ?? f.value ?? ""}` : ""}
+                            loading={loading} getOptionLabel={(f) => f ? `${f.name} - ${f.amount ?? ""}` : ""}
                         />
-                        {errors.school_fee_id && <Typography color="error" variant="caption">{errors.school_fee_id}</Typography>}
                     </Grid>
 
                     <Grid item xs={12} md={6}>
@@ -260,7 +344,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                         <TextField
                             label="المبلغ" fullWidth type="number"
                             value={form.amount} onChange={(e) => setField("amount", e.target.value)}
-                            error={!!errors.amount} helperText={errors.amount || ""}
                         />
                     </Grid>
 
@@ -268,7 +351,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                         <TextField
                             select fullWidth label="حالة الخصم"
                             value={form.discount_status} onChange={(e) => setField("discount_status", e.target.value)}
-                            error={!!errors.discount_status} helperText={errors.discount_status || ""}
                         >
                             {DISCOUNT_STATUS_OPTIONS.map(opt => (
                                 <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
@@ -287,7 +369,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                         <TextField
                             select fullWidth label="حالة الدفع"
                             value={form.status} onChange={(e) => setField("status", e.target.value)}
-                            error={!!errors.status} helperText={errors.status || ""}
                             sx={{ "& .MuiInputBase-root": { color: "#fff", backgroundColor: statusColor } }}
                         >
                             {STATUS_OPTIONS.map(opt => (
@@ -309,15 +390,14 @@ const PaymentModal = ({ open, handleClose, student: initialStudent }) => {
                     </Button>
                 </Box>
 
-                {/* ✅ تنبيه النجاح */}
-                {showSuccess && (
+                {alert && (
                     <SuccessAlert
-                        title="تمت إضافة الدفع بنجاح!"
-                        message="تم تسجيل عملية الدفع وحفظها في النظام."
-                        severity="success"
+                        title={alert.title || (alert.type === "success" ? "نجاح" : "خطأ")}
+                        message={alert.message}
+                        severity={alert.type}
                         onClose={() => {
-                            setShowSuccess(false);
-                            handleClose(); // اغلاق الموديال بعد إخفاء التنبيه (اختياري)
+                            setAlert(null);
+                            if (alert.type === "success") handleClose();
                         }}
                     />
                 )}

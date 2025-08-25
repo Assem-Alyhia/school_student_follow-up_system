@@ -6,33 +6,38 @@ import {
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 import { useQuery } from "@tanstack/react-query";
-import { getAllLevels } from "./../../../../api/Admin/Levels/getAllLevels";
+import { getAllLevelsPaginate } from "../../../../api/Admin/Levels/getAllLevelsPaginate";
 
-const pickRowValues = (raw) => {
-    const id = raw?.id ?? "—";
-    const name = raw?.name ?? "—";
-    const gradeLevel = raw?.grade_level ?? "—";
-    const classroomsCount = raw?.classrooms_count ?? 0; // بدّلها إلى "—" إن أردت
-    const subjectsCount = raw?.subjects_count ?? 0;
-    const studentsCount = raw?.students_count ?? 0;
-    return { id, name, gradeLevel, classroomsCount, subjectsCount, studentsCount };
-};
+// تحويل سجلّ واحد لشكل العرض
+const pickRowValues = (raw) => ({
+    id: raw?.id ?? "—",
+    name: raw?.name ?? "—",
+    gradeLevel: raw?.grade_level ?? "—",
+    classroomsCount: raw?.classrooms_count ?? 0,
+    subjectsCount: raw?.subjects_count ?? 0,
+    studentsCount: raw?.students_count ?? 0,
+});
 
 const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
     const [order, setOrder] = useState("asc");
     const [orderBy, setOrderBy] = useState("id");
 
+    // ✅ اربط الاستعلام بالصفحة والحجم، ونادِ الـ API بهما
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["teacher-levels-all", page, rowsPerPage],
-        queryFn: () => getAllLevels(page, rowsPerPage),
+        queryFn: () => getAllLevelsPaginate(page, rowsPerPage),
         keepPreviousData: true,
         staleTime: 60_000,
     });
 
-    const listRaw = useMemo(
-        () => (Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []),
-        [data]
-    );
+    // مصدر الصفوف من الاستجابة
+    const listRaw = useMemo(() => {
+        if (!data) return [];
+        if (Array.isArray(data?.data)) return data.data;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.levels)) return data.levels;
+        return [];
+    }, [data]);
 
     const rowsAll = useMemo(() => listRaw.map(pickRowValues), [listRaw]);
 
@@ -45,31 +50,54 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
     const sortedRows = useMemo(() => {
         const arr = [...rowsAll];
         arr.sort((a, b) => {
-            const av = (a?.[orderBy] ?? "").toString();
-            const bv = (b?.[orderBy] ?? "").toString();
-            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
-            return av < bv ? 1 : av > bv ? -1 : 0;
+            const av = a?.[orderBy];
+            const bv = b?.[orderBy];
+            if (typeof av === "number" && typeof bv === "number") {
+                return order === "asc" ? av - bv : bv - av;
+            }
+            const as = (av ?? "").toString();
+            const bs = (bv ?? "").toString();
+            if (order === "asc") return as > bs ? 1 : as < bs ? -1 : 0;
+            return as < bs ? 1 : as > bs ? -1 : 0;
         });
         return arr;
     }, [rowsAll, order, orderBy]);
 
+    // ✅ إن كان السيرفر يرجّع meta اعتبر أن الصفحة الحالية جاهزة ولا تقطع محليًا
     const hasServerPagination = !!data?.meta;
     const start = (page - 1) * rowsPerPage;
     const viewRows = hasServerPagination ? sortedRows : sortedRows.slice(start, start + rowsPerPage);
 
+    // ✅ مرّر معلومات الباجينيشن للأب
     useEffect(() => {
         if (data?.meta) {
             onMeta?.(data.meta);
         } else {
+            const total = sortedRows.length;
             onMeta?.({
-                total: sortedRows.length,
-                last_page: Math.max(1, Math.ceil(sortedRows.length / rowsPerPage)),
+                total,
+                last_page: Math.max(1, Math.ceil(total / rowsPerPage)),
+                per_page: rowsPerPage,
+                current_page: page,
             });
         }
-    }, [data?.meta, sortedRows.length, rowsPerPage, onMeta]);
+    }, [data?.meta, sortedRows.length, rowsPerPage, page, onMeta]);
 
-    if (isLoading) return <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>;
-    if (isError) return <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>خطأ: {error.message}</Box>;
+    if (isLoading) {
+        return (
+            <Box sx={{ p: 3, textAlign: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (isError) {
+        return (
+            <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>
+                خطأ: {error?.message || "تعذّر تحميل البيانات"}
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: 3 }}>
@@ -129,15 +157,9 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
                                     </TableSortLabel>
                                 </TableCell>
 
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    عدد الصفوف
-                                </TableCell>
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    عدد المواد
-                                </TableCell>
-                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
-                                    عدد الطلاب
-                                </TableCell>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>عدد الصفوف</TableCell>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>عدد المواد</TableCell>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>عدد الطلاب</TableCell>
                             </TableRow>
                         </TableHead>
 

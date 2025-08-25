@@ -1,36 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box,
-    Modal,
-    Paper,
-    Typography,
-    Button,
-    TextField,
-    MenuItem,
-    IconButton,
-    Avatar,
-    Grid,
-    CircularProgress
+    Box, Modal, Paper, Typography, Button, TextField, MenuItem,
+    IconButton, Avatar, Grid, CircularProgress
 } from '@mui/material';
 import { Close as CloseIcon, Visibility, VisibilityOff } from '@mui/icons-material';
+import { useQueryClient } from '@tanstack/react-query';
 import { createUser } from '../../../api/Admin/Users/createUser';
 import { getAllRoles } from '../../../api/Admin/Roles/getAllRoles';
+import SuccessAlert from '../../../layout/SuccessAlert';
 
 const AddUserModal = ({ open, onClose }) => {
+    const queryClient = useQueryClient(); // ⬅️ لتحديث قائمة المستخدمين مباشرة
+
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [rolesLoading, setRolesLoading] = useState(false);
+
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
     const [roles, setRoles] = useState([]);
+
+    // تنبيهات نجاح/فشل
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [showFail, setShowFail] = useState(false);
+    const [alertMsg, setAlertMsg] = useState('');
+    const [alertTitle, setAlertTitle] = useState('');
 
     const [userData, setUserData] = useState({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
-        role: '',   
+        role: '',
         image: null
     });
 
@@ -41,10 +43,15 @@ const AddUserModal = ({ open, onClose }) => {
     const fetchRoles = async () => {
         try {
             setRolesLoading(true);
-            const rolesData = await getAllRoles(); 
+            const rolesData = await getAllRoles();
             setRoles(rolesData || []);
         } catch (err) {
-            setError(err?.response?.data?.message || err.message || 'تعذر تحميل الأدوار');
+            const msg = err?.response?.data?.message || err.message || 'تعذر تحميل الأدوار';
+            setError(msg);
+            setAlertTitle('خطأ في تحميل الأدوار');
+            setAlertMsg(msg);
+            setShowFail(true);
+            setTimeout(() => setShowFail(false), 3000);
         } finally {
             setRolesLoading(false);
         }
@@ -64,32 +71,80 @@ const AddUserModal = ({ open, onClose }) => {
         setUserData((prev) => ({ ...prev, image: null }));
     };
 
+    const resetForm = () => {
+        setUserData({
+            name: '',
+            email: '',
+            password: '',
+            password_confirmation: '',
+            role: '',
+            image: null
+        });
+        setFieldErrors({});
+        setError('');
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setFieldErrors({});
 
         if (userData.password !== userData.password_confirmation) {
-            setError('كلمتا المرور غير متطابقتين');
+            const msg = 'كلمتا المرور غير متطابقتين';
+            setError(msg);
+            setAlertTitle('فشل الإضافة');
+            setAlertMsg(msg);
+            setShowFail(true);
+            setTimeout(() => setShowFail(false), 3000);
             return;
         }
 
         try {
             setLoading(true);
 
-            await createUser({
+            // لو API يتطلب multipart عند وجود صورة:
+            let payload = {
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
                 password_confirmation: userData.password_confirmation,
-                role: userData.role,     
+                role: userData.role,
                 image: userData.image
-            });
+            };
 
-            onClose();
+            // ⚠️ إذا createUser داخليًا لا يتعامل مع FormData، فكّ التعليق التالي:
+            // if (userData.image instanceof File) {
+            //   const fd = new FormData();
+            //   Object.entries(payload).forEach(([k, v]) => fd.append(k, v ?? ''));
+            //   payload = fd;
+            // }
+
+            await createUser(payload);
+
+            // ✅ نجاح: أظهر التنبيه وحدّث الجدول فورًا
+            setAlertTitle('تم إنشاء المستخدم بنجاح!');
+            setAlertMsg('تمت إضافة المستخدم إلى النظام.');
+            setShowSuccess(true);
+
+            // 🔄 تحديث الجدول مباشرة
+            await queryClient.invalidateQueries({ queryKey: ['users'] });
+
+            // اغلق بعد لحظات قصيرة حتى يرى المستخدم التنبيه
+            setTimeout(() => {
+                setShowSuccess(false);
+                resetForm();
+                onClose();
+            }, 1200);
         } catch (err) {
+            // ❌ فشل
             setFieldErrors(err?.details || {});
-            setError(err.message || 'حدث خطأ غير متوقع');
+            const msg = err?.message || 'حدث خطأ غير متوقع';
+            setError(msg);
+
+            setAlertTitle('فشل الإضافة');
+            setAlertMsg(msg);
+            setShowFail(true);
+            setTimeout(() => setShowFail(false), 3000);
         } finally {
             setLoading(false);
         }
@@ -101,7 +156,25 @@ const AddUserModal = ({ open, onClose }) => {
             onClose={onClose}
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl' }}
         >
-            <Paper sx={{ borderRadius: '14px', width: '700px', p: 3 }}>
+            <Paper sx={{ borderRadius: '14px', width: '700px', p: 3, position: 'relative' }}>
+                {/* ✅ تنبيهات النجاح/الفشل */}
+                {showSuccess && (
+                    <SuccessAlert
+                        title={alertTitle || 'تم العملية بنجاح'}
+                        message={alertMsg || 'تم تنفيذ العملية بنجاح.'}
+                        onClose={() => setShowSuccess(false)}
+                        severity="success"
+                    />
+                )}
+                {showFail && (
+                    <SuccessAlert
+                        title={alertTitle || 'حدث خطأ'}
+                        message={alertMsg || 'تعذر تنفيذ العملية.'}
+                        onClose={() => setShowFail(false)}
+                        severity="error"
+                    />
+                )}
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                     <Typography sx={{ fontSize: '20px', fontWeight: 'bold', color: '#1E8796' }}>
                         أضف مستخدم

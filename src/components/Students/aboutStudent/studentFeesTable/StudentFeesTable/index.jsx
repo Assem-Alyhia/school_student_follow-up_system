@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Chip, TableSortLabel, TextField, Grid
+    TableHead, TableRow, Chip, TableSortLabel, TextField, Grid, Button
 } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useParams } from 'react-router-dom';
 
-// استبدل هذا باسم دالتك إن كان مختلفًا
 import { getAllPaymentsNoPaginate } from '../../../../../api/Admin/Payments/getAllPaymentsNoPaginate';
+import PaymentModal from './../../../PaymentModal';
 
 const StudentFeesTable = () => {
-    const { id } = useParams(); // id الطالب من الـ URL
+    const { id } = useParams();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -20,13 +20,24 @@ const StudentFeesTable = () => {
         student: '', parent: '', feeType: '', status: ''
     });
 
+    const [openPaymentModal, setOpenPaymentModal] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+
+    const handleOpenPayment = () => {
+        setSelectedStudent({ id: Number(id) });
+        setOpenPaymentModal(true);
+    };
+    const handleClosePayment = () => {
+        setSelectedStudent(null);
+        setOpenPaymentModal(false);
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const all = await getAllPaymentsNoPaginate(); // يُتوقّع أن يُرجع Array
+                const all = await getAllPaymentsNoPaginate(); 
                 const list = Array.isArray(all) ? all : (all?.data ?? []);
-                // تصفية بحسب id الطالب القادم من الـ URL
                 const onlyThisStudent = list.filter(
                     (p) => String(p?.student?.id ?? p?.student_id) === String(id)
                 );
@@ -96,9 +107,25 @@ const StudentFeesTable = () => {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-                تفاصيل الرسوم للطالب #{id}
-            </Typography>
+            {/* العنوان + زر إضافة الرسوم */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                    تفاصيل الرسوم للطالب #{id}
+                </Typography>
+
+                <Button
+                    variant="contained"
+                    onClick={handleOpenPayment}
+                    sx={{
+                        textTransform: 'none',
+                        fontWeight: 'bold',
+                        background: 'linear-gradient(90deg, #308A9F,#22385F)',
+                        '&:hover': { opacity: .95 }
+                    }}
+                >
+                    أضف الرسوم
+                </Button>
+            </Box>
 
             {/* Filters */}
             <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -190,7 +217,6 @@ const StudentFeesTable = () => {
                                     <TableCell>{row.remaining_amount}</TableCell>
                                     <TableCell>{row.payment_number}</TableCell>
                                     <TableCell>
-                                        {/* عرض التاريخ (يدعم ISO مع Z) */}
                                         {row.paid_at
                                             ? (row.paid_at.includes('T')
                                                 ? row.paid_at.split('T')[0]
@@ -223,6 +249,13 @@ const StudentFeesTable = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* ✅ موديال إضافة الرسوم لهذا الطالب */}
+            <PaymentModal
+                open={openPaymentModal}
+                handleClose={handleClosePayment}
+                student={selectedStudent}
+            />
         </Box>
     );
 };

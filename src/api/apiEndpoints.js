@@ -64,6 +64,7 @@ const apiEndpoints = {
   // المراحل الدراسية
   getLevelsStats: "admin/levels/home",
   getAllLevels: "/admin/levels/get-all",
+  getAllLevelsPaginate: "/admin/levels",
 
   //الادوار
   getAllRoles: "/admin/roles",
@@ -240,9 +241,9 @@ const apiEndpoints = {
   //الاولاد الطلاب
   getParentStudents: "/parent/students",
 
-
   // الموقع
-  getParentStudentLocation : (supervisorId) => `parent/locations/${supervisorId}`,
+  getParentStudentLocation: (supervisorId) =>
+    `parent/locations/${supervisorId}`,
 
   // *****************************************************************************
   // ******************************{supervisor}***********************************
@@ -264,6 +265,10 @@ const apiEndpoints = {
 
   // الباصات
   getSupervisorBuses: "supervisor/buses",
+
+  // الموقع
+  getSupervisorStudentLocation: "supervisor/locations",
+  storeSupervisorLocation: "supervisor/locations",
 
   // *****************************************************************************
   // ******************************{student}**************************************

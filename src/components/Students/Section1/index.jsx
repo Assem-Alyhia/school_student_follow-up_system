@@ -1,14 +1,14 @@
+// Section1.jsx
 import React from 'react';
-import { Box, Grid, Button, IconButton, TextField, Paper } from '@mui/material';
+import { Box, Grid, Button, IconButton, TextField, Paper, InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
 import SortIcon from '@mui/icons-material/Sort';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { Link } from 'react-router-dom';
 
-const Section1 = () => {
+const Section1 = ({ searchTerm, onSearchChange }) => {
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2 }}>
@@ -17,7 +17,7 @@ const Section1 = () => {
                         <Button
                             variant="outlined"
                             startIcon={<SortIcon />}
-                            sx={{ marginRight: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
+                            sx={{ mr: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
                         >
                             ترتيب
                         </Button>
@@ -25,23 +25,29 @@ const Section1 = () => {
                         <Button
                             variant="outlined"
                             startIcon={<FilterListIcon />}
-                            sx={{ marginRight: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
+                            sx={{ mr: 2, color: '#35AFBC', borderColor: '#35AFBC' }}
                         >
                             فلترة
                         </Button>
 
                         <TextField
-                            placeholder="بحث..."
+                            placeholder="بحث بالاسم..."
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             InputProps={{
-                                startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: '20px' }} />,
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: 'action.active', fontSize: 20 }} />
+                                    </InputAdornment>
+                                ),
                             }}
                             sx={{
                                 flexGrow: 1,
-                                height: '40px',
+                                height: 40,
                                 '& .MuiInputBase-root': {
-                                    height: '40px',
-                                    fontSize: '14px',
-                                    padding: '6px 12px',
+                                    height: 40,
+                                    fontSize: 14,
+                                    px: 1.5,
                                 },
                             }}
                         />
@@ -56,24 +62,11 @@ const Section1 = () => {
                             sx={{
                                 backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
+                                mr: 2,
                             }}
                         >
                             إضافة طالب
                         </Button>
-
-                        <Button
-                            variant="contained"
-                            startIcon={<FileDownloadIcon />}
-                            sx={{
-                                backgroundColor: '#35AFBC',
-                                '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
-                            }}
-                        >
-                            تصدير بيانات
-                        </Button>
-
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />
                         </IconButton>

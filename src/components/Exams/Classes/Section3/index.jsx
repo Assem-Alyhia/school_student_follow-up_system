@@ -1,7 +1,7 @@
 // src/components/TeacherRole/Classrooms/Section3.jsx
-import React, { useRef, useState } from "react";
+import React, { useState, useRef } from "react";
 import PaginationSection from "../../../../layout/PaginationSection";
-import Section2 from "../Section2"; 
+import Section2 from "../Section2"; // هذا هو ClassroomsTable
 
 export default function Section3() {
     const [page, setPage] = useState(1);
@@ -21,7 +21,7 @@ export default function Section3() {
                 rowsPerPage={rowsPerPage}
                 total={metaRef.current?.total || 0}
                 lastPage={metaRef.current?.last_page || 1}
-                onPageChange={setPage}
+                onPageChange={(p) => setPage(p)}
                 onRowsPerPageChange={(e) => {
                     setRowsPerPage(Number(e.target.value));
                     setPage(1);

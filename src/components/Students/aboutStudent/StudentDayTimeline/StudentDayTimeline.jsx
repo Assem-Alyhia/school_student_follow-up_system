@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Box, Typography, Paper, Grid, FormControl, MenuItem, Select, useTheme, useMediaQuery
+    Box, Typography, Paper, Grid, FormControl, MenuItem, Select,
+    useTheme, useMediaQuery, Popover, IconButton
 } from '@mui/material';
+import { SettingsRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getStudentById } from '../../../../api/Admin/Students/getStudentById';
 
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#B39DDB', '#81D4FA', '#AED581', '#FFAB91', '#F06292', '#BA68C8', '#4DD0E1'];
+
+const formatTime = (d) => {
+    if (!(d instanceof Date) || isNaN(d)) return '—';
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const am = h < 12;
+    h = h % 12 || 12;
+    return `${h}:${m} ${am ? 'ص' : 'م'}`;
+};
 
 const StudentDayTimeline = ({ studentId }) => {
     const theme = useTheme();
@@ -20,6 +31,11 @@ const StudentDayTimeline = ({ studentId }) => {
     const [selectedDay, setSelectedDay] = useState(today.getDay());
     const [events, setEvents] = useState([]);
 
+    // Popover state
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const popoverOpen = Boolean(anchorEl);
+
     const fetchStudentSchedules = async () => {
         try {
             const res = await getStudentById(studentId);
@@ -29,7 +45,7 @@ const StudentDayTimeline = ({ studentId }) => {
                 id: item.id,
                 title: item.title,
                 start_time: new Date(item.start_time),
-                end_time: new Date(item.end_time),
+                end_time: new Date(item.end_time || item.start_time),
                 color: colors[i % colors.length],
             }));
 
@@ -46,10 +62,8 @@ const StudentDayTimeline = ({ studentId }) => {
     const getDateByWeekAndDay = (year, month, weekNumber, dayOfWeek) => {
         const firstDayOfMonth = new Date(year, month, 1);
         const firstWeekDay = firstDayOfMonth.getDay();
-
         const offsetToWeekStart = (7 - firstWeekDay) % 7;
         const startOfFirstWeek = new Date(year, month, 1 + offsetToWeekStart);
-
         const targetDate = new Date(startOfFirstWeek);
         targetDate.setDate(startOfFirstWeek.getDate() + (weekNumber - 1) * 7 + dayOfWeek);
         return targetDate;
@@ -67,6 +81,9 @@ const StudentDayTimeline = ({ studentId }) => {
     const handleEventClick = () => {
         navigate(`/dashboard/student-schedule-details/${studentId}/${selectedDate.getFullYear()}/${selectedDate.getMonth() + 1}/${selectedDate.getDate()}`);
     };
+
+    const handleOpenPopover = (ev, event) => { setAnchorEl(ev.currentTarget); setSelectedEvent(event); };
+    const handleClosePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
     return (
         <Box sx={{ p: isMobile ? 1 : 3 }}>
@@ -107,8 +124,8 @@ const StudentDayTimeline = ({ studentId }) => {
                             لا توجد حصص أو اختبارات في هذا اليوم
                         </Typography>
                     )}
-                    {dayEvents.map((event, index) => (
-                        <Grid item xs={12} key={index}>
+                    {dayEvents.map((event) => (
+                        <Grid item xs={12} key={event.id}>
                             <Box
                                 sx={{
                                     bgcolor: event.color,
@@ -123,17 +140,51 @@ const StudentDayTimeline = ({ studentId }) => {
                                     transition: '0.2s',
                                     '&:hover': { opacity: 0.9 }
                                 }}
-                                onClick={() => handleEventClick(event)}
+                                onClick={handleEventClick}
                             >
                                 <Typography fontWeight="bold">{event.title}</Typography>
-                                <Typography fontSize="0.9rem">
-                                    {event.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography fontSize="0.9rem">
+                                        {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => { e.stopPropagation(); handleOpenPopover(e, event); }}
+                                    >
+                                        <SettingsRounded fontSize="small" sx={{ color: '#fff' }} />
+                                    </IconButton>
+                                </Box>
                             </Box>
                         </Grid>
                     ))}
                 </Grid>
             </Paper>
+
+            <Popover
+                open={popoverOpen}
+                anchorEl={anchorEl}
+                onClose={handleClosePopover}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{ sx: { p: 2, borderRadius: 3, width: 280 } }}
+            >
+                {selectedEvent && (
+                    <Box sx={{ direction: 'rtl' }}>
+                        <Typography sx={{ color: '#22385F', fontWeight: 700, mb: .5 }}>
+                            {selectedEvent.title || '—'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            التاريخ: {selectedDate.getFullYear()}/{String(selectedDate.getMonth() + 1).padStart(2, '0')}/{String(selectedDate.getDate()).padStart(2, '0')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            اليوم: {arabicDays[selectedDate.getDay()]}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: .5 }}>
+                            الوقت: {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
+                        </Typography>
+                    </Box>
+                )}
+            </Popover>
         </Box>
     );
 };

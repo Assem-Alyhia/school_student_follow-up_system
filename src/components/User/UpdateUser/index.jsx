@@ -11,13 +11,19 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { getUserById } from "../../../api/Admin/Users/getUserById";
 import { updateUser } from "../../../api/Admin/Users/updateUser";
 import { getAllRoles } from "../../../api/Admin/Roles/getAllRoles";
+import SuccessAlert from "../../../layout/SuccessAlert";
+
+const PLACEHOLDER = "/default-avatar.png"; 
+const mainColor = "#2a8a89";
 
 const UpdateUser = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const queryClient = useQueryClient(); 
 
     const [_userData, setUserData] = useState(null);
     const [form, setForm] = useState({
@@ -33,7 +39,11 @@ const UpdateUser = () => {
     const [userLoading, setUserLoading] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const mainColor = "#2a8a89";
+    // تنبيهات النجاح/الفشل
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [showFail, setShowFail] = useState(false);
+    const [alertMsg, setAlertMsg] = useState("");
+    const [alertTitle, setAlertTitle] = useState("");
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -45,12 +55,19 @@ const UpdateUser = () => {
                     ...prev,
                     name: res.data.name || "",
                     email: res.data.email || "",
-                    role: (res.data.role ?? (Array.isArray(res.data.roles) ? res.data.roles[0] : "")) || "",
+                    role:
+                        (res.data.role ??
+                            (Array.isArray(res.data.roles) ? res.data.roles[0] : "")) || "",
                     image: null,
                 }));
+                // لو السيرفر يُعيد رابط كامل للصورة سيعمل مباشرة
                 setPreview(res.data.image || "");
             } catch (err) {
                 console.error("Error fetching user:", err);
+                setAlertTitle("خطأ في جلب البيانات");
+                setAlertMsg(err?.message || "تعذر تحميل بيانات المستخدم.");
+                setShowFail(true);
+                setTimeout(() => setShowFail(false), 3000);
             } finally {
                 setUserLoading(false);
             }
@@ -63,6 +80,10 @@ const UpdateUser = () => {
                 setRoles(data || []);
             } catch (err) {
                 console.error("Error fetching roles:", err);
+                setAlertTitle("خطأ في تحميل الأدوار");
+                setAlertMsg(err?.message || "تعذر تحميل الأدوار.");
+                setShowFail(true);
+                setTimeout(() => setShowFail(false), 3000);
             } finally {
                 setRolesLoading(false);
             }
@@ -113,11 +134,24 @@ const UpdateUser = () => {
     const handleSubmit = async () => {
         try {
             setLoading(true);
+
             await updateUser(id, form);
-            alert("تم تحديث المستخدم بنجاح");
-            navigate(-1); // الرجوع بعد الحفظ
+
+            setAlertTitle("تم تحديث المستخدم بنجاح!");
+            setAlertMsg("تم حفظ التغييرات.");
+            setShowSuccess(true);
+
+            await queryClient.invalidateQueries({ queryKey: ["users"] });
+
+            setTimeout(() => {
+                setShowSuccess(false);
+                navigate(-1);
+            }, 1200);
         } catch (error) {
-            alert("حدث خطأ أثناء التحديث: " + (error?.message || "غير معروف"));
+            setAlertTitle("فشل التحديث");
+            setAlertMsg(error?.message || "حدث خطأ أثناء التحديث.");
+            setShowFail(true);
+            setTimeout(() => setShowFail(false), 3000);
         } finally {
             setLoading(false);
         }
@@ -125,20 +159,48 @@ const UpdateUser = () => {
 
     const needsTransientOption =
         form.role &&
-        !roleNames.some((n) => n.toLowerCase() === String(form.role).toLowerCase());
+        !roleNames.some(
+            (n) => n.toLowerCase() === String(form.role).toLowerCase()
+        );
 
     return (
         <Box sx={{ p: 3, direction: "rtl", bgcolor: "#f8f9fa" }}>
-            <Paper sx={{ p: 3, borderRadius: 3, maxWidth: "80%", mx: "auto" }} elevation={2}>
+            <Paper
+                sx={{ p: 3, borderRadius: 3, maxWidth: "80%", mx: "auto", position: "relative" }}
+                elevation={2}
+            >
+                {/* ✅ تنبيهات النجاح/الفشل */}
+                {showSuccess && (
+                    <SuccessAlert
+                        title={alertTitle || "تم العملية بنجاح"}
+                        message={alertMsg || "تم تنفيذ العملية بنجاح."}
+                        onClose={() => setShowSuccess(false)}
+                        severity="success"
+                    />
+                )}
+                {showFail && (
+                    <SuccessAlert
+                        title={alertTitle || "حدث خطأ"}
+                        message={alertMsg || "تعذر تنفيذ العملية."}
+                        onClose={() => setShowFail(false)}
+                        severity="error"
+                    />
+                )}
+
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.2rem">
                     تعديل بيانات المستخدم
                 </Typography>
 
                 <Box display="flex" alignItems="center" gap={2} mb={3}>
                     <Avatar
-                        src={preview || "/default-avatar.png"}
+                        src={preview || PLACEHOLDER}
                         alt="Avatar"
                         sx={{ width: 70, height: 70 }}
+                        imgProps={{
+                            onError: (e) => {
+                                e.currentTarget.src = PLACEHOLDER;
+                            },
+                        }}
                     />
                     <Button variant="outlined" component="label">
                         تغيير الصورة
@@ -216,7 +278,7 @@ const UpdateUser = () => {
                         variant="outlined"
                         fullWidth
                         onClick={() => navigate(-1)}
-                        sx={{ color:"#2a8a89" , borderColor:"#2a8a89"}}
+                        sx={{ color: "#2a8a89", borderColor: "#2a8a89" }}
                     >
                         رجوع
                     </Button>

@@ -5,8 +5,11 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { useNavigate } from 'react-router-dom';
 
 const ParentChildrenModal = ({ open, onClose, parent }) => {
+    const navigate = useNavigate();
+
     if (!parent) return null;
 
     const formatDate = (dateStr) => {
@@ -16,6 +19,13 @@ const ParentChildrenModal = ({ open, onClose, parent }) => {
     };
 
     const students = parent?.students ?? [];
+
+    const handleViewDetails = (studentId) => {
+        // أغلق المودال أولاً (اختياري لكنه يعطي تجربة أفضل)
+        if (onClose) onClose();
+        // الانتقال إلى صفحة تفاصيل الطالب مع تمرير الـ id
+        navigate(`/dashboard/student/studentManagement/${studentId}`);
+    };
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" sx={{ '& .MuiDialog-paper': { borderRadius: '12px' } }}>
@@ -111,6 +121,7 @@ const ParentChildrenModal = ({ open, onClose, parent }) => {
                                                 fontWeight: 'bold',
                                                 textTransform: 'none'
                                             }}
+                                            onClick={() => handleViewDetails(student.id)}
                                         >
                                             عرض التفاصيل
                                         </Button>

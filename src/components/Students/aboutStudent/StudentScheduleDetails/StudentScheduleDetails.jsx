@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
     Box,
     Paper,
@@ -8,6 +8,7 @@ import {
     CardContent,
     Divider,
     CircularProgress,
+    Button
 } from '@mui/material';
 import { getStudentById } from '../../../../api/Admin/Students/getStudentById';
 
@@ -18,6 +19,7 @@ const StudentScheduleDetails = () => {
     const { studentId, year, month, day } = useParams();
     const [schedules, setSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate(); // ✅ للرجوع
 
     const selectedDate = new Date(`${year}-${month}-${day}`);
     const formattedDate = `${selectedDate.getDate()} ${arabicMonths[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
@@ -51,7 +53,16 @@ const StudentScheduleDetails = () => {
 
     return (
         <Box sx={{ p: 3, direction: 'rtl' }}>
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Paper sx={{ p: 3, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* زر الرجوع */}
+                <Button
+                    variant="outlined"
+                    onClick={() => navigate(-1)}
+                    sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                >
+                    رجوع
+                </Button>
+
                 <Typography variant="h5" fontWeight="bold">
                     تفاصيل الجدول ليوم {dayName} - {formattedDate}
                 </Typography>

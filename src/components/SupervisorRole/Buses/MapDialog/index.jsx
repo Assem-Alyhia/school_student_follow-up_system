@@ -13,7 +13,7 @@ import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
-import { getParentStudentLocation } from "../../../../api/Parent/Locations/getParentStudentLocation";
+import { getSupervisorStudentLocation } from "../../../../api/Supervisor/Locations/getSupervisorStudentLocation";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -22,11 +22,9 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
-// ⏱️ كل 10 ثوانٍ
-const POLL_MS = 10_000;
+const POLL_MS = 10_000; 
 const formatSec = (s) => `00:${String(s).padStart(2, "0")}`;
 
-// يحرك الخريطة تلقائيًا عند تغيّر المركز
 function ChangeView({ center, duration = 0.8 }) {
     const map = useMap();
     useEffect(() => {
@@ -37,18 +35,18 @@ function ChangeView({ center, duration = 0.8 }) {
     return null;
 }
 
-const MapDialogStudent = ({ open, onClose, supervisorId }) => {
+const MapDialogSupervisorStudent = ({ open, onClose, supervisorId }) => {
     const [location, setLocation] = useState(null);
     const [error, setError] = useState("");
     const [remaining, setRemaining] = useState(POLL_MS / 1000);
     const [lastUpdated, setLastUpdated] = useState(null);
 
-    const cancelledRef = useRef(false);
     const timerRef = useRef(null);
+    const cancelledRef = useRef(false);
 
     const fetchLocation = async () => {
         try {
-            const res = await getParentStudentLocation(supervisorId);
+            const res = await getSupervisorStudentLocation(supervisorId);
             if (cancelledRef.current) return;
 
             const loc = res?.data || res;
@@ -63,28 +61,29 @@ const MapDialogStudent = ({ open, onClose, supervisorId }) => {
             setError("");
             setLocation({ ...loc, latitude: lat, longitude: lon });
             setLastUpdated(loc?.created_at ? new Date(loc.created_at) : new Date());
-            setRemaining(POLL_MS / 1000); // إعادة ضبط العدّاد بعد كل تحديث ناجح
+            setRemaining(POLL_MS / 1000); 
         } catch (err) {
             if (cancelledRef.current) return;
             console.error("فشل في جلب موقع المشرف:", err);
-            setError(err?.message || "حدث خطأ أثناء تحميل الموقع.");
+            const msg = err?.response?.data?.message || err?.message || "حدث خطأ أثناء تحميل الموقع.";
+            setError(msg);
         }
     };
 
-    // المؤقّت/العدّاد + الجلب الدوري (فوري ثم كل 10 ثوانٍ)
     useEffect(() => {
-        if (!open || !supervisorId) return;
+        if (!open) return;
         cancelledRef.current = false;
         setError("");
         setLocation(null);
         setRemaining(POLL_MS / 1000);
-        fetchLocation(); // جلب فوري
+
+        fetchLocation(); 
 
         timerRef.current = setInterval(() => {
             setRemaining((prev) => {
                 if (prev <= 1) {
-                    fetchLocation();             // جلب فوري عند الصفر
-                    return POLL_MS / 1000;       // إعادة الضبط
+                    fetchLocation(); 
+                    return POLL_MS / 1000;
                 }
                 return prev - 1;
             });
@@ -97,12 +96,16 @@ const MapDialogStudent = ({ open, onClose, supervisorId }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, supervisorId]);
 
-    const initialCenter = location
+    const center = location
         ? [location.latitude, location.longitude]
-        : [24.7136, 46.6753]; // مركز افتراضي
+        : [24.7136, 46.6753]; // افتراضي
 
-    const supervisorName = location?.supervisor?.name || `#${supervisorId}`;
-    const supervisorImage = location?.supervisor?.image || "/images/avatars/default.png";
+    const supervisorName =
+        location?.supervisor?.name ||
+        location?.name ||
+        (supervisorId ? `#${supervisorId}` : "المشرف");
+    const supervisorImage =
+        location?.supervisor?.image || "/images/avatars/default.png";
 
     return (
         <Dialog
@@ -120,7 +123,11 @@ const MapDialogStudent = ({ open, onClose, supervisorId }) => {
                             موقع المشرف — {supervisorName}
                         </Typography>
                     </Stack>
-                    <Chip label={`تحديث خلال: ${formatSec(remaining)}`} variant="outlined" sx={{ fontWeight: "bold" }} />
+                    <Chip
+                        label={`تحديث خلال: ${formatSec(remaining)}`}
+                        variant="outlined"
+                        sx={{ fontWeight: "bold" }}
+                    />
                 </Stack>
             </DialogTitle>
 
@@ -132,25 +139,21 @@ const MapDialogStudent = ({ open, onClose, supervisorId }) => {
                         </Typography>
                     ) : location ? (
                         <>
-                            <MapContainer
-                                center={initialCenter}
-                                zoom={15}
-                                style={{ height: "100%", width: "100%" }}
-                            >
+                            <MapContainer center={center} zoom={15} style={{ height: "100%", width: "100%" }}>
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution="&copy; OpenStreetMap contributors"
                                 />
-                                {/* يحرك الخريطة فور تغير الإحداثيات */}
+                                {/* تحريك الخريطة تلقائيًا عند تغير الإحداثيات */}
                                 <ChangeView center={[location.latitude, location.longitude]} />
                                 <Marker position={[location.latitude, location.longitude]} />
                             </MapContainer>
 
-                            <Stack direction="row" justifyContent="center" sx={{ mt: 1.5 }}>
-                                <Typography color="text.secondary" fontSize=".85rem">
-                                    {lastUpdated ? `آخر تحديث: ${lastUpdated.toLocaleString("ar-EG")}` : null}
+                            {lastUpdated && (
+                                <Typography sx={{ mt: 1.5 }} align="center" color="text.secondary" fontSize=".85rem">
+                                    آخر تحديث: {lastUpdated.toLocaleString("ar-EG")}
                                 </Typography>
-                            </Stack>
+                            )}
                         </>
                     ) : (
                         <Typography align="center" mt={12} color="text.secondary">
@@ -169,10 +172,10 @@ const MapDialogStudent = ({ open, onClose, supervisorId }) => {
     );
 };
 
-MapDialogStudent.propTypes = {
+MapDialogSupervisorStudent.propTypes = {
     open: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
     supervisorId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
 
-export default MapDialogStudent;
+export default MapDialogSupervisorStudent;

@@ -65,18 +65,6 @@ const Section1 = () => {
                             إضافة مستخدم
                         </Button>
 
-                        <Button
-                            variant="contained"
-                            startIcon={<FileDownloadIcon />}
-                            sx={{
-                                backgroundColor: '#35AFBC',
-                                '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
-                            }}
-                        >
-                            تصدير بيانات
-                        </Button>
-
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />
                         </IconButton>
