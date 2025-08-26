@@ -160,6 +160,15 @@ const apiEndpoints = {
   getAdminStudentsInClassroom: (classroomId) =>
     `/admin/students/get-in-classroom/${classroomId}`,
 
+
+  // المالية
+  getAllFinancials: "admin/financials", 
+  createFinancial: "admin/financials", 
+  getAllFinancialsNoPaginate: "admin/financials/get-all", 
+  getFinancialById: (id) => `admin/financials/${id}`, 
+  updateFinancial: (id) => `admin/financials/${id}`, 
+  deleteFinancial: (id) => `admin/financials/${id}`,
+
   // *****************************************************************************
   // ******************************{techers}**************************************
   // *****************************************************************************

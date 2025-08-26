@@ -170,6 +170,7 @@ const menuItems = [
     { text: 'المعلمون', icon: <SchoolIcon />, url: '/dashboard/teachers' },
     { text: 'المشرفون', icon: <SchoolIcon />, url: '/dashboard/supervisor' },
     { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
+    { text: 'موظفي المالية', icon: <FamilyRestroomIcon />, url: '/dashboard/financials' },
     { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
     { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
     { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },

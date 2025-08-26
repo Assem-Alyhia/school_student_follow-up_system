@@ -12,6 +12,9 @@ import {
     Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import ChatIcon from "@mui/icons-material/Chat";
+
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteTeacher } from "../../../api/Admin/Teachers/deleteTeacher";
 import ConfirmDeleteModal from "../../../layout/ConfirmDeleteModal";
@@ -257,12 +260,24 @@ const Section2 = ({ teachers = [], page, rowsPerPage }) => {
 
                                 {/* أسفل البطاقة */}
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ color: "#F44336", backgroundColor: "#FFCDD2", p: ".4rem 1rem", borderRadius: "4px" }}
-                                    >
-                                        {teacher.subject || "---"}
-                                    </Typography>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ color: "#22385F" }}
+                                            component="a"
+                                            href={`mailto:${teacher.email || ""}`}
+                                        >
+                                            <ChatIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ color: "#22385F" }}
+                                            component="a"
+                                            href={`tel:${teacher.phone || ""}`}
+                                        >
+                                            <PhoneIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
 
                                     <Button
                                         onClick={() => openDetails(teacher.id)}

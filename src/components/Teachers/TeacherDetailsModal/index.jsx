@@ -1,7 +1,8 @@
 import React from "react";
 import {
     Dialog, DialogTitle, DialogContent, IconButton, Box, Grid, Typography,
-    Avatar, Chip, Divider, CircularProgress, Stack, Tooltip
+    Avatar, Chip, Divider, CircularProgress, Stack, Tooltip,
+    FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, OutlinedInput
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EmailIcon from "@mui/icons-material/Email";
@@ -11,7 +12,7 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import SchoolIcon from "@mui/icons-material/School";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useQuery } from "@tanstack/react-query";
-import { getTeacherById } from "../../../api/Admin/Teachers/getTeacherById"; 
+import { getTeacherById } from "../../../api/Admin/Teachers/getTeacherById";
 
 const toDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 
@@ -21,18 +22,13 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
         queryFn: () => getTeacherById(teacherId),
         enabled: open && !!teacherId,
     });
-
-    const t = data?.data; 
-
+    const t = data?.data;
+    const allPerms = Array.isArray(t?.user?.permissions) ? t.user.permissions : [];
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth dir="rtl">
             <DialogTitle sx={{ pr: 6 }}>
                 تفاصيل المعلّم
-                <IconButton
-                    aria-label="close"
-                    onClick={onClose}
-                    sx={{ position: "absolute", left: 8, top: 8 }}
-                >
+                <IconButton aria-label="close" onClick={onClose} sx={{ position: "absolute", left: 8, top: 8 }}>
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
@@ -75,7 +71,6 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
 
                         <Divider sx={{ my: 3 }} />
 
-                        {/* معلومات أساسية */}
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}>
                                 <Stack spacing={1.2}>
@@ -124,9 +119,7 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
                                 </Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                     {(t.subjects || []).length ? (
-                                        t.subjects.map((s) => (
-                                            <Chip key={s.id || s.name} label={s.name} variant="outlined" />
-                                        ))
+                                        t.subjects.map((s) => <Chip key={s.id || s.name} label={s.name} variant="outlined" />)
                                     ) : (
                                         <Typography variant="body2">—</Typography>
                                     )}
@@ -139,9 +132,7 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
                                 </Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                     {(t.classrooms || []).length ? (
-                                        t.classrooms.map((c) => (
-                                            <Chip key={c.id || c.name} label={c.name} variant="outlined" />
-                                        ))
+                                        t.classrooms.map((c) => <Chip key={c.id || c.name} label={c.name} variant="outlined" />)
                                     ) : (
                                         <Typography variant="body2">—</Typography>
                                     )}
@@ -149,7 +140,7 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
                             </Grid>
                         </Grid>
 
-                        {/* صلاحيات/أدوار المستخدم (اختياري) */}
+                        {/* الأدوار */}
                         {!!t.user?.roles?.length && (
                             <>
                                 <Divider sx={{ my: 3 }} />
@@ -164,24 +155,25 @@ export default function TeacherDetailsModal({ open, teacherId, onClose }) {
                             </>
                         )}
 
-                        {!!t.user?.permissions?.length && (
-                            <>
-                                <Divider sx={{ my: 3 }} />
-                                <Typography variant="subtitle2" sx={{ mb: 1, color: "#308A9F" }}>
-                                    الصلاحيات
+                        <Divider sx={{ my: 3 }} />
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: "#308A9F" }}>
+                            الصلاحيات
+                        </Typography>
+
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {allPerms.length ? (
+                                allPerms.map((p) => (
+                                    <Tooltip title={p} key={p}>
+                                        <Chip label={p} size="small" variant="outlined" />
+                                    </Tooltip>
+                                ))
+                            ) : (
+                                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                                    —
                                 </Typography>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                    {t.user.permissions.slice(0, 15).map((p) => (
-                                        <Tooltip title={p} key={p}>
-                                            <Chip label={p} size="small" variant="outlined" />
-                                        </Tooltip>
-                                    ))}
-                                    {t.user.permissions.length > 15 && (
-                                        <Chip label={`+${t.user.permissions.length - 15}`} size="small" />
-                                    )}
-                                </Stack>
-                            </>
-                        )}
+                            )}
+                        </Stack>
                     </Box>
                 )}
             </DialogContent>

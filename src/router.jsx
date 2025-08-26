@@ -95,6 +95,7 @@ import FinancialProfile from "./components/FinancialRole/ProfilePage";
 import FinancialDashboard from "./pages/FinancialRole/dashboard";
 import FinancialStudents from "./pages/FinancialRole/Students";
 import FinancialParents from "./pages/FinancialRole/Parents";
+import Financials from "./pages/Financials";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -110,6 +111,7 @@ const dashboardRoutes = [
   { path: "students", element: <Students /> },
   { path: "teachers", element: <Teachers /> },
   { path: "supervisor", element: <Supervisor /> },
+  { path: "financials", element: <Financials /> },
   { path: "teachers/teacherFormAdd", element: <TeacherForAdd /> },
   { path: "teacher/updateTeacher/:id", element: <TeacherFormUpdate /> },
   { path: "guardian", element: <Guardian /> },
