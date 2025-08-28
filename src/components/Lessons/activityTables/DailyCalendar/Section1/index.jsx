@@ -42,14 +42,12 @@ const DailyEventsCalendar = () => {
     const [academicYears, setAcademicYears] = useState([]);
     const [currentDate, setCurrentDate] = useState(today);
 
-    // Popover state
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    // تعديل
     const [openEditModal, setOpenEditModal] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [editSchedule, setEditSchedule] = useState(null);
@@ -366,7 +364,6 @@ const DailyEventsCalendar = () => {
                                             <Typography fontSize="0.9rem">
                                                 {formatTime(event.start_time)} - {formatTime(event.end_time)}
                                             </Typography>
-                                            {/* أيقونة الضبط لفتح البوب أوفر */}
                                             <IconButton
                                                 size="small"
                                                 onClick={(e) => { e.stopPropagation(); openPopover(e, event); }}
@@ -382,7 +379,6 @@ const DailyEventsCalendar = () => {
                 </Box>
             </Paper>
 
-            {/* Popover تفاصيل + تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -434,7 +430,6 @@ const DailyEventsCalendar = () => {
                 )}
             </Popover>
 
-            {/* مودال التعديل */}
             <UpdateScheduleModal
                 open={openEditModal}
                 onClose={() => {
@@ -444,7 +439,6 @@ const DailyEventsCalendar = () => {
                 schedule={editSchedule}
                 name="تعديل الفعالية"
                 onUpdated={() => {
-                    // بعد الحفظ نعيد جلب البيانات لتحديث اليوم
                     fetchEvents();
                 }}
             />

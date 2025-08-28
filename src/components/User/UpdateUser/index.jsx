@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Box,
     Paper,
@@ -11,21 +11,21 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { getUserById } from "../../../api/Admin/Users/getUserById";
 import { updateUser } from "../../../api/Admin/Users/updateUser";
 import { getAllRoles } from "../../../api/Admin/Roles/getAllRoles";
 import SuccessAlert from "../../../layout/SuccessAlert";
 
-const PLACEHOLDER = "/default-avatar.png"; 
+const PLACEHOLDER = "/default-avatar.png";
 const mainColor = "#2a8a89";
 
 const UpdateUser = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const queryClient = useQueryClient(); 
+    const queryClient = useQueryClient();
 
-    const [_userData, setUserData] = useState(null);
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -34,75 +34,53 @@ const UpdateUser = () => {
     });
 
     const [preview, setPreview] = useState("");
-    const [roles, setRoles] = useState([]);
-    const [rolesLoading, setRolesLoading] = useState(false);
-    const [userLoading, setUserLoading] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    // تنبيهات النجاح/الفشل
     const [showSuccess, setShowSuccess] = useState(false);
     const [showFail, setShowFail] = useState(false);
     const [alertMsg, setAlertMsg] = useState("");
     const [alertTitle, setAlertTitle] = useState("");
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                setUserLoading(true);
-                const res = await getUserById(id);
-                setUserData(res.data);
-                setForm((prev) => ({
-                    ...prev,
-                    name: res.data.name || "",
-                    email: res.data.email || "",
-                    role:
-                        (res.data.role ??
-                            (Array.isArray(res.data.roles) ? res.data.roles[0] : "")) || "",
-                    image: null,
-                }));
-                // لو السيرفر يُعيد رابط كامل للصورة سيعمل مباشرة
-                setPreview(res.data.image || "");
-            } catch (err) {
-                console.error("Error fetching user:", err);
-                setAlertTitle("خطأ في جلب البيانات");
-                setAlertMsg(err?.message || "تعذر تحميل بيانات المستخدم.");
-                setShowFail(true);
-                setTimeout(() => setShowFail(false), 3000);
-            } finally {
-                setUserLoading(false);
-            }
-        };
+    const userQ = useQuery({
+        queryKey: ["user", id],
+        queryFn: () => getUserById(id),
+        enabled: !!id,
+    });
 
-        const fetchRoles = async () => {
-            try {
-                setRolesLoading(true);
-                const data = await getAllRoles();
-                setRoles(data || []);
-            } catch (err) {
-                console.error("Error fetching roles:", err);
-                setAlertTitle("خطأ في تحميل الأدوار");
-                setAlertMsg(err?.message || "تعذر تحميل الأدوار.");
-                setShowFail(true);
-                setTimeout(() => setShowFail(false), 3000);
-            } finally {
-                setRolesLoading(false);
-            }
-        };
+    const rolesQ = useQuery({
+        queryKey: ["roles:all"],
+        queryFn: getAllRoles,
+        enabled: true,
+        staleTime: 5 * 60 * 1000,
+    });
 
-        if (id) fetchUser();
-        fetchRoles();
-    }, [id]);
+    const apiUser = userQ.data?.data ?? userQ.data ?? null;
+    const roles = useMemo(() => {
+        const raw = rolesQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [rolesQ.data]);
 
     const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
 
     useEffect(() => {
-        if (userLoading || rolesLoading) return;
-        if (!_userData) return;
+        if (!apiUser) return;
+        setForm((prev) => ({
+            ...prev,
+            name: apiUser.name || "",
+            email: apiUser.email || "",
+            role:
+                apiUser.role ??
+                (Array.isArray(apiUser.roles) ? apiUser.roles[0] : "") ??
+                "",
+            image: null,
+        }));
+        setPreview(apiUser.image || "");
+    }, [apiUser]);
 
+    useEffect(() => {
+        if (!apiUser || rolesQ.isLoading) return;
         const current = form.role;
         if (!current) return;
 
-        let normalized = String(current).trim();
+        const normalized = String(current).trim();
 
         if (!isNaN(Number(normalized))) {
             const byId = roles.find((r) => String(r.id) === normalized);
@@ -118,7 +96,7 @@ const UpdateUser = () => {
         if (byName && byName !== form.role) {
             setForm((prev) => ({ ...prev, role: byName }));
         }
-    }, [userLoading, rolesLoading, _userData, roleNames, roles, form.role]);
+    }, [roles, roleNames, rolesQ.isLoading, apiUser, form.role]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -131,37 +109,34 @@ const UpdateUser = () => {
         if (file) setPreview(URL.createObjectURL(file));
     };
 
-    const handleSubmit = async () => {
-        try {
-            setLoading(true);
-
-            await updateUser(id, form);
-
+    const saveMut = useMutation({
+        mutationFn: async () => updateUser(id, form),
+        onSuccess: async () => {
             setAlertTitle("تم تحديث المستخدم بنجاح!");
             setAlertMsg("تم حفظ التغييرات.");
             setShowSuccess(true);
-
             await queryClient.invalidateQueries({ queryKey: ["users"] });
-
+            await queryClient.invalidateQueries({ queryKey: ["user", id] });
             setTimeout(() => {
                 setShowSuccess(false);
                 navigate(-1);
             }, 1200);
-        } catch (error) {
+        },
+        onError: (error) => {
             setAlertTitle("فشل التحديث");
-            setAlertMsg(error?.message || "حدث خطأ أثناء التحديث.");
+            setAlertMsg(error?.response?.data?.message || error?.message || "حدث خطأ أثناء التحديث.");
             setShowFail(true);
             setTimeout(() => setShowFail(false), 3000);
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
+
+    const loading = saveMut.isPending;
+    const userLoading = userQ.isLoading;
+    const rolesLoading = rolesQ.isLoading;
 
     const needsTransientOption =
         form.role &&
-        !roleNames.some(
-            (n) => n.toLowerCase() === String(form.role).toLowerCase()
-        );
+        !roleNames.some((n) => n.toLowerCase() === String(form.role).toLowerCase());
 
     return (
         <Box sx={{ p: 3, direction: "rtl", bgcolor: "#f8f9fa" }}>
@@ -169,7 +144,6 @@ const UpdateUser = () => {
                 sx={{ p: 3, borderRadius: 3, maxWidth: "80%", mx: "auto", position: "relative" }}
                 elevation={2}
             >
-                {/* ✅ تنبيهات النجاح/الفشل */}
                 {showSuccess && (
                     <SuccessAlert
                         title={alertTitle || "تم العملية بنجاح"}
@@ -202,7 +176,7 @@ const UpdateUser = () => {
                             },
                         }}
                     />
-                    <Button variant="outlined" component="label">
+                    <Button variant="outlined" component="label" disabled={loading}>
                         تغيير الصورة
                         <input type="file" hidden accept="image/*" onChange={handleImageChange} />
                     </Button>
@@ -217,6 +191,7 @@ const UpdateUser = () => {
                     value={form.name}
                     onChange={handleChange}
                     sx={{ mb: 2 }}
+                    disabled={loading || userLoading}
                 />
 
                 <TextField
@@ -226,6 +201,7 @@ const UpdateUser = () => {
                     value={form.email}
                     onChange={handleChange}
                     sx={{ mb: 2 }}
+                    disabled={loading || userLoading}
                 />
 
                 <TextField
@@ -238,6 +214,7 @@ const UpdateUser = () => {
                     sx={{ mb: 3 }}
                     SelectProps={{ displayEmpty: true }}
                     helperText={rolesLoading ? "جاري تحميل الأدوار..." : ""}
+                    disabled={loading || rolesLoading || userLoading}
                 >
                     <MenuItem value="" disabled>
                         {rolesLoading || userLoading ? (
@@ -249,9 +226,7 @@ const UpdateUser = () => {
                         )}
                     </MenuItem>
 
-                    {needsTransientOption && (
-                        <MenuItem value={form.role}>{form.role}</MenuItem>
-                    )}
+                    {needsTransientOption && <MenuItem value={form.role}>{form.role}</MenuItem>}
 
                     {roles.map((r) => (
                         <MenuItem key={r.id} value={r.name}>
@@ -268,8 +243,8 @@ const UpdateUser = () => {
                             "&:hover": { backgroundColor: "#227472" },
                         }}
                         fullWidth
-                        disabled={loading}
-                        onClick={handleSubmit}
+                        disabled={loading || userLoading}
+                        onClick={() => saveMut.mutate()}
                     >
                         {loading ? "جارٍ الحفظ..." : "حفظ التعديلات"}
                     </Button>
@@ -279,6 +254,7 @@ const UpdateUser = () => {
                         fullWidth
                         onClick={() => navigate(-1)}
                         sx={{ color: "#2a8a89", borderColor: "#2a8a89" }}
+                        disabled={loading}
                     >
                         رجوع
                     </Button>

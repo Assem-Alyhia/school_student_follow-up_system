@@ -39,7 +39,6 @@ export default function AddLessonModal({ open, onClose, name }) {
         type: 'daily',
         title: '',
         description: '',
-        // نخزّنها كنص بصيغة datetime-local
         startDate: '',
         endDate: '',
     });
@@ -94,7 +93,6 @@ export default function AddLessonModal({ open, onClose, name }) {
     }, [values]);
 
     const toSqlDateTime = (v) => {
-        // v مثل "2025-08-01T10:30"
         const d = v ? new Date(v) : null;
         return d && !isNaN(d) ? format(d, 'yyyy-MM-dd HH:mm:ss') : '';
     };
@@ -117,7 +115,6 @@ export default function AddLessonModal({ open, onClose, name }) {
         }
     };
 
-    // تخطيط الأعمدة
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 9, md: 4 };
     const longFieldCols = { xs: 9, md: 10 };
@@ -143,7 +140,6 @@ export default function AddLessonModal({ open, onClose, name }) {
             <DialogContent sx={{ pt: 3, pb: 2.5 }}>
                 <Grid container spacing={2.25} alignItems="center">
 
-                    {/* السنة الأكاديمية */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>السنة الأكاديمية</Typography></Grid>
                     <Grid item {...fieldCols}>
                         <FormControl fullWidth sx={fieldSx}>
@@ -164,7 +160,6 @@ export default function AddLessonModal({ open, onClose, name }) {
                         </FormControl>
                     </Grid>
 
-                    {/* الشعبة */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>الشعبة</Typography></Grid>
                     <Grid item {...fieldCols}>
                         <FormControl fullWidth sx={fieldSx}>
@@ -185,7 +180,6 @@ export default function AddLessonModal({ open, onClose, name }) {
                         </FormControl>
                     </Grid>
 
-                    {/* نوع الجدول — يملأ السطر */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>نوع الجدول</Typography></Grid>
                     <Grid item {...longFieldCols}>
                         <FormControl fullWidth sx={fieldSx}>
@@ -197,19 +191,16 @@ export default function AddLessonModal({ open, onClose, name }) {
                         </FormControl>
                     </Grid>
 
-                    {/* العنوان */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>العنوان</Typography></Grid>
                     <Grid item {...longFieldCols}>
                         <TextField fullWidth placeholder="ادخل عنوان المناسبة" value={values.title} onChange={change('title')} sx={fieldSx} />
                     </Grid>
 
-                    {/* الوصف */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>الوصف</Typography></Grid>
                     <Grid item {...longFieldCols}>
                         <TextField fullWidth placeholder="(اختياري) اكتب الوصف" value={values.description} onChange={change('description')} sx={fieldSx} />
                     </Grid>
 
-                    {/* تاريخ البداية (datetime-local) */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>تاريخ البداية</Typography></Grid>
                     <Grid item {...fieldCols}>
                         <TextField
@@ -219,12 +210,11 @@ export default function AddLessonModal({ open, onClose, name }) {
                             fullWidth
                             sx={fieldSx}
                             InputLabelProps={{ shrink: true }}
-                            inputProps={{ step: 300 }} // دقائق كل 5
+                            inputProps={{ step: 300 }} 
                             placeholder="yyyy-MM-ddTHH:mm"
                         />
                     </Grid>
 
-                    {/* تاريخ النهاية (datetime-local) */}
                     <Grid item {...labelCols}><Typography sx={labelSx}>تاريخ النهاية</Typography></Grid>
                     <Grid item {...fieldCols}>
                         <TextField

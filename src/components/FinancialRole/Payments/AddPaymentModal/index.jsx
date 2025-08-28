@@ -155,7 +155,6 @@ export default function AddPaymentModal({ open, onClose }) {
             sx={{ display: "flex", alignItems: "center", justifyContent: "center", direction: "rtl" }}
         >
             <Paper sx={{ width: 760, maxWidth: "96vw", borderRadius: 3, overflow: "hidden" }}>
-                {/* Header */}
                 <Box
                     sx={{
                         p: 2.2, px: 3,
@@ -177,7 +176,6 @@ export default function AddPaymentModal({ open, onClose }) {
                     {errMsg && <Alert severity="error" sx={{ mb: 2 }}>{errMsg}</Alert>}
 
                     <Grid container spacing={2}>
-                        {/* Parent */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={parents}
@@ -198,7 +196,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* Student */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={studentsFiltered}
@@ -219,7 +216,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* School fee */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={fees}
@@ -240,7 +236,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* Amount */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 label="المبلغ المدفوع"
@@ -255,7 +250,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* Status */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 select
@@ -274,7 +268,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             </TextField>
                         </Grid>
 
-                        {/* Date */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 type="date"
@@ -290,7 +283,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* Discount */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 label="الخصم"
@@ -305,7 +297,6 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* Discount status */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 select

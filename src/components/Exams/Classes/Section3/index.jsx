@@ -1,7 +1,7 @@
 // src/components/TeacherRole/Classrooms/Section3.jsx
 import React, { useState, useRef } from "react";
 import PaginationSection from "../../../../layout/PaginationSection";
-import Section2 from "../Section2"; // هذا هو ClassroomsTable
+import Section2 from "../Section2"; 
 
 export default function Section3() {
     const [page, setPage] = useState(1);

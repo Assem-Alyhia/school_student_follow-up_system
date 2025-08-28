@@ -5,14 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
     Dialog, DialogContent, IconButton, Box, Typography, Grid,
     TextField, Button, Divider, CircularProgress,
-    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Snackbar, Alert
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getAdminStudentsInClassroom } from "../../../../api/Admin/Students/getAdminStudentsInClassroom";
 import { createExamResult } from "../../../../api/Admin/ExamResults/createExamResult";
-import { getAllClassroomsNoPaginate } from './../../../../api/Admin/Classrooms/getAllClassroomsNoPaginate';
+import { getAllClassroomsNoPaginate } from "./../../../../api/Admin/Classrooms/getAllClassroomsNoPaginate";
 
 const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -32,60 +34,62 @@ export default function AddExamResultsModal({
     onCreated,
     title = "إضافة درجات امتحان",
     examId,
+    subjectName,
 }) {
-    const [classrooms, setClassrooms] = useState([]);
+    const queryClient = useQueryClient();
+
     const [classroomId, setClassroomId] = useState("");
-    const [students, setStudents] = useState([]);
     const [scores, setScores] = useState({});
     const [exam_id, setExamId] = useState(examId || "");
+    const [errorMsg, setErrorMsg] = useState("");
 
-    const [loadingLists, setLoadingLists] = useState(true);
-    const [loadingStudents, setLoadingStudents] = useState(false);
-    const [saving, setSaving] = useState(false);
+    const [successOpen, setSuccessOpen] = useState(false);
+
+    // ===== Q: classrooms (no paginate) =====
+    const classroomsQ = useQuery({
+        queryKey: ["classrooms:nopage"],
+        queryFn: getAllClassroomsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const classrooms = useMemo(() => {
+        const raw = classroomsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [classroomsQ.data]);
+
+    // ===== Q: students in classroom (depends on classroomId) =====
+    const studentsQ = useQuery({
+        queryKey: ["classroom:students", String(classroomId || "")],
+        queryFn: () => getAdminStudentsInClassroom(classroomId),
+        enabled: !!open && !!classroomId,
+        staleTime: 60 * 1000,
+        onSuccess: (arr) => {
+            const list = Array.isArray(arr) ? arr : [];
+            const init = {};
+            list.forEach((s) => { init[s.id] = ""; });
+            setScores(init);
+        },
+    });
+
+    const students = useMemo(() => {
+        const raw = studentsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [studentsQ.data]);
 
     useEffect(() => {
         if (!open) return;
-        let alive = true;
-        (async () => {
-            try {
-                setLoadingLists(true);
-                const cls = await getAllClassroomsNoPaginate();
-                if (!alive) return;
-                setClassrooms(Array.isArray(cls) ? cls : []);
-            } finally {
-                setLoadingLists(false);
-            }
-        })();
-        return () => { alive = false; };
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return;
+        setErrorMsg("");
         setExamId(examId || "");
         setClassroomId("");
-        setStudents([]);
         setScores({});
+        setSuccessOpen(false);
     }, [open, examId]);
 
     const selectedClassroom = useMemo(
         () => classrooms.find((c) => String(c?.id) === String(classroomId)) || null,
         [classrooms, classroomId]
     );
-
-    const fetchStudents = async (cid) => {
-        if (!cid) return;
-        setLoadingStudents(true);
-        try {
-            const list = await getAdminStudentsInClassroom(cid);
-            const arr = Array.isArray(list) ? list : [];
-            setStudents(arr);
-            const init = {};
-            arr.forEach((s) => { init[s.id] = ""; });
-            setScores(init);
-        } finally {
-            setLoadingStudents(false);
-        }
-    };
 
     const changeScore = (id, val) => setScores((s) => ({ ...s, [id]: val }));
 
@@ -95,31 +99,48 @@ export default function AddExamResultsModal({
         return filled.length > 0;
     }, [exam_id, classroomId, scores]);
 
-    const handleSave = async () => {
-        const student_ids = [];
-        const scoresArr = [];
-        students.forEach((st) => {
-            const v = scores[st.id];
-            if (v !== "" && !Number.isNaN(Number(v))) {
-                student_ids.push(st.id);
-                scoresArr.push(Number(v));
-            }
-        });
-        const payload = {
-            exam_id: Number(exam_id),
-            student_ids,
-            scores: scoresArr,
-        };
-        try {
-            setSaving(true);
-            const res = await createExamResult(payload);
+    // ===== M: create exam results =====
+    const saveMut = useMutation({
+        mutationFn: async () => {
+            const student_ids = [];
+            const scoresArr = [];
+            students.forEach((st) => {
+                const v = scores[st.id];
+                if (v !== "" && !Number.isNaN(Number(v))) {
+                    student_ids.push(st.id);
+                    scoresArr.push(Number(v));
+                }
+            });
+            const payload = {
+                exam_id: Number(exam_id),
+                student_ids,
+                scores: scoresArr,
+            };
+            return createExamResult(payload);
+        },
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["exam-results"] });
+            queryClient.invalidateQueries({ queryKey: ["exam-results", String(exam_id)] });
+            queryClient.invalidateQueries({ queryKey: ["classroom:students", String(classroomId)] });
             onCreated?.(res);
-            onClose?.();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setSaving(false);
-        }
+            // عرض إشعار نجاح طويل بدلاً من الإغلاق الفوري
+            setSuccessOpen(true);
+        },
+        onError: (e) => {
+            const apiMsg = e?.response?.data?.message || e?.message || "فشل حفظ النتائج";
+            setErrorMsg(apiMsg);
+        },
+    });
+
+    const handleSave = () => {
+        setErrorMsg("");
+        if (!canSubmit || saveMut.isPending) return;
+        saveMut.mutate();
+    };
+
+    const handleSuccessClose = () => {
+        setSuccessOpen(false);
+        onClose?.();
     };
 
     const labelCols = { xs: 3, md: 2 };
@@ -128,7 +149,7 @@ export default function AddExamResultsModal({
     return (
         <Dialog
             open={open}
-            onClose={saving ? undefined : onClose}
+            onClose={saveMut.isPending ? undefined : onClose}
             fullWidth
             maxWidth="md"
             PaperProps={{ sx: { direction: "rtl", borderRadius: 4 } }}
@@ -139,28 +160,67 @@ export default function AddExamResultsModal({
                     size="small"
                     sx={{ position: "absolute", left: 8, top: 8 }}
                     aria-label="إغلاق"
-                    disabled={saving}
+                    disabled={saveMut.isPending}
                 >
                     <CloseRoundedIcon />
                 </IconButton>
+
                 <Typography variant="h6" sx={{ fontWeight: 700, textAlign: "right", pr: 1 }}>
                     {title}
                 </Typography>
-                <Divider sx={{ mt: 1.25, mx: 1.5 }} />
+
+                {/* المادة + الشعبة */}
+                <Box
+                    sx={{
+                        display: "flex",
+                        gap: 2,
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        px: 1.5,
+                        pt: 0.75,
+                        pb: 0.25,
+                    }}
+                >
+                    <Typography sx={{ color: "#308A9F", fontWeight: 600 }}>
+                        المادة: <span style={{ color: "#22385F" }}>{subjectName || "—"}</span>
+                    </Typography>
+                    <Typography sx={{ color: "#308A9F", fontWeight: 600 }}>
+                        الشعبة: <span style={{ color: "#22385F" }}>{selectedClassroom?.name || "—"}</span>
+                    </Typography>
+                </Box>
+
+                <Divider sx={{ mt: 1, mx: 1.5 }} />
             </Box>
 
             <DialogContent sx={{ pt: 3, pb: 2.5 }}>
-                {loadingLists ? (
+                {classroomsQ.isLoading ? (
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 6 }}>
                         <CircularProgress />
                     </Box>
+                ) : classroomsQ.isError ? (
+                    <Box sx={{ textAlign: "center", py: 3 }}>
+                        <Typography color="error" sx={{ mb: 1.5 }}>
+                            {classroomsQ.error?.message || "تعذّر تحميل الشعب"}
+                        </Typography>
+                        <Button variant="outlined" onClick={() => classroomsQ.refetch()}>
+                            إعادة المحاولة
+                        </Button>
+                    </Box>
                 ) : (
                     <>
+                        {errorMsg && (
+                            <Typography sx={{ color: "error.main", mb: 2, textAlign: "right" }}>
+                                {errorMsg}
+                            </Typography>
+                        )}
+
                         <Grid container spacing={2.25} alignItems="center">
                             {!examId && (
                                 <>
                                     <Grid item {...labelCols}>
-                                        <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>معرّف الامتحان</Typography>
+                                        <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>
+                                            معرّف الامتحان
+                                        </Typography>
                                     </Grid>
                                     <Grid item {...fieldCols}>
                                         <TextField
@@ -170,14 +230,16 @@ export default function AddExamResultsModal({
                                             onChange={(e) => setExamId(e.target.value)}
                                             sx={fieldSx}
                                             placeholder="أدخل معرّف الامتحان"
-                                            disabled={saving}
+                                            disabled={saveMut.isPending}
                                         />
                                     </Grid>
                                 </>
                             )}
 
                             <Grid item {...labelCols}>
-                                <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>الشعبة</Typography>
+                                <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>
+                                    الشعبة
+                                </Typography>
                             </Grid>
                             <Grid item {...fieldCols}>
                                 <Autocomplete
@@ -185,28 +247,45 @@ export default function AddExamResultsModal({
                                     value={selectedClassroom}
                                     onChange={(_, v) => {
                                         const id = v?.id || "";
+                                        setErrorMsg("");
                                         setClassroomId(id);
-                                        setStudents([]);
                                         setScores({});
-                                        if (id) fetchStudents(id);
                                     }}
                                     getOptionLabel={(c) => c?.name || `شعبة #${c?.id || ""}`}
                                     isOptionEqualToValue={(a, b) => String(a?.id) === String(b?.id)}
                                     renderInput={(params) => (
-                                        <TextField {...params} placeholder="اختر الشعبة" sx={fieldSx} disabled={saving} />
+                                        <TextField
+                                            {...params}
+                                            placeholder="اختر الشعبة"
+                                            sx={fieldSx}
+                                            disabled={saveMut.isPending}
+                                        />
                                     )}
                                 />
                             </Grid>
                         </Grid>
 
                         <Box sx={{ mt: 2 }}>
-                            {loadingStudents ? (
+                            {(!classroomId && !studentsQ.isLoading) ? (
+                                <Typography color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+                                    اختر الشعبة أولاً لعرض الطلاب.
+                                </Typography>
+                            ) : studentsQ.isLoading ? (
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 4 }}>
                                     <CircularProgress />
                                 </Box>
+                            ) : studentsQ.isError ? (
+                                <Box sx={{ textAlign: "center", py: 3 }}>
+                                    <Typography color="error" sx={{ mb: 1.5 }}>
+                                        {studentsQ.error?.message || "تعذّر تحميل الطلاب"}
+                                    </Typography>
+                                    <Button variant="outlined" onClick={() => studentsQ.refetch()}>
+                                        إعادة المحاولة
+                                    </Button>
+                                </Box>
                             ) : students.length === 0 ? (
                                 <Typography color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
-                                    {classroomId ? "لا يوجد طلاب في هذه الشعبة." : "اختر الشعبة أولاً لعرض الطلاب."}
+                                    لا يوجد طلاب في هذه الشعبة.
                                 </Typography>
                             ) : (
                                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
@@ -235,7 +314,7 @@ export default function AddExamResultsModal({
                                                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                                                             inputProps={{ min: 0, step: "any" }}
                                                             placeholder="أدخل الدرجة"
-                                                            disabled={saving}
+                                                            disabled={saveMut.isPending}
                                                         />
                                                     </TableCell>
                                                 </TableRow>
@@ -252,7 +331,7 @@ export default function AddExamResultsModal({
             <Box sx={{ px: 3, pb: 3, display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
                     onClick={handleSave}
-                    disabled={!canSubmit || saving}
+                    disabled={!canSubmit || saveMut.isPending}
                     variant="contained"
                     sx={{
                         minWidth: 180, borderRadius: 2, py: 1,
@@ -261,12 +340,28 @@ export default function AddExamResultsModal({
                         "&:hover": { background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)" },
                     }}
                 >
-                    {saving ? "جارٍ الحفظ..." : "حفظ النتائج"}
+                    {saveMut.isPending ? "جارٍ الحفظ..." : "حفظ النتائج"}
                 </Button>
-                <Button onClick={onClose} disabled={saving} variant="outlined" sx={{ minWidth: 140, borderRadius: 2, py: 1 }}>
+                <Button
+                    onClick={onClose}
+                    disabled={saveMut.isPending}
+                    variant="outlined"
+                    sx={{ minWidth: 140, borderRadius: 2, py: 1 }}
+                >
                     إلغاء
                 </Button>
             </Box>
+
+            <Snackbar
+                open={successOpen}
+                autoHideDuration={8000}
+                onClose={handleSuccessClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+                <Alert onClose={handleSuccessClose} severity="success" variant="filled" sx={{ width: "100%" }}>
+                    تم حفظ النتائج بنجاح 🎉
+                </Alert>
+            </Snackbar>
         </Dialog>
     );
 }

@@ -20,7 +20,7 @@ import EditClassroomModal from '../EditClassroomModal';
 const Section1 = ({ page, rowsPerPage }) => {
     const [search, setSearch] = useState('');
     const [levelFilter, setLevelFilter] = useState('');
-    const [sortOption, setSortOption] = useState(''); // أبقيناه إن احتجت تضيف فرز لاحقاً
+    const [sortOption, setSortOption] = useState(''); 
     const [selectedId, setSelectedId] = useState(null);
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -129,7 +129,6 @@ const Section1 = ({ page, rowsPerPage }) => {
                     {data?.meta?.total || 0}
                 </Typography>
                 <Typography sx={{ color: '#888' }}>عدد الصفوف الكلي</Typography>
-                {/* تمت إزالة: إجمالي الطلاب / إجمالي المواد */}
             </Box>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>

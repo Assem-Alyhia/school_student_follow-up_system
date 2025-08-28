@@ -51,7 +51,6 @@ const Section1 = ({
                             <MenuItem value="الصف الأول">الصف الأول</MenuItem>
                             <MenuItem value="الصف الثاني">الصف الثاني</MenuItem>
                             <MenuItem value="الصف الثالث">الصف الثالث</MenuItem>
-                            {/* أضف بقية الصفوف من مصدر بياناتك إن وُجد */}
                         </Select>
 
                         <Button

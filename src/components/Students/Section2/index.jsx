@@ -74,11 +74,10 @@ const Section2 = ({ students }) => {
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
                 {students.map((student) => {
-                    // بعض الردود تكون student.user أو student نفسه يحتوي البيانات
                     const user = student?.user ?? student ?? {};
                     const name = user.name || '—';
                     const email = user.email || '—';
-                    const imageRaw = user.image || ''; // قد يكون رابطًا كاملاً أو فارغًا
+                    const imageRaw = user.image || ''; 
                     const hasImage = Boolean(imageRaw && String(imageRaw).trim());
 
                     return (
@@ -95,7 +94,6 @@ const Section2 = ({ students }) => {
                                     margin: 'auto',
                                 }}
                             >
-                                {/* الشريط العلوي (القائمة + الرقم) */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <IconButton onClick={(e) => handleMenuClick(e, student.id)}>
@@ -140,7 +138,6 @@ const Section2 = ({ students }) => {
                                     </IconButton>
                                 </Box>
 
-                                {/* الصورة — نفس أسلوب المشرفين */}
                                 <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mb: 2 }}>
                                     <Avatar
                                         src={hasImage ? imageRaw : undefined}
@@ -157,7 +154,6 @@ const Section2 = ({ students }) => {
                                         {!hasImage && <PersonIcon sx={{ color: '#9aa6b2', fontSize: 42 }} />}
                                     </Avatar>
 
-                                    {/* مؤشر الحالة (اختياري إن كان لديك status) */}
                                     <Box
                                         sx={{
                                             position: 'absolute',
@@ -172,7 +168,6 @@ const Section2 = ({ students }) => {
                                     />
                                 </Box>
 
-                                {/* الاسم */}
                                 <Typography
                                     variant="h6"
                                     sx={{
@@ -185,7 +180,6 @@ const Section2 = ({ students }) => {
                                     {name}
                                 </Typography>
 
-                                {/* صف معلومات مختصر */}
                                 <Box sx={{ margin: '2.5rem 0' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-evenly', marginBottom: 1 }}>
                                         <Typography sx={{ color: '#308A9F' }}><strong>رقم التسجيل:</strong></Typography>
@@ -203,7 +197,6 @@ const Section2 = ({ students }) => {
                                     </Box>
                                 </Box>
 
-                                {/* شريط البريد */}
                                 <Box
                                     sx={{
                                         background: 'linear-gradient(90deg, #35AFBC, #308A9F,#22385F)',
@@ -221,7 +214,6 @@ const Section2 = ({ students }) => {
                                     </Box>
                                 </Box>
 
-                                {/* الأزرار السفلية */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Button
                                         variant="contained"

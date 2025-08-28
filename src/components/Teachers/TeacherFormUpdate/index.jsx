@@ -1,9 +1,14 @@
 // src/pages/Admin/Teachers/TeacherForm.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import { Box, Button, Container, Paper, TextField, Typography, Grid, Divider } from "@mui/material";
+import React, { useMemo, useState, useEffect } from "react";
+import {
+    Box, Button, Container, Paper, TextField, Typography, Grid, Divider,
+    CircularProgress, Alert
+} from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import SuccessAlert from "../../../layout/SuccessAlert";
 import { updateTeacher } from "../../../api/Admin/Teachers/updateTeacher";
 import { getTeacherById } from "../../../api/Admin/Teachers/getTeacherById";
@@ -13,6 +18,7 @@ import { getAllSubjectsNoPaginate } from "../../../api/Admin/Subjects/getAllSubj
 export default function TeacherFormUpdate() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const queryClient = useQueryClient();
 
     const [formData, setFormData] = useState({
         image: null,
@@ -30,11 +36,7 @@ export default function TeacherFormUpdate() {
 
     const [previewImage, setPreviewImage] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState("");
-    const [classrooms, setClassrooms] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [alertConfig, setAlertConfig] = useState({ title: "", message: "", severity: "success" });
+    const [alert, setAlert] = useState(null);
 
     const toISOIfDate = (d) => (d ? new Date(d).toISOString() : "");
     const isoToInput = (iso) => {
@@ -46,61 +48,84 @@ export default function TeacherFormUpdate() {
         return `${y}-${m}-${day}`;
     };
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const [cls, subs] = await Promise.all([getAllClassroomsNoPaginate(), getAllSubjectsNoPaginate()]);
-                setClassrooms(cls || []);
-                setSubjects(subs || []);
-            } catch { console.log() }
-        })();
-    }, []);
+    // ===== Queries =====
+    const {
+        data: classroomsData,
+        isLoading: classroomsLoading,
+        isError: classroomsErr,
+        error: classroomsError,
+    } = useQuery({
+        queryKey: ["classrooms:nopaginate"],
+        queryFn: getAllClassroomsNoPaginate,
+        staleTime: 5 * 60 * 1000,
+    });
 
+    const {
+        data: subjectsData,
+        isLoading: subjectsLoading,
+        isError: subjectsErr,
+        error: subjectsError,
+    } = useQuery({
+        queryKey: ["subjects:nopaginate"],
+        queryFn: getAllSubjectsNoPaginate,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const {
+        data: teacherResp,
+        isLoading: teacherLoading,
+        isError: teacherErr,
+        error: teacherError,
+    } = useQuery({
+        queryKey: ["teacher", String(id)],
+        queryFn: () => getTeacherById(id),
+        enabled: Boolean(id),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // تطبيع البيانات
+    const classrooms = Array.isArray(classroomsData) ? classroomsData : classroomsData?.data || [];
+    const subjects = Array.isArray(subjectsData) ? subjectsData : subjectsData?.data || [];
+    const teacher = teacherResp?.data?.data ?? teacherResp?.data ?? teacherResp ?? null;
+
+    // عند وصول بيانات المعلم: عبّي الاستمارة
+    useEffect(() => {
+        if (!teacher) return;
+        const subjectIds = (teacher?.subjects || []).map((s) => s.id ?? s);
+        const classroomIds = (teacher?.classrooms || []).map((c) => c.id ?? c);
+
+        setFormData((prev) => ({
+            ...prev,
+            name: teacher?.name || teacher?.user?.name || "",
+            email: teacher?.user?.email || "",
+            gender: teacher?.gender || "male",
+            dob: isoToInput(teacher?.dob),
+            phone: teacher?.phone || "",
+            address: teacher?.address || "",
+            specialization: teacher?.specialization || "",
+            hiring_date: isoToInput(teacher?.hiring_date),
+            subject_ids: subjectIds,
+            classroom_ids: classroomIds,
+            image: null,
+        }));
+        setExistingImageUrl(teacher?.user?.image || "");
+        setPreviewImage(null);
+    }, [teacher]);
+
+    // مابات للوصول السريع بالـ id
     const subjectsById = useMemo(() => {
         const map = new Map();
         subjects.forEach((s) => map.set(s.id, s));
         return map;
     }, [subjects]);
+
     const classroomsById = useMemo(() => {
         const map = new Map();
         classrooms.forEach((c) => map.set(c.id, c));
         return map;
     }, [classrooms]);
 
-    useEffect(() => {
-        if (!id) return;
-        (async () => {
-            try {
-                const res = await getTeacherById(id);
-                const t = res?.data?.data ?? res?.data ?? res;
-                const subjectIds = (t?.subjects || []).map((s) => s.id ?? s);
-                const classroomIds = (t?.classrooms || []).map((c) => c.id ?? c);
-                setFormData((prev) => ({
-                    ...prev,
-                    name: t?.name || t?.user?.name || "",
-                    email: t?.user?.email || "",
-                    gender: t?.gender || "male",
-                    dob: isoToInput(t?.dob),
-                    phone: t?.phone || "",
-                    address: t?.address || "",
-                    specialization: t?.specialization || "",
-                    hiring_date: isoToInput(t?.hiring_date),
-                    subject_ids: subjectIds,
-                    classroom_ids: classroomIds,
-                    image: null,
-                }));
-                setExistingImageUrl(t?.user?.image || "");
-            } catch (err) {
-                setAlertConfig({
-                    title: "فشل في جلب بيانات المعلم",
-                    message: err?.response?.data?.message || err.message,
-                    severity: "error",
-                });
-                setShowSuccess(true);
-            }
-        })();
-    }, [id]);
-
+    // قيم Autocomplete المختارة (مصفوفات كائنات)
     const selectedSubjects = useMemo(
         () =>
             (formData.subject_ids || []).map((v) =>
@@ -108,6 +133,7 @@ export default function TeacherFormUpdate() {
             ),
         [formData.subject_ids, subjectsById]
     );
+
     const selectedClassrooms = useMemo(
         () =>
             (formData.classroom_ids || []).map((v) =>
@@ -116,57 +142,91 @@ export default function TeacherFormUpdate() {
         [formData.classroom_ids, classroomsById]
     );
 
+    // ===== Mutation (update) =====
+    const updateMut = useMutation({
+        mutationFn: ({ teacherId, payload }) => updateTeacher(teacherId, payload),
+        onSuccess: () => {
+            // حدّث الكاش
+            queryClient.invalidateQueries({ queryKey: ["teacher", String(id)] });
+            queryClient.invalidateQueries({ queryKey: ["teachers"] });
+            setAlert({
+                title: "تم تعديل بيانات المعلم!",
+                message: "تم حفظ التغييرات بنجاح.",
+                severity: "success",
+            });
+            setTimeout(() => navigate("/dashboard/teachers"), 900);
+        },
+        onError: (err) => {
+            const serverMsg =
+                err?.response?.data?.message || err?.message || "فشل في تعديل المعلم!";
+            const fieldErrors = err?.response?.data?.errors
+                ? Object.values(err.response.data.errors).flat().join(" • ")
+                : "";
+            setAlert({
+                title: "فشل في تعديل المعلم!",
+                message: fieldErrors ? `${serverMsg}: ${fieldErrors}` : serverMsg,
+                severity: "error",
+            });
+        },
+    });
+
+    // ===== Handlers =====
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
+
     const handleAutocompleteChange = (name, value) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
+
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setFormData((prev) => ({ ...prev, image: file }));
-            const reader = new FileReader();
-            reader.onloadend = () => setPreviewImage(reader.result);
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+        setFormData((prev) => ({ ...prev, image: file }));
+        const reader = new FileReader();
+        reader.onloadend = () => setPreviewImage(reader.result);
+        reader.readAsDataURL(file);
     };
 
-    const handleSubmit = async () => {
-        try {
-            const payload = {
-                ...formData,
-                subject_ids: (formData.subject_ids || []).map((s) => s.id ?? s),
-                classroom_ids: (formData.classroom_ids || []).map((c) => c.id ?? c),
-                dob: toISOIfDate(formData.dob),
-                hiring_date: toISOIfDate(formData.hiring_date),
-            };
-            Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
-            await updateTeacher(id, payload);
-            setAlertConfig({ title: "تم تعديل بيانات المعلم!", message: "تم حفظ التغييرات بنجاح.", severity: "success" });
-            setShowSuccess(true);
-            setTimeout(() => navigate("/dashboard/teachers"), 900);
-        } catch (err) {
-            setAlertConfig({
-                title: "فشل في تعديل المعلم!",
-                message: err?.response?.data?.message || err.message,
-                severity: "error",
-            });
-            setShowSuccess(true);
-        }
+    const handleSubmit = () => {
+        const payload = {
+            ...formData,
+            subject_ids: (formData.subject_ids || []).map((s) => s.id ?? s),
+            classroom_ids: (formData.classroom_ids || []).map((c) => c.id ?? c),
+            dob: toISOIfDate(formData.dob),
+            hiring_date: toISOIfDate(formData.hiring_date),
+        };
+        Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+        updateMut.mutate({ teacherId: id, payload });
     };
+
+    const anyLoading = teacherLoading || classroomsLoading || subjectsLoading;
+    const anyError = teacherErr || classroomsErr || subjectsErr;
+    const firstErrorMsg =
+        teacherError?.message || classroomsError?.message || subjectsError?.message;
 
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: "#f6f9fb", py: 4 }} dir="rtl">
             <Container maxWidth="xl">
-                {showSuccess && (
+                {alert && (
                     <SuccessAlert
-                        title={alertConfig.title}
-                        message={alertConfig.message}
-                        severity={alertConfig.severity}
-                        onClose={() => setShowSuccess(false)}
+                        title={alert.title}
+                        message={alert.message}
+                        severity={alert.severity}
+                        onClose={() => setAlert(null)}
                     />
+                )}
+
+                {anyLoading && (
+                    <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                        <CircularProgress size={20} /> جاري تحميل البيانات...
+                    </Box>
+                )}
+                {anyError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        تعذر جلب البيانات: {firstErrorMsg}
+                    </Alert>
                 )}
 
                 <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
@@ -175,7 +235,8 @@ export default function TeacherFormUpdate() {
                             mb: 3,
                             p: 2,
                             borderRadius: 2,
-                            background: "linear-gradient(90deg, rgba(48,138,159,0.15), rgba(34,56,95,0.08))",
+                            background:
+                                "linear-gradient(90deg, rgba(48,138,159,0.15), rgba(34,56,95,0.08))",
                         }}
                     >
                         <Typography variant="h5" sx={{ fontWeight: 800, color: "#22385F" }}>
@@ -195,7 +256,13 @@ export default function TeacherFormUpdate() {
 
                                 <Grid container spacing={2}>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="الاسم الكامل" name="name" value={formData.name} onChange={handleChange} />
+                                        <TextField
+                                            fullWidth
+                                            label="الاسم الكامل"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                        />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
@@ -205,8 +272,13 @@ export default function TeacherFormUpdate() {
                                                 { label: "أنثى", value: "female" },
                                             ]}
                                             getOptionLabel={(o) => o.label}
-                                            value={{ label: formData.gender === "female" ? "أنثى" : "ذكر", value: formData.gender }}
-                                            onChange={(_e, v) => handleAutocompleteChange("gender", v?.value || "male")}
+                                            value={{
+                                                label: formData.gender === "female" ? "أنثى" : "ذكر",
+                                                value: formData.gender,
+                                            }}
+                                            onChange={(_e, v) =>
+                                                handleAutocompleteChange("gender", v?.value || "male")
+                                            }
                                             renderInput={(params) => <TextField {...params} label="الجنس" />}
                                         />
                                     </Grid>
@@ -224,15 +296,33 @@ export default function TeacherFormUpdate() {
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <TextField fullWidth name="phone" label="رقم الهاتف" value={formData.phone} onChange={handleChange} />
+                                        <TextField
+                                            fullWidth
+                                            name="phone"
+                                            label="رقم الهاتف"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                        />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <TextField fullWidth name="email" label="البريد الإلكتروني" value={formData.email} onChange={handleChange} />
+                                        <TextField
+                                            fullWidth
+                                            name="email"
+                                            label="البريد الإلكتروني"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                        />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <TextField fullWidth name="address" label="العنوان" value={formData.address} onChange={handleChange} />
+                                        <TextField
+                                            fullWidth
+                                            name="address"
+                                            label="العنوان"
+                                            value={formData.address}
+                                            onChange={handleChange}
+                                        />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
@@ -267,7 +357,7 @@ export default function TeacherFormUpdate() {
                                 <Autocomplete
                                     multiple
                                     options={subjects}
-                                    getOptionLabel={(o) => o.name}
+                                    getOptionLabel={(o) => o?.name || ""}
                                     value={selectedSubjects}
                                     onChange={(_e, value) => handleAutocompleteChange("subject_ids", value)}
                                     renderInput={(params) => <TextField {...params} label="المواد" />}
@@ -276,10 +366,12 @@ export default function TeacherFormUpdate() {
                                 <Autocomplete
                                     multiple
                                     options={classrooms}
-                                    getOptionLabel={(o) => o.name}
+                                    getOptionLabel={(o) => o?.name || ""}
                                     value={selectedClassrooms}
                                     onChange={(_e, value) => handleAutocompleteChange("classroom_ids", value)}
-                                    renderInput={(params) => <TextField {...params} label="الفصول" sx={{ mt: 2 }} />}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="الفصول" sx={{ mt: 2 }} />
+                                    )}
                                 />
                             </Paper>
 
@@ -287,6 +379,7 @@ export default function TeacherFormUpdate() {
                                 <Button
                                     variant="contained"
                                     onClick={handleSubmit}
+                                    disabled={updateMut.isPending}
                                     sx={{
                                         px: 4,
                                         py: 1.2,
@@ -295,13 +388,16 @@ export default function TeacherFormUpdate() {
                                         "&:hover": { background: "linear-gradient(90deg, #308A9F, #22385F)" },
                                     }}
                                 >
-                                    حفظ التغييرات
+                                    {updateMut.isPending ? "جارٍ الحفظ..." : "حفظ التغييرات"}
                                 </Button>
                             </Box>
                         </Grid>
 
                         <Grid item xs={12} md={4} lg={3}>
-                            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, borderColor: "#e6eef3", height: "100%" }}>
+                            <Paper
+                                variant="outlined"
+                                sx={{ p: 2.5, borderRadius: 2, borderColor: "#e6eef3", height: "100%" }}
+                            >
                                 <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
                                     الصورة الشخصية
                                 </Typography>
@@ -326,18 +422,32 @@ export default function TeacherFormUpdate() {
                                         <img
                                             src={previewImage}
                                             alt="معاينة الصورة"
-                                            style={{ width: 140, height: 140, borderRadius: 12, objectFit: "cover", boxShadow: "0 6px 16px rgba(0,0,0,0.08)" }}
+                                            style={{
+                                                width: 140,
+                                                height: 140,
+                                                borderRadius: 12,
+                                                objectFit: "cover",
+                                                boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+                                            }}
                                         />
                                     ) : existingImageUrl ? (
                                         <img
                                             src={existingImageUrl}
                                             alt="الصورة الحالية"
-                                            style={{ width: 140, height: 140, borderRadius: 12, objectFit: "cover", boxShadow: "0 6px 16px rgba(0,0,0,0.08)" }}
+                                            style={{
+                                                width: 140,
+                                                height: 140,
+                                                borderRadius: 12,
+                                                objectFit: "cover",
+                                                boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+                                            }}
                                         />
                                     ) : (
                                         <>
                                             <UploadFileIcon sx={{ fontSize: 46, color: "#308A9F" }} />
-                                            <Typography sx={{ fontSize: 14, color: "text.secondary" }}>اختر صورة</Typography>
+                                            <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
+                                                اختر صورة
+                                            </Typography>
                                         </>
                                     )}
                                     <Button component="span" variant="outlined" size="small" sx={{ mt: 1 }}>

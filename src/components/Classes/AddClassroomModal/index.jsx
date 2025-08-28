@@ -1,24 +1,13 @@
 // components/Classrooms/AddClassroomModal.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
-    Box,
-    Modal,
-    Paper,
-    Typography,
-    Button,
-    TextField,
-    Grid,
-    IconButton,
-    CircularProgress,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    FormHelperText,
-    Autocomplete,
-    Divider,
+    Box, Modal, Paper, Typography, Button, TextField, Grid, IconButton,
+    CircularProgress, FormControl, Select, MenuItem, FormHelperText,
+    Autocomplete, Divider,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { getAllLevels } from "../../../api/Admin/Levels/getAllLevels";
 import { createClassroom } from "../../../api/Admin/Classrooms/createClassroom";
 
@@ -27,38 +16,35 @@ const STATUSES = [
     { value: "inactive", label: "غير نشط" },
 ];
 
-const defaultForm = {
-    level_id: "",
-    name: "",
-    capacity: "",
-    status: "active",
-};
+const defaultForm = { level_id: "", name: "", capacity: "", status: "active" };
 
 const AddClassroomModal = ({ open, onClose, onCreated }) => {
+    const queryClient = useQueryClient();
+
     const [form, setForm] = useState(defaultForm);
-    const [levels, setLevels] = useState([]);
-    const [levelsLoading, setLevelsLoading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
 
+    // ===== Query: levels (only when modal open) =====
+    const {
+        data: levelsData,
+        isLoading: levelsLoading,
+        isError: levelsErr,
+        error: levelsError,
+    } = useQuery({
+        queryKey: ["levels:all"],
+        queryFn: getAllLevels,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const levels = Array.isArray(levelsData) ? levelsData : levelsData?.data || [];
+
     useEffect(() => {
         if (!open) return;
-        const load = async () => {
-            setLevelsLoading(true);
-            setErrorMsg("");
-            setFieldErrors({});
-            try {
-                const data = await getAllLevels();
-                setLevels(Array.isArray(data) ? data : []);
-            } catch (e) {
-                setErrorMsg(e?.message || "تعذر تحميل المراحل");
-            } finally {
-                setLevelsLoading(false);
-            }
-        };
         setForm(defaultForm);
-        load();
+        setErrorMsg("");
+        setFieldErrors({});
     }, [open]);
 
     const selectedLevel = useMemo(
@@ -78,34 +64,40 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
         Number(form.capacity) > 0 &&
         form.status;
 
-    const handleSubmit = async (e) => {
-        e?.preventDefault?.();
-        setErrorMsg("");
-        setFieldErrors({});
-        if (!isValid) return;
-
-        setSubmitting(true);
-        try {
-            const payload = {
-                level_id: Number(form.level_id),
-                name: String(form.name).trim(),
-                capacity: Number(form.capacity),
-                status: form.status,
-            };
-            const created = await createClassroom(payload);
+    // ===== Mutation: create classroom =====
+    const createMut = useMutation({
+        mutationFn: createClassroom,
+        onSuccess: (created) => {
+            queryClient.invalidateQueries({ queryKey: ["classrooms"] });
+            queryClient.invalidateQueries({ queryKey: ["levels:stats"] });
             onCreated?.(created);
             onClose?.();
-        } catch (e) {
-            const details = e?.details || {};
-            setFieldErrors(details);
-            setErrorMsg(e?.message || "فشل في إنشاء الصف");
-        } finally {
-            setSubmitting(false);
-        }
+        },
+        onError: (e) => {
+            const apiMsg = e?.response?.data?.message || e?.message || "فشل في إنشاء الصف";
+            const apiFields = e?.response?.data?.errors || e?.details || {};
+            setErrorMsg(apiMsg);
+            setFieldErrors(apiFields);
+        },
+    });
+
+    const handleSubmit = (e) => {
+        e?.preventDefault?.();
+        if (!isValid || createMut.isPending) return;
+        setErrorMsg("");
+        setFieldErrors({});
+
+        const payload = {
+            level_id: Number(form.level_id),
+            name: String(form.name).trim(),
+            capacity: Number(form.capacity),
+            status: form.status,
+        };
+        createMut.mutate(payload);
     };
 
     const handleClose = () => {
-        if (submitting) return;
+        if (createMut.isPending) return;
         setForm(defaultForm);
         setFieldErrors({});
         setErrorMsg("");
@@ -120,46 +112,27 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
             "&:hover fieldset": { borderColor: "#D1D5DB" },
             "&.Mui-focused fieldset": { borderColor: "#1BB5C4", borderWidth: 2 },
         },
-        "& .MuiInputBase-input": {
-            padding: "12px 14px",
-        },
+        "& .MuiInputBase-input": { padding: "12px 14px" },
     };
 
     return (
         <Modal
             open={open}
             onClose={handleClose}
-            sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                direction: "rtl",
-                px: 2,
-            }}
+            sx={{ display: "flex", alignItems: "center", justifyContent: "center", direction: "rtl", px: 2 }}
         >
             <Paper
                 sx={{
-                    width: 820,
-                    maxWidth: "100%",
-                    borderRadius: 4,
-                    overflow: "hidden",
+                    width: 820, maxWidth: "100%", borderRadius: 4, overflow: "hidden",
                     boxShadow: "0 14px 40px rgba(0,0,0,0.18)",
                 }}
             >
                 <Box sx={{ position: "relative", px: 2, pt: 1.25 }}>
-                    <IconButton
-                        onClick={handleClose}
-                        size="small"
-                        sx={{ position: "absolute", left: 8, top: 8 }}
-                        aria-label="إغلاق"
-                    >
+                    <IconButton onClick={handleClose} size="small" sx={{ position: "absolute", left: 8, top: 8 }} aria-label="إغلاق">
                         <CloseIcon />
                     </IconButton>
 
-                    <Typography
-                        variant="h6"
-                        sx={{ fontWeight: 700, color: "#0C4A6E", textAlign: "right", pr: 1 }}
-                    >
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: "#0C4A6E", textAlign: "right", pr: 1 }}>
                         أضف صف
                     </Typography>
 
@@ -167,6 +140,11 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
                 </Box>
 
                 <Box component="form" onSubmit={handleSubmit} sx={{ px: 2.5, pt: 2.5, pb: 1 }}>
+                    {levelsErr && (
+                        <Typography sx={{ color: "error.main", mb: 1.5, textAlign: "right" }}>
+                            تعذر تحميل المراحل: {levelsError?.message}
+                        </Typography>
+                    )}
                     {errorMsg ? (
                         <Typography sx={{ color: "error.main", mb: 2, textAlign: "right" }}>
                             {errorMsg}
@@ -252,23 +230,17 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
 
                     <Box
                         sx={{
-                            display: "flex",
-                            gap: 2,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            mt: 3.5,
-                            mb: 3,
+                            display: "flex", gap: 2, justifyContent: "center", alignItems: "center",
+                            mt: 3.5, mb: 3,
                         }}
                     >
                         <Button
                             onClick={handleClose}
                             variant="outlined"
+                            disabled={createMut.isPending}
                             sx={{
-                                minWidth: 140,
-                                borderRadius: 2,
-                                py: 1,
-                                borderColor: "rgba(0,0,0,0.12)",
-                                bgcolor: "#fff",
+                                minWidth: 140, borderRadius: 2, py: 1,
+                                borderColor: "rgba(0,0,0,0.12)", bgcolor: "#fff",
                             }}
                         >
                             تجاهل
@@ -276,24 +248,16 @@ const AddClassroomModal = ({ open, onClose, onCreated }) => {
 
                         <Button
                             type="submit"
-                            disabled={submitting || levelsLoading || !isValid}
+                            disabled={createMut.isPending || levelsLoading || !isValid}
                             variant="contained"
                             sx={{
-                                minWidth: 180,
-                                borderRadius: 2,
-                                py: 1,
+                                minWidth: 180, borderRadius: 2, py: 1,
                                 background: "linear-gradient(90deg, #1CB7BE 0%, #122E57 100%)",
                                 boxShadow: "none",
-                                "&:hover": {
-                                    background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)",
-                                },
+                                "&:hover": { background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)" },
                             }}
                         >
-                            {submitting ? (
-                                <CircularProgress size={20} sx={{ color: "#fff" }} />
-                            ) : (
-                                "إضافة الصف"
-                            )}
+                            {createMut.isPending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إضافة الصف"}
                         </Button>
                     </Box>
                 </Box>

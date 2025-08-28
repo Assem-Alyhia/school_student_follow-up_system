@@ -162,7 +162,6 @@ const Section2 = ({ page = 1, rowsPerPage = 12, onMeta, onView }) => {
                                         backgroundClip: "content-box, border-box",
                                     }}
                                 >
-                                    {/* شريط علوي مستقل لأيقونات التعديل/الحذف */}
                                     <Box
                                         sx={{
                                             px: 1,
@@ -253,7 +252,6 @@ const Section2 = ({ page = 1, rowsPerPage = 12, onMeta, onView }) => {
                 </Grid>
             </Paper>
 
-            {/* موديل تأكيد الحذف */}
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}

@@ -131,6 +131,7 @@ const apiEndpoints = {
 
   // المواد
   subjects: "/admin/subjects",
+  getAllSubjectsNoPaginate: "/admin/subjects/get-all",
   subjectById: (id) => `/admin/subjects/${id}`,
 
   //الامتحانات

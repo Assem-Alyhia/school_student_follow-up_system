@@ -6,7 +6,7 @@ import {
     Divider, Alert, Chip, Stack, Card, CardContent
 } from "@mui/material";
 import { Close as CloseIcon, Visibility, VisibilityOff } from "@mui/icons-material";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateFinancial } from "./../../../api/Admin/Financials/updateFinancial";
 
 const GENDERS = [
@@ -24,9 +24,6 @@ const asDateInput = (iso) => {
 const EditFinancialModal = ({ open, onClose, initialData }) => {
     const qc = useQueryClient();
 
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [loading, setLoading] = useState(false);
 
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
@@ -36,8 +33,6 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
         name: "", email: "", gender: "", dob: "", phone: "", hiring_date: "",
         password: "", password_confirmation: "", image: null, imageUrl: ""
     });
-    const [showPasswordIcon, setShowPasswordIcon] = useState(false);
-    const [showConfirmIcon, setShowConfirmIcon] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -71,19 +66,11 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
         return form.name && form.email && form.gender && form.dob && form.phone && form.hiring_date;
     }, [form]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        setFieldErrors({});
-        setSuccessMsg("");
-
-        if ((form.password || form.password_confirmation) && form.password !== form.password_confirmation) {
-            setError("كلمتا المرور غير متطابقتين");
-            return;
-        }
-
-        try {
-            setLoading(true);
+    const updateMut = useMutation({
+        mutationFn: async () => {
+            if ((form.password || form.password_confirmation) && form.password !== form.password_confirmation) {
+                throw new Error("كلمتا المرور غير متطابقتين");
+            }
             const payload = {
                 name: form.name,
                 email: form.email,
@@ -96,20 +83,27 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
             if (form.password_confirmation) payload.password_confirmation = form.password_confirmation;
             if (form.image instanceof File) payload.image = form.image;
 
-            await updateFinancial(initialData.id, payload);
+            return updateFinancial(initialData.id, payload);
+        },
+        onSuccess: async () => {
             setSuccessMsg("تم تحديث بيانات الموظف المالي بنجاح");
-
             await qc.invalidateQueries({ queryKey: ["financials"] });
             await qc.invalidateQueries({ queryKey: ["financials-all"] });
-
             setTimeout(() => onClose?.(), 900);
-        } catch (err) {
+        },
+        onError: (err) => {
             const msg = err?.response?.data?.message || err?.message || "حدث خطأ غير متوقع";
             setError(msg);
             setFieldErrors(err?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setError("");
+        setFieldErrors({});
+        setSuccessMsg("");
+        updateMut.mutate();
     };
 
     return (
@@ -127,12 +121,10 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                     boxShadow: "0 12px 30px rgba(0,0,0,.08)"
                 }}
             >
-                {/* Header */}
                 <Box
                     sx={{
                         p: 2.5,
                         px: 3,
-                        bgcolor: "linear-gradient(90deg, #35AFBC, #308A9F)",
                         background: "linear-gradient(90deg, #35AFBC, #308A9F)",
                         color: "#fff",
                         display: "flex",
@@ -155,7 +147,6 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                     </IconButton>
                 </Box>
 
-                {/* Alerts */}
                 <Box sx={{ px: 3, pt: 2 }}>
                     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
                     {successMsg && <Alert severity="success" sx={{ mb: 1.5 }}>{successMsg}</Alert>}
@@ -163,7 +154,6 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
 
                 <Box component="form" onSubmit={handleSubmit} sx={{ p: 3, pt: 1.5 }}>
                     <Grid container spacing={3}>
-                        {/* Avatar card */}
                         <Grid item xs={12} md={4}>
                             <Card sx={{ borderRadius: 3, height: "100%" }}>
                                 <CardContent>
@@ -192,7 +182,6 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                             </Card>
                         </Grid>
 
-                        {/* Form fields */}
                         <Grid item xs={12} md={8}>
                             <Card sx={{ borderRadius: 3, mb: 3 }}>
                                 <CardContent>
@@ -299,67 +288,6 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                                                 helperText={fieldErrors?.hiring_date?.[0] || ""}
                                             />
                                         </Grid>
-
-                                        <Grid item xs={12} md={6}>
-                                            <TextField
-                                                size="small"
-                                                label="كلمة المرور"
-                                                type={showPassword ? "text" : "password"}
-                                                name="password"
-                                                value={form.password}
-                                                onChange={handleChange}
-                                                onFocus={() => setShowPasswordIcon(true)}
-                                                onBlur={() => setShowPasswordIcon(false)}
-                                                fullWidth
-                                                error={!!fieldErrors?.password}
-                                                helperText={fieldErrors?.password?.[0] || ""}
-                                                InputProps={{
-                                                    endAdornment: (showPasswordIcon || !!form.password) && (
-                                                        <InputAdornment position="end">
-                                                            <IconButton
-                                                                // مهم جداً: لا تدع الزر يأخذ التركيز من الحقل
-                                                                onMouseDown={(e) => e.preventDefault()}
-                                                                onClick={() => setShowPassword((s) => !s)}
-                                                                edge="end"
-                                                                size="small"
-                                                            >
-                                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    ),
-                                                }}
-                                            />
-                                        </Grid>
-
-                                        <Grid item xs={12} md={6}>
-                                            <TextField
-                                                size="small"
-                                                label="تأكيد كلمة المرور"
-                                                type={showConfirm ? "text" : "password"}
-                                                name="password_confirmation"
-                                                value={form.password_confirmation}
-                                                onChange={handleChange}
-                                                onFocus={() => setShowConfirmIcon(true)}
-                                                onBlur={() => setShowConfirmIcon(false)}
-                                                fullWidth
-                                                error={!!fieldErrors?.password_confirmation}
-                                                helperText={fieldErrors?.password_confirmation?.[0] || ""}
-                                                InputProps={{
-                                                    endAdornment: (showConfirmIcon || !!form.password_confirmation) && (
-                                                        <InputAdornment position="end">
-                                                            <IconButton
-                                                                onMouseDown={(e) => e.preventDefault()} // يمنع blur
-                                                                onClick={() => setShowConfirm((s) => !s)}
-                                                                edge="end"
-                                                                size="small"
-                                                            >
-                                                                {showConfirm ? <VisibilityOff /> : <Visibility />}
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    ),
-                                                }}
-                                            />
-                                        </Grid>
                                     </Grid>
                                 </CardContent>
                             </Card>
@@ -368,11 +296,10 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
 
                     <Divider sx={{ my: 3 }} />
 
-                    {/* Actions */}
                     <Stack direction="row" spacing={2} justifyContent="center">
                         <Button
                             type="submit"
-                            disabled={!canSubmit || loading}
+                            disabled={!canSubmit || updateMut.isPending}
                             sx={{
                                 width: "15rem",
                                 px: 5,
@@ -384,7 +311,7 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                                 "&:hover": { opacity: 0.95 },
                             }}
                         >
-                            {loading ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "حفظ التعديلات"}
+                            {updateMut.isPending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "حفظ التعديلات"}
                         </Button>
                         <Button
                             onClick={onClose}

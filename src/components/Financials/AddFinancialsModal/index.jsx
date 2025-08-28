@@ -6,7 +6,7 @@ import {
     Divider, Alert, Chip, Stack, Card, CardContent
 } from "@mui/material";
 import { Close as CloseIcon, Visibility, VisibilityOff } from "@mui/icons-material";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFinancial } from "./../../../api/Admin/Financials/createFinancial";
 
 const GENDERS = [
@@ -35,14 +35,12 @@ const AddFinancialModal = ({ open, onClose }) => {
     const [showPasswordIcon, setShowPasswordIcon] = useState(false);
     const [showConfirmIcon, setShowConfirmIcon] = useState(false);
 
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
     const [successMsg, setSuccessMsg] = useState("");
 
     const [form, setForm] = useState(INITIAL_FORM);
 
-    // لتصفير حقل رفع الملف أيضاً
     const fileInputRef = useRef(null);
 
     const resetForm = () => {
@@ -54,10 +52,9 @@ const AddFinancialModal = ({ open, onClose }) => {
         setShowConfirm(false);
         setShowPasswordIcon(false);
         setShowConfirmIcon(false);
-        if (fileInputRef.current) fileInputRef.current.value = ""; // يمسح اختيار الملف
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    // كل ما يفتح الموديال صفّر الحقول
     useEffect(() => {
         if (open) resetForm();
     }, [open]);
@@ -82,40 +79,38 @@ const AddFinancialModal = ({ open, onClose }) => {
         return req && form.password && form.password_confirmation;
     }, [form]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(""); setFieldErrors({}); setSuccessMsg("");
-
-        if (form.password !== form.password_confirmation) {
-            setError("كلمتا المرور غير متطابقتين");
-            return;
-        }
-
-        try {
-            setLoading(true);
-
+    const createMut = useMutation({
+        mutationFn: async () => {
+            if (form.password !== form.password_confirmation) {
+                throw new Error("كلمتا المرور غير متطابقتين");
+            }
             const payload = {
                 ...form,
                 dob: form.dob ? new Date(form.dob).toISOString() : "",
                 hiring_date: form.hiring_date ? new Date(form.hiring_date).toISOString() : "",
             };
-
-            await createFinancial(payload);
+            return createFinancial(payload);
+        },
+        onSuccess: async () => {
             setSuccessMsg("تم إنشاء الموظف المالي بنجاح");
-
             await qc.invalidateQueries({ queryKey: ["financials"] });
             await qc.invalidateQueries({ queryKey: ["financials-all"] });
-
-            // صفّر الحقول ثم أغلق
             resetForm();
             setTimeout(() => onClose?.(), 300);
-        } catch (err) {
+        },
+        onError: (err) => {
             const msg = err?.response?.data?.message || err?.message || "حدث خطأ غير متوقع";
             setError(msg);
             setFieldErrors(err?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setError("");
+        setFieldErrors({});
+        setSuccessMsg("");
+        createMut.mutate();
     };
 
     return (
@@ -133,7 +128,6 @@ const AddFinancialModal = ({ open, onClose }) => {
                     boxShadow: "0 12px 30px rgba(0,0,0,.08)",
                 }}
             >
-                {/* Header */}
                 <Box
                     sx={{
                         p: 2.5,
@@ -156,7 +150,6 @@ const AddFinancialModal = ({ open, onClose }) => {
                     </IconButton>
                 </Box>
 
-                {/* Alerts */}
                 <Box sx={{ px: 3, pt: 2 }}>
                     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
                     {successMsg && <Alert severity="success" sx={{ mb: 1.5 }}>{successMsg}</Alert>}
@@ -164,7 +157,6 @@ const AddFinancialModal = ({ open, onClose }) => {
 
                 <Box component="form" onSubmit={handleSubmit} sx={{ p: 3, pt: 1.5 }}>
                     <Grid container spacing={3}>
-                        {/* Avatar card */}
                         <Grid item xs={12} md={4}>
                             <Card sx={{ borderRadius: 3, height: "100%" }}>
                                 <CardContent>
@@ -194,7 +186,6 @@ const AddFinancialModal = ({ open, onClose }) => {
                             </Card>
                         </Grid>
 
-                        {/* Fields card */}
                         <Grid item xs={12} md={8}>
                             <Card sx={{ borderRadius: 3, mb: 3 }}>
                                 <CardContent>
@@ -371,11 +362,10 @@ const AddFinancialModal = ({ open, onClose }) => {
 
                     <Divider sx={{ my: 3 }} />
 
-                    {/* Actions */}
                     <Stack direction="row" spacing={2} justifyContent="center">
                         <Button
                             type="submit"
-                            disabled={!canSubmit || loading}
+                            disabled={!canSubmit || createMut.isPending}
                             sx={{
                                 width: "15rem",
                                 px: 5,
@@ -387,7 +377,7 @@ const AddFinancialModal = ({ open, onClose }) => {
                                 "&:hover": { opacity: 0.95 },
                             }}
                         >
-                            {loading ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إضافة"}
+                            {createMut.isPending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إضافة"}
                         </Button>
                         <Button
                             onClick={handleClose}

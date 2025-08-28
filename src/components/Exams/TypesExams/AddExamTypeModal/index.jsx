@@ -4,7 +4,7 @@ import {
     TextField, Button, Divider
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { createExamType } from "../../../../api/Admin/ExamTypes/createExamType";
 
@@ -25,28 +25,27 @@ const INITIAL = { name: "", description: "" };
 
 export default function AddExamTypeModal({ open, onClose, onCreated, title = "إضافة نوع امتحان" }) {
     const [values, setValues] = useState(INITIAL);
-    const [saving, setSaving] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
     const queryClient = useQueryClient();
 
-    const canSave = useMemo(() => values.name.trim().length > 0 && !saving, [values.name, saving]);
+    const canSave = useMemo(() => values.name.trim().length > 0, [values.name]);
 
     const change = (k) => (e) => setValues((s) => ({ ...s, [k]: e.target.value }));
 
     const handleClose = () => {
-        if (saving) return;
+        if (createMut.isPending) return;
         setValues(INITIAL);
+        setErrorMsg("");
         onClose?.();
     };
 
-    // دالة مساعدة لتحديث الكاش فورًا (تضيف العنصر الجديد إلى البداية)
+    // إدراج/تحديث عنصر جديد داخل الكاش (يدعم مصفوفتين أو استجابة {data:[]})
     const upsertIntoCache = (queryKey, createdItem) => {
         queryClient.setQueryData(queryKey, (old) => {
             if (!old) {
-                // في حال لم يكن هناك بيانات سابقة
                 return Array.isArray(createdItem) ? createdItem : [createdItem];
             }
 
-            // إذا كان الشكل: { data: [] , meta? }
             if (Array.isArray(old?.data)) {
                 return {
                     ...old,
@@ -57,42 +56,46 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
                 };
             }
 
-            // إذا كان مصفوفة مباشرة
             if (Array.isArray(old)) {
                 return [createdItem, ...old];
             }
 
-            // أشكال أخرى نادرة: أعدها كما هي
             return old;
         });
     };
 
-    const handleSave = async () => {
-        try {
-            setSaving(true);
+    // Mutation: إنشاء نوع امتحان
+    const createMut = useMutation({
+        mutationFn: async () => {
             const payload = {
                 name: values.name.trim(),
                 description: values.description?.trim() || "",
             };
-
-            const created = await createExamType(payload);
-            const newItem = created?.data ?? created; // بعض الـ APIs تعيد {data: {...}} وأخرى تعيد الكائن مباشرة
+            return createExamType(payload);
+        },
+        onSuccess: (created) => {
+            const newItem = created?.data ?? created;
 
             if (newItem && typeof newItem === "object") {
-                // حدّث القوائم المعروضة فورًا بدون انتظار refetch
+                // تحديث الكاش مباشرة (أسرع تجربة)
                 upsertIntoCache(["teacher-exam-types"], newItem);
                 upsertIntoCache(["admin-exam-types"], newItem);
             }
 
+            // ويمكن أيضًا إبطال الاستعلامات إن رغبت بدلاً من/بالإضافة إلى upsert:
+            // queryClient.invalidateQueries({ queryKey: ["teacher-exam-types"] });
+            // queryClient.invalidateQueries({ queryKey: ["admin-exam-types"] });
+
             setValues(INITIAL);
+            setErrorMsg("");
             onCreated?.(created);
             handleClose();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setSaving(false);
-        }
-    };
+        },
+        onError: (e) => {
+            const msg = e?.response?.data?.message || e?.message || "تعذر إنشاء نوع الامتحان.";
+            setErrorMsg(msg);
+        },
+    });
 
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 12, md: 10 };
@@ -111,7 +114,7 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
                     size="small"
                     sx={{ position: "absolute", left: 8, top: 8 }}
                     aria-label="إغلاق"
-                    disabled={saving}
+                    disabled={createMut.isPending}
                 >
                     <CloseRoundedIcon />
                 </IconButton>
@@ -122,8 +125,13 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
             </Box>
 
             <DialogContent sx={{ pt: 3, pb: 2.5 }}>
+                {errorMsg && (
+                    <Typography sx={{ color: "error.main", mb: 1.5, textAlign: "right" }}>
+                        {errorMsg}
+                    </Typography>
+                )}
+
                 <Grid container spacing={2.25} alignItems="center">
-                    {/* اسم النوع */}
                     <Grid item {...labelCols}>
                         <Typography sx={labelSx}>اسم النوع</Typography>
                     </Grid>
@@ -134,11 +142,10 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
                             fullWidth
                             sx={fieldSx}
                             placeholder="مثال: اختبار فصلي"
-                            disabled={saving}
+                            disabled={createMut.isPending}
                         />
                     </Grid>
 
-                    {/* الوصف */}
                     <Grid item {...labelCols}>
                         <Typography sx={labelSx}>الوصف</Typography>
                     </Grid>
@@ -151,7 +158,7 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
                             placeholder="وصف اختياري لنوع الامتحان"
                             multiline
                             minRows={3}
-                            disabled={saving}
+                            disabled={createMut.isPending}
                         />
                     </Grid>
                 </Grid>
@@ -159,8 +166,8 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
 
             <Box sx={{ px: 3, pb: 3, display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
-                    onClick={handleSave}
-                    disabled={!canSave}
+                    onClick={() => createMut.mutate()}
+                    disabled={!canSave || createMut.isPending}
                     variant="contained"
                     sx={{
                         minWidth: 180,
@@ -171,11 +178,11 @@ export default function AddExamTypeModal({ open, onClose, onCreated, title = "إ
                         "&:hover": { background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)" },
                     }}
                 >
-                    {saving ? "جارٍ الحفظ..." : "حفظ"}
+                    {createMut.isPending ? "جارٍ الحفظ..." : "حفظ"}
                 </Button>
                 <Button
                     onClick={handleClose}
-                    disabled={saving}
+                    disabled={createMut.isPending}
                     variant="outlined"
                     sx={{ minWidth: 140, borderRadius: 2, py: 1 }}
                 >

@@ -15,7 +15,6 @@ const Section1 = () => {
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2 }}>
                 <Grid container spacing={2} alignItems="center">
-                    {/* أدوات الفرز والبحث */}
                     <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
                         <Button
                             variant="outlined"
@@ -50,7 +49,6 @@ const Section1 = () => {
                         />
                     </Grid>
 
-                    {/* أزرار الإضافة والتصدير والطباعة */}
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"
@@ -60,7 +58,7 @@ const Section1 = () => {
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 marginRight: 2
                             }}
-                            onClick={() => setOpenModal(true)} // فتح الموديول
+                            onClick={() => setOpenModal(true)} 
                         >
                             إضافة مستخدم
                         </Button>
@@ -72,7 +70,6 @@ const Section1 = () => {
                 </Grid>
             </Paper>
 
-            {/* استدعاء الموديول */}
             <AddUserModal open={openModal} onClose={() => setOpenModal(false)} />
         </Box>
     );

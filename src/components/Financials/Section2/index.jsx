@@ -94,7 +94,6 @@ const Section2 = ({ financials }) => {
                                     margin: 'auto',
                                 }}
                             >
-                                {/* الشريط العلوي */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <IconButton onClick={(e) => handleMenuClick(e, fin.id)}>
@@ -105,7 +104,6 @@ const Section2 = ({ financials }) => {
                                             open={Boolean(menuAnchorEl) && menuRowId === fin.id}
                                             onClose={handleMenuClose}
                                         >
-                                            {/* ✅ فتح موديول التفاصيل */}
                                             <MenuItem
                                                 onClick={() => {
                                                     setDetailsData(fin);
@@ -146,7 +144,6 @@ const Section2 = ({ financials }) => {
                                     </IconButton>
                                 </Box>
 
-                                {/* الصورة */}
                                 <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mb: 2 }}>
                                     <Avatar
                                         src={hasImage ? imageRaw : undefined}
@@ -164,7 +161,6 @@ const Section2 = ({ financials }) => {
                                     </Avatar>
                                 </Box>
 
-                                {/* الاسم */}
                                 <Typography
                                     variant="h6"
                                     sx={{
@@ -177,7 +173,6 @@ const Section2 = ({ financials }) => {
                                     {name}
                                 </Typography>
 
-                                {/* معلومات مختصرة */}
                                 <Box sx={{ my: '2rem' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-evenly', mb: 1 }}>
                                         <Typography sx={{ color: '#308A9F' }}><strong>رقم الموظف:</strong></Typography>
@@ -191,7 +186,6 @@ const Section2 = ({ financials }) => {
                                     </Box>
                                 </Box>
 
-                                {/* البريد */}
                                 <Box
                                     sx={{
                                         background: 'linear-gradient(90deg, #35AFBC, #308A9F,#22385F)',
@@ -210,7 +204,6 @@ const Section2 = ({ financials }) => {
                                     </Box>
                                 </Box>
 
-                                {/* أزرار تواصل */}
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                                     <IconButton><PhoneIcon sx={{ color: '#22385F', fontSize: '20px' }} /></IconButton>
                                     <IconButton><ChatIcon sx={{ color: '#22385F', fontSize: '20px' }} /></IconButton>
@@ -221,21 +214,18 @@ const Section2 = ({ financials }) => {
                 })}
             </Grid>
 
-            {/* ✳️ موديول التفاصيل */}
             <FinancialsDetails
                 open={openDetails}
                 onClose={() => { setOpenDetails(false); setDetailsData(null); }}
                 financial={detailsData}
             />
 
-            {/* موديال التعديل */}
             <EditFinancialModal
                 open={openEditModal}
                 onClose={() => { setOpenEditModal(false); setSelectedRow(null); }}
                 initialData={selectedRow}
             />
 
-            {/* حذف */}
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}

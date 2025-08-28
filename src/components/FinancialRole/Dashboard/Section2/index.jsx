@@ -49,7 +49,6 @@ const QuickAccessSection = () => {
 
     return (
         <Grid container spacing={3} sx={{ direction: 'rtl', width: '95%', margin: '2rem auto' }}>
-            {/* التقويم والأحداث */}
             <Grid item xs={12} md={8}>
                 <Paper sx={{ borderRadius: 3 }}>
                     <Box sx={{ background: 'linear-gradient(to left, #308A9F, #35AFBC)', p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -135,7 +134,6 @@ const QuickAccessSection = () => {
                 </Paper>
             </Grid>
 
-            {/* الإشعارات والروابط السريعة */}
             <Grid item xs={12} md={4}>
                 <Paper sx={{ borderRadius: 3 }}>
                     <Box sx={{ backgroundColor: '#F2F2F2', p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -181,7 +179,6 @@ const QuickAccessSection = () => {
                 </Paper>
             </Grid>
 
-            {/* Dialog لإضافة الحدث */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
                 <DialogTitle>إضافة حدث جديد</DialogTitle>
                 <DialogContent>

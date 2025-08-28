@@ -82,7 +82,6 @@ export default function Section1({ searchTerm, onSearchChange }) {
                 </Grid>
             </Paper>
 
-            {/* موديال الإضافة */}
             <AddPaymentModal open={openAddModal} onClose={() => setOpenAddModal(false)} />
         </Box>
     );

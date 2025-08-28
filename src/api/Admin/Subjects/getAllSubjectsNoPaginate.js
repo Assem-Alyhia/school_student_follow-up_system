@@ -3,6 +3,6 @@
   import apiEndpoints from "../../apiEndpoints";
 
   export const getAllSubjectsNoPaginate = async () => {
-    const response = await axiosInstance.get(apiEndpoints.subjects);
+    const response = await axiosInstance.get(apiEndpoints.getAllSubjectsNoPaginate);
     return response.data.data; 
   };

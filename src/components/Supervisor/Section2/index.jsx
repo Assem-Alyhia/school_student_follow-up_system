@@ -18,7 +18,6 @@ import ConfirmDeleteModal from './../../../layout/ConfirmDeleteModal';
 import SuccessAlert from './../../../layout/SuccessAlert';
 import { deleteSupervisor } from './../../../api/Admin/Supervisors/deleteSupervisor';
 
-// عدّل المسار حسب مكان الملف لديك إن لزم
 import SupervisorDetailsModal from '../SupervisorDetailsModal';
 import SupervisorEditModal from '../SupervisorEditModal';
 
@@ -29,7 +28,6 @@ const Section2 = ({ supervisors = [] }) => {
     const [selectedId, setSelectedId] = useState(null);
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
 
-    // تنبيه نجاح عام (للتحديث/الحذف)
     const [success, setSuccess] = useState({
         show: false,
         title: '',
@@ -40,11 +38,9 @@ const Section2 = ({ supervisors = [] }) => {
     const [menuAnchorEl, setMenuAnchorEl] = useState(null);
     const [menuRowId, setMenuRowId] = useState(null);
 
-    // موديل التفاصيل
     const [openDetails, setOpenDetails] = useState(false);
     const [detailsId, setDetailsId] = useState(null);
 
-    // موديل التعديل
     const [openEdit, setOpenEdit] = useState(false);
     const [editId, setEditId] = useState(null);
 

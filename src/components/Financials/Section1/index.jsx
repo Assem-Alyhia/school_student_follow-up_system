@@ -57,7 +57,6 @@ const Section1 = ({ searchTerm, onSearchChange }) => {
                         />
                     </Grid>
 
-                    {/* زر الإضافة والطباعة */}
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Button
                             variant="contained"

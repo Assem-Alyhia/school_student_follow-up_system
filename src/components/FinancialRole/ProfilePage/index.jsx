@@ -80,7 +80,6 @@ const FinancialProfile = () => {
 
     const financialId = useMemo(() => financial?.id, [financial]);
 
-    // حفظ جزئي لحقل واحد
     const { mutate: savePartial, isLoading: saving } = useMutation({
         mutationFn: async (payload) => {
             if (!financialId) throw new Error("لا يوجد معرّف للمالي.");
@@ -126,7 +125,6 @@ const FinancialProfile = () => {
         dob: fmt(p.dob),
     };
 
-    // أدوات التحرير للحقول المسموحة فقط
     const startEdit = (field) => {
         setDraft((d) => ({ ...d, [field]: form[field] ?? "" }));
         setEditing((e) => ({ ...e, [field]: true }));
@@ -156,7 +154,6 @@ const FinancialProfile = () => {
     const handleChange = (key) => (e) =>
         setForm((s) => ({ ...s, [key]: e.target.value }));
 
-    // الصورة: اختيار + زر حفظ
     const handlePickImage = () => fileInputRef.current?.click();
     const handleImage = (e) => {
         const file = e.target.files?.[0];
@@ -186,7 +183,6 @@ const FinancialProfile = () => {
                     المعلومات الشخصية
                 </Typography>
 
-                {/* الصورة + أزرار الاختيار/الحفظ */}
                 <Box display="flex" alignItems="center" mb={1.5}>
                     <Avatar
                         alt={profileData.fullName}
@@ -240,7 +236,6 @@ const FinancialProfile = () => {
 
                 <Divider sx={{ my: 1.5 }} />
 
-                {/* للعرض فقط - لا أزرار */}
                 <DisplayRow label="العنوان" value={profileData.address || "—"} />
                 <DisplayRow label="الجنس" value={profileData.gender} />
                 <DisplayRow label="تاريخ الميلاد" value={profileData.dob} hideDivider />
@@ -251,7 +246,6 @@ const FinancialProfile = () => {
                     معلومات الحساب (قابلة للتعديل)
                 </Typography>
 
-                {/* قابلة للتعديل فقط: email, phone, password */}
                 <EditableRow
                     label="البريد الإلكتروني"
                     value={form.email}
@@ -317,7 +311,6 @@ const FinancialProfile = () => {
     );
 };
 
-/* صف عرض فقط */
 const DisplayRow = ({ label, value, hideDivider = false }) => (
     <>
         <Box display="flex" justifyContent="space-between" alignItems="center" py={1.5} px={1}>
@@ -330,7 +323,6 @@ const DisplayRow = ({ label, value, hideDivider = false }) => (
     </>
 );
 
-/* صف قابل للتحرير للحقول المدعومة فقط */
 const EditableRow = ({
     label,
     value,

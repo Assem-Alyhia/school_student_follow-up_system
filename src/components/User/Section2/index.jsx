@@ -184,7 +184,6 @@ const Section2 = ({ page, rowsPerPage }) => {
                 </TableContainer>
             </Paper>
 
-            {/* ✅ مكون عرض بيانات المستخدم */}
             <UserDetails
                 open={openViewModal}
                 onClose={() => setOpenViewModal(false)}

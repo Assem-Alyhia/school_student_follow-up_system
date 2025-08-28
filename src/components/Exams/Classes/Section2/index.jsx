@@ -8,7 +8,6 @@ import { visuallyHidden } from "@mui/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getAllLevelsPaginate } from "../../../../api/Admin/Levels/getAllLevelsPaginate";
 
-// تحويل سجلّ واحد لشكل العرض
 const pickRowValues = (raw) => ({
     id: raw?.id ?? "—",
     name: raw?.name ?? "—",
@@ -22,7 +21,6 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
     const [order, setOrder] = useState("asc");
     const [orderBy, setOrderBy] = useState("id");
 
-    // ✅ اربط الاستعلام بالصفحة والحجم، ونادِ الـ API بهما
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["teacher-levels-all", page, rowsPerPage],
         queryFn: () => getAllLevelsPaginate(page, rowsPerPage),
@@ -30,7 +28,6 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
         staleTime: 60_000,
     });
 
-    // مصدر الصفوف من الاستجابة
     const listRaw = useMemo(() => {
         if (!data) return [];
         if (Array.isArray(data?.data)) return data.data;
@@ -63,12 +60,10 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
         return arr;
     }, [rowsAll, order, orderBy]);
 
-    // ✅ إن كان السيرفر يرجّع meta اعتبر أن الصفحة الحالية جاهزة ولا تقطع محليًا
     const hasServerPagination = !!data?.meta;
     const start = (page - 1) * rowsPerPage;
     const viewRows = hasServerPagination ? sortedRows : sortedRows.slice(start, start + rowsPerPage);
 
-    // ✅ مرّر معلومات الباجينيشن للأب
     useEffect(() => {
         if (data?.meta) {
             onMeta?.(data.meta);
@@ -106,7 +101,6 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
                     <Table sx={{ minWidth: 650 }} aria-label="جدول الصفوف">
                         <TableHead sx={{ backgroundColor: "#308A9F" }}>
                             <TableRow>
-                                {/* المعرّف */}
                                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     <TableSortLabel
                                         active={orderBy === "id"}
@@ -123,7 +117,6 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
                                     </TableSortLabel>
                                 </TableCell>
 
-                                {/* الاسم */}
                                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     <TableSortLabel
                                         active={orderBy === "name"}
@@ -140,7 +133,6 @@ const ClassroomsTable = ({ page = 1, rowsPerPage = 10, onMeta }) => {
                                     </TableSortLabel>
                                 </TableCell>
 
-                                {/* المستوى الدراسي */}
                                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     <TableSortLabel
                                         active={orderBy === "gradeLevel"}

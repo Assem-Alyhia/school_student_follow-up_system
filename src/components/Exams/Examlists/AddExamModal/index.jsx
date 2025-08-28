@@ -1,14 +1,14 @@
 // src/features/Exams/AddExamModal.jsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
     Dialog, DialogContent, IconButton, Box, Typography, Grid,
     TextField, Button, Divider, FormControl, Select, MenuItem,
     CircularProgress
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getAllClassroomsNoPaginate } from "../../../../api/Admin/Classrooms/getAllClassroomsNoPaginate";
 import { getAllSubjectsNoPaginate } from "../../../../api/Admin/Subjects/getAllSubjectsNoPaginate";
@@ -36,12 +36,11 @@ const TERM_OPTIONS = [
     { label: "الفصل الثالث", value: "term 3" },
 ];
 
-// من input datetime-local => "YYYY-MM-DD HH:mm:ss"
 const toApiDateTime = (v) => {
     if (!v) return "";
     if (v.includes("T")) {
         const [d, t] = v.split("T");
-        const hhmm = t.slice(0, 5); // HH:mm
+        const hhmm = t.slice(0, 5);
         return `${d} ${hhmm}:00`;
     }
     return `${v.slice(0, 10)} 00:00:00`;
@@ -61,22 +60,12 @@ const INITIAL_VALUES = {
 
 export default function AddExamModal({ open, onClose, onCreated, title = "إضافة امتحان" }) {
     const [values, setValues] = useState(INITIAL_VALUES);
-    const [loadingLists, setLoadingLists] = useState(true);
-    const [saving, setSaving] = useState(false);
-
-    const [academicYears, setAcademicYears] = useState([]);
-    const [classrooms, setClassrooms] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [examTypes, setExamTypes] = useState([]);
-
-    // تنبيه عام (نجاح/فشل)
     const [showAlert, setShowAlert] = useState(false);
     const [alertMsg, setAlertMsg] = useState("");
-    const [alertSeverity, setAlertSeverity] = useState("success"); // "success" | "error"
+    const [alertSeverity, setAlertSeverity] = useState("success");
 
     const queryClient = useQueryClient();
 
-    // التقط أول رسالة خطأ حقلية إن وجدت
     const pickFirstError = (resp) => {
         const errs = resp?.errors;
         if (!errs || typeof errs !== "object") return null;
@@ -87,42 +76,69 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
         return null;
     };
 
-    // تحميل القوائم عند الفتح
-    useEffect(() => {
-        if (!open) return;
+    // ===== Queries: القوائم =====
+    const yearsQ = useQuery({
+        queryKey: ["academic-years:all"],
+        queryFn: getAllAcademicYears,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const classroomsQ = useQuery({
+        queryKey: ["classrooms:nopage"],
+        queryFn: getAllClassroomsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const subjectsQ = useQuery({
+        queryKey: ["subjects:nopage"],
+        queryFn: getAllSubjectsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const typesQ = useQuery({
+        queryKey: ["exam-types:nopage"],
+        queryFn: getAllExamTypesNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const academicYears = useMemo(() => {
+        const raw = yearsQ.data;
+        return Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+    }, [yearsQ.data]);
+
+    const classrooms = useMemo(() => {
+        const raw = classroomsQ.data;
+        return Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+    }, [classroomsQ.data]);
+
+    const subjects = useMemo(() => {
+        const raw = subjectsQ.data;
+        return Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+    }, [subjectsQ.data]);
+
+    const examTypes = useMemo(() => {
+        const raw = typesQ.data;
+        return Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+    }, [typesQ.data]);
+
+    const loadingLists = yearsQ.isLoading || classroomsQ.isLoading || subjectsQ.isLoading || typesQ.isLoading;
+    const listsError = yearsQ.isError || classroomsQ.isError || subjectsQ.isError || typesQ.isError;
+    const firstListsErrorMsg =
+        yearsQ.error?.message ||
+        classroomsQ.error?.message ||
+        subjectsQ.error?.message ||
+        typesQ.error?.message;
+
+    // إعادة الضبط عند الإغلاق/الفتح
+    const handleClose = () => {
         setValues(INITIAL_VALUES);
         setShowAlert(false);
-
-        let alive = true;
-        (async () => {
-            try {
-                setLoadingLists(true);
-                const [years, cls, subs, types] = await Promise.all([
-                    getAllAcademicYears(),
-                    getAllClassroomsNoPaginate(),
-                    getAllSubjectsNoPaginate(),
-                    getAllExamTypesNoPaginate(),
-                ]);
-                if (!alive) return;
-                setAcademicYears(Array.isArray(years?.data) ? years.data : (Array.isArray(years) ? years : []));
-                setClassrooms(Array.isArray(cls?.data) ? cls.data : (Array.isArray(cls) ? cls : []));
-                setSubjects(Array.isArray(subs?.data) ? subs.data : (Array.isArray(subs) ? subs : []));
-                setExamTypes(Array.isArray(types?.data) ? types.data : (Array.isArray(types) ? types : []));
-            } catch (e) {
-                if (!alive) return;
-                const resp = e?.response?.data;
-                const fieldMsg = pickFirstError(resp);
-                setAlertSeverity("error");
-                setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر تحميل القوائم.");
-                setShowAlert(true);
-                setAcademicYears([]); setClassrooms([]); setSubjects([]); setExamTypes([]);
-            } finally {
-                if (alive) setLoadingLists(false);
-            }
-        })();
-
-        return () => { alive = false; };
-    }, [open]);
+        onClose?.();
+    };
 
     const change = (k) => (e) => setValues((s) => ({ ...s, [k]: e.target.value }));
 
@@ -142,51 +158,41 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
         );
     }, [values]);
 
-    const handleClose = () => {
-        setValues(INITIAL_VALUES);
-        onClose?.();
-    };
-
-    const handleSave = async () => {
-        const payload = {
-            academic_year_id: Number(values.academic_year_id),
-            classroom_id: Number(values.classroom_id),
-            subject_id: Number(values.subject_id),
-            exam_type_id: Number(values.exam_type_id),
-            term: values.term,
-            start_time: toApiDateTime(values.start_time),
-            end_time: toApiDateTime(values.end_time),
-            max_score: Number(values.max_score),
-            weight: Number(values.weight),
-        };
-
-        try {
-            setSaving(true);
-            const created = await createAdminExam(payload);
+    // ===== Mutation: إنشاء امتحان =====
+    const createMut = useMutation({
+        mutationFn: async () => {
+            const payload = {
+                academic_year_id: Number(values.academic_year_id),
+                classroom_id: Number(values.classroom_id),
+                subject_id: Number(values.subject_id),
+                exam_type_id: Number(values.exam_type_id),
+                term: values.term,
+                start_time: toApiDateTime(values.start_time),
+                end_time: toApiDateTime(values.end_time),
+                max_score: Number(values.max_score),
+                weight: Number(values.weight),
+            };
+            return createAdminExam(payload);
+        },
+        onSuccess: async (created) => {
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: ["admin-exams"] }),
                 queryClient.invalidateQueries({ queryKey: ["teacher-exams"] }),
             ]);
-
-            // نجاح ✅
             setAlertSeverity("success");
             setAlertMsg("تم إنشاء الامتحان بنجاح.");
             setShowAlert(true);
-
             setValues(INITIAL_VALUES);
             onCreated?.(created);
-            // handleClose(); // إن أردت الإغلاق مباشرة
-        } catch (e) {
-            // فشل ❌
+        },
+        onError: (e) => {
             const resp = e?.response?.data;
             const fieldMsg = pickFirstError(resp);
             setAlertSeverity("error");
             setAlertMsg(fieldMsg || resp?.message || e?.message || "تعذر إنشاء الامتحان.");
             setShowAlert(true);
-        } finally {
-            setSaving(false);
-        }
-    };
+        },
+    });
 
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 9, md: 4 };
@@ -195,7 +201,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
     return (
         <Dialog
             open={open}
-            onClose={saving ? undefined : handleClose}
+            onClose={createMut.isPending ? undefined : handleClose}
             fullWidth
             maxWidth="md"
             PaperProps={{ sx: { direction: "rtl", borderRadius: 4 } }}
@@ -206,7 +212,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                     size="small"
                     sx={{ position: "absolute", left: 8, top: 8 }}
                     aria-label="إغلاق"
-                    disabled={saving}
+                    disabled={createMut.isPending}
                 >
                     <CloseRoundedIcon />
                 </IconButton>
@@ -221,9 +227,19 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 6 }}>
                         <CircularProgress />
                     </Box>
+                ) : listsError ? (
+                    <Box sx={{ textAlign: "center", py: 3 }}>
+                        <Typography color="error" sx={{ mb: 1.5 }}>
+                            {firstListsErrorMsg || "تعذر تحميل القوائم."}
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
+                            <Button variant="outlined" onClick={() => { yearsQ.refetch(); classroomsQ.refetch(); subjectsQ.refetch(); typesQ.refetch(); }}>
+                                إعادة المحاولة
+                            </Button>
+                        </Box>
+                    </Box>
                 ) : (
                     <Grid container spacing={2.25} alignItems="center">
-                        {/* العام الدراسي */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>العام الدراسي</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
@@ -231,7 +247,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                     value={values.academic_year_id}
                                     onChange={change("academic_year_id")}
                                     displayEmpty
-                                    disabled={saving}
+                                    disabled={createMut.isPending}
                                 >
                                     <MenuItem value="" disabled>اختر العام الدراسي</MenuItem>
                                     {academicYears.map((y) => (
@@ -241,7 +257,6 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                             </FormControl>
                         </Grid>
 
-                        {/* الشعبة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الشعبة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
@@ -249,7 +264,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                     value={values.classroom_id}
                                     onChange={change("classroom_id")}
                                     displayEmpty
-                                    disabled={saving}
+                                    disabled={createMut.isPending}
                                 >
                                     <MenuItem value="" disabled>اختر الشعبة</MenuItem>
                                     {classrooms.map((c) => (
@@ -259,7 +274,6 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                             </FormControl>
                         </Grid>
 
-                        {/* المادة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>المادة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
@@ -267,7 +281,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                     value={values.subject_id}
                                     onChange={change("subject_id")}
                                     displayEmpty
-                                    disabled={saving}
+                                    disabled={createMut.isPending}
                                 >
                                     <MenuItem value="" disabled>اختر المادة</MenuItem>
                                     {subjects.map((s) => (
@@ -277,7 +291,6 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                             </FormControl>
                         </Grid>
 
-                        {/* نوع الامتحان */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>نوع الامتحان</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
@@ -285,7 +298,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                     value={values.exam_type_id}
                                     onChange={change("exam_type_id")}
                                     displayEmpty
-                                    disabled={saving}
+                                    disabled={createMut.isPending}
                                 >
                                     <MenuItem value="" disabled>اختر النوع</MenuItem>
                                     {examTypes.map((t) => (
@@ -295,7 +308,6 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                             </FormControl>
                         </Grid>
 
-                        {/* الفصل */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الفصل</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
@@ -303,7 +315,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                     value={values.term}
                                     onChange={change("term")}
                                     displayEmpty
-                                    disabled={saving}
+                                    disabled={createMut.isPending}
                                 >
                                     <MenuItem value="" disabled>اختر الفصل</MenuItem>
                                     {TERM_OPTIONS.map((t) => (
@@ -313,7 +325,6 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                             </FormControl>
                         </Grid>
 
-                        {/* وقت البداية */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>وقت البداية</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -322,12 +333,11 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                 onChange={change("start_time")}
                                 fullWidth
                                 sx={fieldSx}
-                                disabled={saving}
+                                disabled={createMut.isPending}
                                 placeholder="YYYY-MM-DDTHH:mm"
                             />
                         </Grid>
 
-                        {/* وقت النهاية */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>وقت النهاية</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -336,12 +346,11 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                 onChange={change("end_time")}
                                 fullWidth
                                 sx={fieldSx}
-                                disabled={saving}
+                                disabled={createMut.isPending}
                                 placeholder="YYYY-MM-DDTHH:mm"
                             />
                         </Grid>
 
-                        {/* العلامة الكاملة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>العلامة الكاملة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -352,11 +361,10 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                 sx={fieldSx}
                                 inputProps={{ min: 0, step: 1 }}
                                 placeholder="مثال: 100"
-                                disabled={saving}
+                                disabled={createMut.isPending}
                             />
                         </Grid>
 
-                        {/* الوزن */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الوزن</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -367,7 +375,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                                 sx={fieldSx}
                                 inputProps={{ min: 0, step: 1 }}
                                 placeholder="مثال: 10"
-                                disabled={saving}
+                                disabled={createMut.isPending}
                             />
                         </Grid>
 
@@ -380,8 +388,8 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
 
             <Box sx={{ px: 3, pb: 3, display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
-                    onClick={handleSave}
-                    disabled={!canSubmit || saving || loadingLists}
+                    onClick={() => createMut.mutate()}
+                    disabled={!canSubmit || createMut.isPending || loadingLists || listsError}
                     variant="contained"
                     sx={{
                         minWidth: 180, borderRadius: 2, py: 1,
@@ -390,9 +398,9 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                         "&:hover": { background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)" },
                     }}
                 >
-                    {saving ? "جارٍ الحفظ..." : "حفظ"}
+                    {createMut.isPending ? "جارٍ الحفظ..." : "حفظ"}
                 </Button>
-                <Button onClick={handleClose} disabled={saving} variant="outlined" sx={{ minWidth: 140, borderRadius: 2, py: 1 }}>
+                <Button onClick={handleClose} disabled={createMut.isPending} variant="outlined" sx={{ minWidth: 140, borderRadius: 2, py: 1 }}>
                     إلغاء
                 </Button>
             </Box>
@@ -401,7 +409,7 @@ export default function AddExamModal({ open, onClose, onCreated, title = "إضا
                 <SuccessAlert
                     title={alertSeverity === "success" ? "تم بنجاح" : "حدث خطأ"}
                     message={alertMsg}
-                    severity={alertSeverity}  
+                    severity={alertSeverity}
                     onClose={() => setShowAlert(false)}
                 />
             )}

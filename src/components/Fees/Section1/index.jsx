@@ -43,7 +43,6 @@ const Section1 = () => {
     const years = Object.keys(statistics).sort((a, b) => b - a);
     const [selectedYear, setSelectedYear] = useState(years[0] || new Date().getFullYear());
 
-    // Sync selected year with available data
     useEffect(() => {
         if (years.length > 0 && !years.includes(selectedYear)) {
             setSelectedYear(years[0]);
@@ -64,7 +63,6 @@ const Section1 = () => {
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
-                {/* حالة الرسوم */}
                 <Grid item xs={12} md={4}>
                     <Paper sx={{ padding: 2, borderRadius: 3, boxShadow: 3, height: '100%' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>

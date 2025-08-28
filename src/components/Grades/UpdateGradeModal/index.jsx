@@ -1,4 +1,6 @@
 // src/features/Grades/EditGradeModal.jsx
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import {
     Dialog, DialogContent, IconButton, Box, Typography, Grid,
@@ -6,6 +8,7 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import Autocomplete from "@mui/material/Autocomplete";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getAllSubjectsNoPaginate } from "../../../api/Admin/Subjects/getAllSubjectsNoPaginate";
 import { getAllStudentsNoPaginate } from "../../../api/Admin/Students/getAllStudentsNoPaginate";
@@ -28,6 +31,8 @@ const labelSx = { color: "text.secondary", fontSize: 14, pr: 1, textAlign: "righ
 const TERMS = ["term 1", "term 2", "term 3"];
 
 export default function EditGradeModal({ open, onClose, grade, title = "تعديل نتيجة" }) {
+    const queryClient = useQueryClient();
+
     const [values, setValues] = useState({
         student_id: "",
         academic_year_id: "",
@@ -38,39 +43,6 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
         note: "",
     });
 
-    // لوائح البيانات
-    const [loading, setLoading] = useState(true);
-    const [students, setStudents] = useState([]);
-    const [years, setYears] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-
-    // تحميل لوائح الخيارات
-    useEffect(() => {
-        if (!open) return;
-        let mounted = true;
-        (async () => {
-            try {
-                setLoading(true);
-                const [st, yr, cl, sb] = await Promise.all([
-                    getAllStudentsNoPaginate().catch(() => []),
-                    getAllAcademicYears().catch(() => []),
-                    getAllClassroomsNoPaginate().catch(() => []),
-                    getAllSubjectsNoPaginate().catch(() => []),
-                ]);
-                if (!mounted) return;
-                setStudents(Array.isArray(st) ? st : []);
-                setYears(Array.isArray(yr) ? yr : []);
-                setClasses(Array.isArray(cl) ? cl : []);
-                setSubjects(Array.isArray(sb) ? sb : []);
-            } finally {
-                setLoading(false);
-            }
-        })();
-        return () => { mounted = false; };
-    }, [open]);
-
-    // ضخ القيم الابتدائية من الدرجة الحالية
     useEffect(() => {
         if (!open || !grade) return;
         setValues({
@@ -95,28 +67,84 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
             values.classroom_id &&
             values.subject_id &&
             values.term &&
-            values.note.trim() !== "" &&
+            String(values.note || "").trim() !== "" &&
             !Number.isNaN(n) && n >= 0 && n <= 100
         );
     }, [values, grade?.id]);
 
-    const handleSave = async () => {
-        const payload = {
-            student_id: Number(values.student_id),
-            academic_year_id: Number(values.academic_year_id),
-            classroom_id: Number(values.classroom_id),
-            subject_id: Number(values.subject_id),
-            term: values.term,
-            final_score: Number(values.final_score),
-            note: values.note?.trim() || "",
-        };
-        try {
-            await updateGrade(grade.id, payload);
+    const studentsQ = useQuery({
+        queryKey: ["students:nopage"],
+        queryFn: getAllStudentsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const yearsQ = useQuery({
+        queryKey: ["academic-years:all"],
+        queryFn: getAllAcademicYears,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const classesQ = useQuery({
+        queryKey: ["classrooms:nopage"],
+        queryFn: getAllClassroomsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const subjectsQ = useQuery({
+        queryKey: ["subjects:nopage"],
+        queryFn: getAllSubjectsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const loading =
+        studentsQ.isLoading || yearsQ.isLoading || classesQ.isLoading || subjectsQ.isLoading;
+
+    const students = useMemo(() => {
+        const raw = studentsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [studentsQ.data]);
+
+    const years = useMemo(() => {
+        const raw = yearsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [yearsQ.data]);
+
+    const classes = useMemo(() => {
+        const raw = classesQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [classesQ.data]);
+
+    const subjects = useMemo(() => {
+        const raw = subjectsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [subjectsQ.data]);
+
+    // Mutation للتعديل
+    const saveMut = useMutation({
+        mutationFn: async () => {
+            const payload = {
+                student_id: Number(values.student_id),
+                academic_year_id: Number(values.academic_year_id),
+                classroom_id: Number(values.classroom_id),
+                subject_id: Number(values.subject_id),
+                term: values.term,
+                final_score: Number(values.final_score),
+                note: String(values.note || "").trim(),
+            };
+            return updateGrade(grade.id, payload);
+        },
+        onSuccess: () => {
+            // تحديث الكاش
+            queryClient.invalidateQueries({ queryKey: ["grades"] });
+            queryClient.invalidateQueries({ queryKey: ["grades", String(values.student_id || "")] });
+            queryClient.invalidateQueries({ queryKey: ["grade", String(grade.id)] });
             onClose?.();
-        } catch (e) {
-            console.error(e);
-        }
-    };
+        },
+    });
 
     const getById = (arr, id) => arr.find((x) => String(x?.id) === String(id)) || null;
 
@@ -127,13 +155,20 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={saveMut.isPending ? undefined : onClose}
             fullWidth
             maxWidth="md"
+            keepMounted
             PaperProps={{ sx: { direction: "rtl", borderRadius: 4, overflow: "hidden", boxShadow: "0 14px 40px rgba(0,0,0,0.18)" } }}
         >
             <Box sx={{ position: "relative", px: 2, pt: 1.25 }}>
-                <IconButton onClick={onClose} size="small" sx={{ position: "absolute", left: 8, top: 8 }} aria-label="إغلاق">
+                <IconButton
+                    onClick={onClose}
+                    size="small"
+                    sx={{ position: "absolute", left: 8, top: 8 }}
+                    aria-label="إغلاق"
+                    disabled={saveMut.isPending}
+                >
                     <CloseRoundedIcon />
                 </IconButton>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: "#0C4A6E", textAlign: "right", pr: 1 }}>
@@ -149,8 +184,6 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                     </Box>
                 ) : (
                     <Grid container spacing={2.25} alignItems="center">
-
-                        {/* الطالب */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الطالب</Typography></Grid>
                         <Grid item {...longFieldCols}>
                             <Autocomplete
@@ -158,11 +191,13 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 value={getById(students, values.student_id)}
                                 onChange={(_, v) => setValues((s) => ({ ...s, student_id: v?.id || "" }))}
                                 getOptionLabel={(o) => (o?.name ?? o?.full_name ?? o?.title ?? `#${o?.id}`)}
-                                renderInput={(params) => <TextField {...params} placeholder="ابحث عن الطالب" sx={fieldSx} />}
+                                isOptionEqualToValue={(a, b) => String(a?.id) === String(b?.id)}
+                                renderInput={(params) => (
+                                    <TextField {...params} placeholder="ابحث عن الطالب" sx={fieldSx} disabled={saveMut.isPending} />
+                                )}
                             />
                         </Grid>
 
-                        {/* السنة الأكاديمية */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>السنة الأكاديمية</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <Autocomplete
@@ -172,11 +207,13 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 getOptionLabel={(y) =>
                                     (y?.name ?? y?.title ?? y?.label ?? `${y?.start_year ?? ""}${y?.end_year ? ` / ${y.end_year}` : ""}`) || `سنة #${y?.id}`
                                 }
-                                renderInput={(params) => <TextField {...params} placeholder="اختر السنة الأكاديمية" sx={fieldSx} />}
+                                isOptionEqualToValue={(a, b) => String(a?.id) === String(b?.id)}
+                                renderInput={(params) => (
+                                    <TextField {...params} placeholder="اختر السنة الأكاديمية" sx={fieldSx} disabled={saveMut.isPending} />
+                                )}
                             />
                         </Grid>
 
-                        {/* الشعبة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الشعبة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <Autocomplete
@@ -184,11 +221,13 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 value={getById(classes, values.classroom_id)}
                                 onChange={(_, v) => setValues((s) => ({ ...s, classroom_id: v?.id || "" }))}
                                 getOptionLabel={(c) => (c?.name ?? c?.title ?? c?.label ?? `شعبة #${c?.id}`)}
-                                renderInput={(params) => <TextField {...params} placeholder="اختر الشعبة" sx={fieldSx} />}
+                                isOptionEqualToValue={(a, b) => String(a?.id) === String(b?.id)}
+                                renderInput={(params) => (
+                                    <TextField {...params} placeholder="اختر الشعبة" sx={fieldSx} disabled={saveMut.isPending} />
+                                )}
                             />
                         </Grid>
 
-                        {/* المادة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>المادة</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <Autocomplete
@@ -196,22 +235,28 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 value={getById(subjects, values.subject_id)}
                                 onChange={(_, v) => setValues((s) => ({ ...s, subject_id: v?.id || "" }))}
                                 getOptionLabel={(s) => (s?.name ?? s?.title ?? s?.label ?? `مادة #${s?.id}`)}
-                                renderInput={(params) => <TextField {...params} placeholder="اختر المادة" sx={fieldSx} />}
+                                isOptionEqualToValue={(a, b) => String(a?.id) === String(b?.id)}
+                                renderInput={(params) => (
+                                    <TextField {...params} placeholder="اختر المادة" sx={fieldSx} disabled={saveMut.isPending} />
+                                )}
                             />
                         </Grid>
 
-                        {/* الترم */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الترم</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <FormControl fullWidth sx={fieldSx}>
-                                <Select value={values.term} onChange={change("term")} displayEmpty>
+                                <Select
+                                    value={values.term}
+                                    onChange={change("term")}
+                                    displayEmpty
+                                    disabled={saveMut.isPending}
+                                >
                                     <MenuItem value="" disabled>اختر الترم</MenuItem>
                                     {TERMS.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
                                 </Select>
                             </FormControl>
                         </Grid>
 
-                        {/* الدرجة النهائية */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>الدرجة النهائية</Typography></Grid>
                         <Grid item {...fieldCols}>
                             <TextField
@@ -222,10 +267,10 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 sx={fieldSx}
                                 inputProps={{ min: 0, max: 100, step: 1 }}
                                 placeholder="0 - 100"
+                                disabled={saveMut.isPending}
                             />
                         </Grid>
 
-                        {/* ملاحظة */}
                         <Grid item {...labelCols}><Typography sx={labelSx}>ملاحظة</Typography></Grid>
                         <Grid item {...longFieldCols}>
                             <TextField
@@ -234,6 +279,7 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                                 onChange={change("note")}
                                 sx={fieldSx}
                                 placeholder="اكتب ملاحظة عن النتيجة"
+                                disabled={saveMut.isPending}
                             />
                         </Grid>
                     </Grid>
@@ -242,8 +288,8 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
 
             <Box sx={{ px: 3, pb: 3, display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
-                    onClick={handleSave}
-                    disabled={!canSubmit}
+                    onClick={() => saveMut.mutate()}
+                    disabled={!canSubmit || saveMut.isPending}
                     variant="contained"
                     sx={{
                         minWidth: 180, borderRadius: 2, py: 1,
@@ -252,10 +298,11 @@ export default function EditGradeModal({ open, onClose, grade, title = "تعدي
                         "&:hover": { background: "linear-gradient(90deg, #23C6CD 0%, #193868 100%)" },
                     }}
                 >
-                    حفظ التعديلات
+                    {saveMut.isPending ? "جارٍ الحفظ..." : "حفظ التعديلات"}
                 </Button>
                 <Button
                     onClick={onClose}
+                    disabled={saveMut.isPending}
                     variant="outlined"
                     sx={{ minWidth: 140, borderRadius: 2, py: 1, borderColor: "rgba(0,0,0,0.12)", bgcolor: "#fff" }}
                 >

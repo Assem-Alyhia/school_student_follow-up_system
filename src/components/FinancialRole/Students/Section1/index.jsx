@@ -160,7 +160,6 @@ function StudentCard({ student }) {
 
             <Box sx={{ p: { xs: 3, md: 3.5 } }}>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={{ xs: 3, md: 3.5 }} alignItems="stretch">
-                    {/* تعريف الطالب */}
                     <Stack direction="column" spacing={1.5} sx={{ flex: 1, minWidth: 280, textAlign: "right" }}>
                         <Avatar
                             src={getImg(student)}
@@ -201,7 +200,6 @@ function StudentCard({ student }) {
                         </Stack>
                     </Stack>
 
-                    {/* بيانات الاتصال والتواريخ */}
                     <Stack direction="row" spacing={{ xs: 2, md: 2.5 }} sx={{ flex: 2, minWidth: 340, flexWrap: "wrap" }}>
                         <InfoItem icon={<EmailRoundedIcon />} label="البريد" value={getEmail(student)} wide />
                         <InfoItem icon={<PhoneIphoneRoundedIcon />} label="الهاتف" value={getPhone(student)} />
@@ -209,7 +207,6 @@ function StudentCard({ student }) {
                         <InfoItem icon={<CalendarMonthRoundedIcon />} label="التحاق" value={fmtDate(getEnroll(student))} />
                     </Stack>
 
-                    {/* الحالة والعنوان والمعلومة الطبية */}
                     <Stack spacing={1.75} sx={{ flex: 2, minWidth: 360 }}>
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                             <Chip

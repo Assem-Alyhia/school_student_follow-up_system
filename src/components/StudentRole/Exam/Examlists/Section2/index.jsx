@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 import { useQuery } from "@tanstack/react-query";
-// ⬇️ استيراد دالة الطالب بدل ولي الأمر
 import { getStudentExams } from "../../../../../api/Student/Exams/getStudentExams";
 
 const onlyTime = (iso) => {

@@ -20,7 +20,6 @@ const UpdateRole = () => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
-    // جلب كل الصلاحيات
     const {
         data: allPermissionsData,
         isLoading: permissionsLoading,
@@ -31,7 +30,6 @@ const UpdateRole = () => {
         queryFn: () => getAllPermissions(1, 100),
     });
 
-    // جلب بيانات الدور بالـ ID
     const {
         data: roleData,
         isLoading: roleLoading,
@@ -42,7 +40,6 @@ const UpdateRole = () => {
         enabled: !!id,
     });
 
-    // تعبئة النموذج عند تحميل بيانات الدور
     useEffect(() => {
         if (roleSuccess && roleData?.data) {
             const role = roleData.data;
@@ -54,7 +51,6 @@ const UpdateRole = () => {
         }
     }, [roleSuccess, roleData]);
 
-    // التعديل
     const mutation = useMutation({
         mutationFn: ({ id, payload }) => updateRole(id, payload),
         onSuccess: () => {
@@ -77,7 +73,7 @@ const UpdateRole = () => {
 
         const payload = {
             name: roleName,
-            permissions: selectedPermissions.map(p => p.label), // فقط أسماء الصلاحيات
+            permissions: selectedPermissions.map(p => p.label), 
         };
 
         mutation.mutate({ id, payload });

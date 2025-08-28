@@ -18,15 +18,11 @@ import { deletePayment } from '../../../api/Admin/Payments/deletePayment';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
 import AddPaymentDialog from '../AddPaymentDialog';
-import EditPaymentDialog from '../EditPaymentDialog'; // ⬅️ استيراد موديول التعديل
+import EditPaymentDialog from '../EditPaymentDialog'; 
 
 const Section2 = ({ payments = [], onSearchChange }) => {
     const queryClient = useQueryClient();
-
-    // حالة البحث
     const [searchValue, setSearchValue] = useState('');
-
-    // حذف
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState(null);
     const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
@@ -34,7 +30,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
     const deleteMutation = useMutation({
         mutationFn: deletePayment,
         onSuccess: () => {
-            // ينعش كل استعلامات payments
             queryClient.invalidateQueries({ queryKey: ['payments'] });
             setShowDeleteSuccess(true);
             setTimeout(() => setShowDeleteSuccess(false), 3000);
@@ -53,7 +48,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
         }
     };
 
-    // إضافة
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [showCreateSuccess, setShowCreateSuccess] = useState(false);
 
@@ -64,8 +58,7 @@ const Section2 = ({ payments = [], onSearchChange }) => {
         setTimeout(() => setShowCreateSuccess(false), 3000);
     };
 
-    // تعديل
-    const [editId, setEditId] = useState(null); // ⬅️ تخزين معرف الدفعة الجاري تعديلها
+    const [editId, setEditId] = useState(null); 
     const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
 
     const handlePaymentUpdated = () => {
@@ -75,7 +68,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
         setTimeout(() => setShowUpdateSuccess(false), 3000);
     };
 
-    // تنفيذ البحث عند الضغط على الزر أو Enter
     const triggerSearch = () => {
         onSearchChange?.(searchValue.trim());
     };
@@ -157,7 +149,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                         {payments.map((row) => (
                             <TableRow key={row.id}>
                                 <TableCell align="center">
-                                    {/* <IconButton><VisibilityIcon sx={{ fontSize: 18 }} /></IconButton> */}
 
                                     <IconButton onClick={() => setEditId(row.id)}>
                                         <EditIcon sx={{ fontSize: 18 }} />
@@ -232,7 +223,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                 </Table>
             </TableContainer>
 
-            {/* موديول تأكيد الحذف */}
             <ConfirmDeleteModal
                 open={openDeleteModal}
                 onClose={() => setOpenDeleteModal(false)}
@@ -241,7 +231,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                 message="سيتم حذف بيانات الدفعة من النظام."
             />
 
-            {/* تنبيه نجاح الحذف */}
             {showDeleteSuccess && (
                 <SuccessAlert
                     title="تم حذف الدفعة بنجاح!"
@@ -251,14 +240,12 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                 />
             )}
 
-            {/* موديول الإضافة */}
             <AddPaymentDialog
                 open={openAddDialog}
                 onClose={() => setOpenAddDialog(false)}
                 onCreated={handlePaymentCreated}
             />
 
-            {/* موديول التعديل - يفتح عند وجود editId */}
             <EditPaymentDialog
                 open={Boolean(editId)}
                 paymentId={editId}
@@ -266,7 +253,6 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                 onUpdated={handlePaymentUpdated}
             />
 
-            {/* تنبيه نجاح الإضافة / التعديل */}
             {showCreateSuccess && (
                 <SuccessAlert
                     title="تمت إضافة الدفعة بنجاح!"

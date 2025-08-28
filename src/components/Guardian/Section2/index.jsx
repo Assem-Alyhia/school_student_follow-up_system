@@ -10,8 +10,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import ParentChildrenModal from '../parentChildrenModal/ParentChildrenModal';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
@@ -22,12 +22,33 @@ import { getParentById } from '../../../api/Admin/Parents/getParentById';
 const Section2 = ({ parents = [], setParents }) => {
     const navigate = useNavigate();
 
-    const [selectedParent, setSelectedParent] = useState(null);
+    const [selectedParentId, setSelectedParentId] = useState(null);
     const [openModal, setOpenModal] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
     const [menuParent, setMenuParent] = useState(null);
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    const queryClient = useQueryClient();
+
+    const parentQ = useQuery({
+        queryKey: ['parent', selectedParentId],
+        queryFn: () => getParentById(selectedParentId),
+        enabled: !!openModal && !!selectedParentId,
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id) => deleteParent(id),
+        onSuccess: (_, id) => {
+            queryClient.invalidateQueries({ queryKey: ['parents'] });
+            setParents?.((prev) => prev.filter((p) => p.id !== id));
+            setShowSuccess(true);
+        },
+        onSettled: () => {
+            setOpenDeleteModal(false);
+            setMenuParent(null);
+        },
+    });
 
     const handleMenuOpen = (event, parent) => {
         setAnchorEl(event.currentTarget);
@@ -39,16 +60,9 @@ const Section2 = ({ parents = [], setParents }) => {
         setMenuParent(null);
     };
 
-    const handleOpenModal = async (parentId) => {
-        try {
-            const response = await getParentById(parentId);
-            const fullParent = response?.data?.parent ?? response?.data ?? response;
-            if (!fullParent?.id) return;
-            setSelectedParent(fullParent);
-            setOpenModal(true);
-        } catch (err) {
-            console.error('خطأ في جلب بيانات ولي الأمر', err);
-        }
+    const handleOpenModal = (parentId) => {
+        setSelectedParentId(parentId);
+        setOpenModal(true);
     };
 
     const handleEdit = (parent) => {
@@ -66,27 +80,17 @@ const Section2 = ({ parents = [], setParents }) => {
     };
 
     const confirmDelete = async () => {
-        if (!menuParent || !menuParent.id) {
-            alert('تعذر تحديد العنصر للحذف');
-            return;
-        }
-
-        try {
-            await deleteParent(menuParent.id);
-            if (setParents) setParents((prev) => prev.filter((p) => p.id !== menuParent.id));
-            setShowSuccess(true);
-        } catch (error) {
-            alert('فشل في الحذف: ' + error.message);
-        } finally {
-            setOpenDeleteModal(false);
-            setMenuParent(null);
-        }
+        if (!menuParent?.id) return;
+        deleteMutation.mutate(menuParent.id);
     };
 
     const handleCloseModal = () => {
-        setSelectedParent(null);
+        setSelectedParentId(null);
         setOpenModal(false);
     };
+
+    const selectedParent =
+        parentQ.data?.data?.parent ?? parentQ.data?.data ?? parentQ.data ?? null;
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -111,7 +115,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                     position: 'relative',
                                 }}
                             >
-                                {/* العنوان العلوي */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <IconButton onClick={(e) => handleMenuOpen(e, parent)}>
@@ -126,7 +129,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                     </IconButton>
                                 </Box>
 
-                                {/* الصورة — نفس أسلوب المشرفين/الطلاب */}
                                 <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mb: 2 }}>
                                     <Avatar
                                         src={hasImage ? imageRaw : undefined}
@@ -140,7 +142,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                             boxShadow: '0 4px 14px rgba(34,56,95,0.12)',
                                         }}
                                         imgProps={{
-                                            // لو الصورة تعطلت: امسح src ليظهر fallback (الأيقونة)
                                             onError: (e) => {
                                                 e.currentTarget.src = '';
                                             },
@@ -163,7 +164,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                     />
                                 </Box>
 
-                                {/* الاسم */}
                                 <Typography
                                     variant="h6"
                                     sx={{
@@ -176,14 +176,12 @@ const Section2 = ({ parents = [], setParents }) => {
                                     {parent.name}
                                 </Typography>
 
-                                {/* تاريخ الإضافة (إن وُجد) */}
                                 {parent.addedDate && (
                                     <Typography variant="body2" sx={{ color: '#586E75', mb: 2 }}>
                                         <strong>تمت الإضافة:</strong> {parent.addedDate}
                                     </Typography>
                                 )}
 
-                                {/* البريد */}
                                 <Box sx={{ mb: 2 }}>
                                     <Typography sx={{ color: '#586E75', mb: 1 }}>
                                         <strong>البريد الإلكتروني:</strong>
@@ -206,7 +204,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                     </Box>
                                 </Box>
 
-                                {/* الهاتف */}
                                 <Box sx={{ mb: 2 }}>
                                     <Typography sx={{ color: '#586E75', mb: 1 }}>
                                         <strong>رقم الهاتف:</strong>
@@ -229,7 +226,6 @@ const Section2 = ({ parents = [], setParents }) => {
                                     </Box>
                                 </Box>
 
-                                {/* أطفال ولي الأمر + زر التفاصيل */}
                                 <Box
                                     sx={{
                                         display: 'flex',
@@ -276,7 +272,6 @@ const Section2 = ({ parents = [], setParents }) => {
                 })}
             </Grid>
 
-            {/* قائمة الإجراءات */}
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
                 <MenuItem onClick={() => { handleOpenModal(menuParent?.id); handleMenuClose(); }}>
                     <ListItemIcon><VisibilityIcon sx={{ color: '#0D47A1' }} /></ListItemIcon>
@@ -294,7 +289,7 @@ const Section2 = ({ parents = [], setParents }) => {
                 </MenuItem>
             </Menu>
 
-            <ParentChildrenModal open={openModal} onClose={handleCloseModal} parent={selectedParent} />
+            <ParentChildrenModal open={openModal} onClose={handleCloseModal} parent={selectedParent} loading={parentQ.isLoading} />
 
             <ConfirmDeleteModal
                 open={openDeleteModal}

@@ -69,7 +69,6 @@ export default function PaymentDetails({ open, onClose, payment }) {
                     border: `1px solid ${theme.palette.divider}`,
                 }}
             >
-                {/* Header */}
                 <Box
                     sx={{
                         p: 2.2,
@@ -126,9 +125,7 @@ export default function PaymentDetails({ open, onClose, payment }) {
                     </Stack>
                 </Box>
 
-                {/* Sections */}
                 <Box sx={{ p: 3 }}>
-                    {/* Parent & Student */}
                     <SectionTitle>البيانات الأساسية</SectionTitle>
                     <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
@@ -153,7 +150,6 @@ export default function PaymentDetails({ open, onClose, payment }) {
 
                     <Divider sx={{ my: 3 }} />
 
-                    {/* Fee & Status */}
                     <SectionTitle>بيانات الرسم</SectionTitle>
                     <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
@@ -179,7 +175,6 @@ export default function PaymentDetails({ open, onClose, payment }) {
 
                     <Divider sx={{ my: 3 }} />
 
-                    {/* Dates & Discounts */}
                     <SectionTitle>التواريخ والخصومات</SectionTitle>
                     <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
@@ -207,7 +202,6 @@ export default function PaymentDetails({ open, onClose, payment }) {
     );
 }
 
-/* ---------- صغحات UI مساعدة ---------- */
 function SectionTitle({ children }) {
     return (
         <Typography

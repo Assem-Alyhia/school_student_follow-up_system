@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Paper,
@@ -7,39 +7,45 @@ import {
     Chip,
     Divider,
     Switch,
+    Avatar,
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getUserById } from './../../api/Admin/Users/getUserById';
-import { Avatar } from '@mui/material';
+
 const UserProfile = () => {
     const { id } = useParams();
     const [isAvailable, setIsAvailable] = useState(false);
-    const [user, setUser] = useState(null);
     const mainColor = '#2ea394';
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const response = await getUserById(id);
-                setUser(response.data);
-            } catch (err) {
-                console.error('Error fetching user:', err);
-            }
-        };
+    const userQ = useQuery({
+        queryKey: ['user', id],
+        queryFn: () => getUserById(id),
+        enabled: !!id,
+    });
 
-        if (id) fetchUser();
-    }, [id]);
+    const apiUser = userQ.data?.data ?? userQ.data ?? null;
+
+    const profileData = {
+        image: apiUser?.image || '/avatar.jpg',
+        name: apiUser?.name || '---',
+        status: 'نشط',
+        birthDate: '01/07/2001',
+        gender: 'أنثى',
+        address: '',
+        email: apiUser?.email || '---@gmail.com',
+        passwordChangedSince: 'شهرين',
+        language: 'العربية - متحدث أصلي',
+        rate: '$28',
+        hoursPerWeek: '32 ساعة',
+        specializations: ['إداري', 'وظائف'],
+        bio: `We're open to partnerships, guest posts, and more. Join us to share your insights and grow your audience.`,
+    };
 
     const Row = ({ label, value }) => (
         <>
-            <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                py={1.5}
-                px={1}
-            >
+            <Box display="flex" justifyContent="space-between" alignItems="center" py={1.5} px={1}>
                 <Box>
                     {label && (
                         <Typography variant="body2" color="text.secondary" mb={0.5}>
@@ -55,22 +61,6 @@ const UserProfile = () => {
             <Divider sx={{ my: 1 }} />
         </>
     );
-
-    const profileData = {
-        image: user?.image || '/avatar.jpg',
-        name: user?.name || '---',
-        status: 'نشط',
-        birthDate: '01/07/2001',
-        gender: 'أنثى',
-        address: '',
-        email: user?.email || '---@gmail.com',
-        passwordChangedSince: 'شهرين',
-        language: 'العربية - متحدث أصلي',
-        rate: '$28',
-        hoursPerWeek: '32 ساعة',
-        specializations: ['إداري', 'وظائف'],
-        bio: `We're open to partnerships, guest posts, and more. Join us to share your insights and grow your audience.`,
-    };
 
     return (
         <Box sx={{ p: 3, direction: 'rtl', bgcolor: '#f8f9fa' }}>
@@ -96,18 +86,26 @@ const UserProfile = () => {
                     </Avatar>
                     <Box>
                         <Typography variant="h5" color="text.secondary" display="block">
-                            {profileData.name}
+                            {userQ.isLoading ? '...' : profileData.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" display="block">
-                            {profileData.email}
+                            {userQ.isLoading ? '...' : profileData.email}
                         </Typography>
                     </Box>
-
                 </Box>
                 <Divider sx={{ my: 1.5 }} />
 
-                <Row label="الاسم" value={profileData.name} />
-                <Row label="النشاط" value={<Chip label={profileData.status} color="success" size="small" />} />
+                <Row label="الاسم" value={userQ.isLoading ? '...' : profileData.name} />
+                <Row
+                    label="النشاط"
+                    value={
+                        <Chip
+                            label={profileData.status}
+                            color="success"
+                            size="small"
+                        />
+                    }
+                />
                 <Row label="تاريخ الميلاد" value={profileData.birthDate} />
                 <Row label="الجنس" value={profileData.gender} />
                 <Row label="العنوان" value={profileData.address || 'ليس لديك عنوان بعد'} />
@@ -123,8 +121,11 @@ const UserProfile = () => {
                 <Typography fontWeight="bold" mb={3} color={mainColor} fontSize="1.1rem">
                     معلومات تسجيل الدخول
                 </Typography>
-                <Row label="البريد الإلكتروني" value={profileData.email} />
-                <Row label="كلمة المرور" value={`تم تغيير كلمة المرور آخر مرة منذ ${profileData.passwordChangedSince}`} />
+                <Row label="البريد الإلكتروني" value={userQ.isLoading ? '...' : profileData.email} />
+                <Row
+                    label="كلمة المرور"
+                    value={`تم تغيير كلمة المرور آخر مرة منذ ${profileData.passwordChangedSince}`}
+                />
             </Paper>
 
             <Paper sx={{ p: 3, borderRadius: 3 }} elevation={1}>

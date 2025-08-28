@@ -54,7 +54,6 @@ const OverviewSection = () => {
                                 boxShadow: '0 8px 18px rgba(34, 56, 95, .18)',
                             }}
                         >
-                            {/* زخارف خفيفة مثل الصورة */}
                             <Box
                                 sx={{
                                     position: 'absolute',
@@ -73,7 +72,6 @@ const OverviewSection = () => {
                                 }}
                             />
 
-                            {/* أيقونة داخل دائرة شفافة يسار الكرت */}
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -92,7 +90,6 @@ const OverviewSection = () => {
                                 {React.cloneElement(stat.icon, { sx: { fontSize: 30, color: '#fff' } })}
                             </Box>
 
-                            {/* النص يمين */}
                             <Box sx={{ textAlign: 'right', mr: 1, flex: 1 }}>
                                 <Typography
                                     sx={{ fontSize: '.86rem', opacity: 0.9, mb: 0.5, whiteSpace: 'nowrap' }}

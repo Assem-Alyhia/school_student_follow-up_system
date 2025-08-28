@@ -1,11 +1,12 @@
 // components/Buses/AddBusDialog.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Grid, TextField, Button, Autocomplete, MenuItem,
     Select, InputLabel, FormControl, CircularProgress,
     Alert, Box, FormHelperText
 } from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { createBus } from "../../../api/Admin/Buses/createBus";
 import { getAllSupervisorsNoPaginate } from "./../../../api/Admin/Supervisors/getAllSupervisorsNoPaginate";
@@ -34,33 +35,22 @@ const defaultForm = {
 
 const AddBusDialog = ({ open, onClose, onCreated }) => {
     const [form, setForm] = useState(defaultForm);
-    const [supervisors, setSupervisors] = useState([]);
-
-    const [loadingLists, setLoadingLists] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [errorMsg, setErrorMsg] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
+    const [errorMsg, setErrorMsg] = useState("");
 
-    useEffect(() => {
-        if (!open) return;
+    const queryClient = useQueryClient();
 
-        const load = async () => {
-            setLoadingLists(true);
-            setErrorMsg("");
-            setFieldErrors({});
-            try {
-                const supRes = await getAllSupervisorsNoPaginate();
-                setSupervisors(Array.isArray(supRes) ? supRes : []);
-            } catch (e) {
-                setErrorMsg(e?.message || "تعذر تحميل قائمة المشرفين");
-            } finally {
-                setLoadingLists(false);
-            }
-        };
+    const supervisorsQ = useQuery({
+        queryKey: ["supervisors:nopage"],
+        queryFn: getAllSupervisorsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
 
-        setForm(defaultForm);
-        load();
-    }, [open]);
+    const supervisors = useMemo(() => {
+        const raw = supervisorsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [supervisorsQ.data]);
 
     const setField = (k, v) => {
         setFieldErrors(prev => ({ ...prev, [k]: undefined }));
@@ -79,18 +69,8 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
         );
     }, [form]);
 
-    const handleSubmit = async () => {
-        setFieldErrors({});
-        setErrorMsg("");
-
-        if (!form.bus_type || !BUS_TYPES_ALLOWED.has(form.bus_type)) {
-            setFieldErrors(prev => ({ ...prev, bus_type: "يجب اختيار نوع الحافلة من القائمة." }));
-            return;
-        }
-        if (!isValid) return;
-
-        setSubmitting(true);
-        try {
+    const saveMut = useMutation({
+        mutationFn: async () => {
             const payload = {
                 supervisor_id: Number(form.supervisor_id),
                 driver_name: form.driver_name.trim(),
@@ -99,20 +79,33 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                 bus_type: form.bus_type,
                 status: form.status,
             };
-
-            
-            const newBus = await createBus(payload);
-            
+            return createBus(payload);
+        },
+        onSuccess: (newBus) => {
+            queryClient.invalidateQueries({ queryKey: ["buses"] });
             onCreated?.(newBus);
-        } catch (e) {
+        },
+        onError: (e) => {
             const apiErrors = e?.response?.data?.errors || {};
             if (apiErrors.bus_type?.length) {
                 setFieldErrors(prev => ({ ...prev, bus_type: apiErrors.bus_type[0] }));
             }
             setErrorMsg(e?.response?.data?.message || e?.message || "فشل في إضافة باص جديد");
-        } finally {
-            setSubmitting(false);
+        },
+    });
+
+    const loadingLists = supervisorsQ.isLoading;
+    const submitting = saveMut.isPending;
+
+    const handleSubmit = () => {
+        setFieldErrors({});
+        setErrorMsg("");
+        if (!form.bus_type || !BUS_TYPES_ALLOWED.has(form.bus_type)) {
+            setFieldErrors(prev => ({ ...prev, bus_type: "يجب اختيار نوع الحافلة من القائمة." }));
+            return;
         }
+        if (!isValid || submitting || loadingLists) return;
+        saveMut.mutate();
     };
 
     const handleClose = () => {
@@ -123,6 +116,11 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
         onClose?.();
     };
 
+    const topError =
+        errorMsg ||
+        (supervisorsQ.isError && (supervisorsQ.error?.response?.data?.message || supervisorsQ.error?.message)) ||
+        "";
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth dir="rtl" keepMounted>
             <DialogTitle sx={{ fontWeight: 700, color: "#308A9F" }}>
@@ -130,7 +128,7 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
             </DialogTitle>
 
             <DialogContent dividers>
-                {errorMsg ? <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert> : null}
+                {topError ? <Alert severity="error" sx={{ mb: 2 }}>{topError}</Alert> : null}
 
                 {loadingLists ? (
                     <Box display="flex" justifyContent="center" py={6}>
@@ -138,7 +136,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                     </Box>
                 ) : (
                     <Grid container spacing={2}>
-                        {/* المشرف */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={supervisors}
@@ -166,7 +163,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* اسم السائق */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="اسم السائق"
@@ -179,7 +175,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* رقم السائق */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="رقم السائق"
@@ -192,7 +187,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* السعة */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="السعة"
@@ -207,7 +201,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* نوع الباص */}
                         <Grid item xs={12} md={6}>
                             <FormControl fullWidth margin="dense" error={Boolean(fieldErrors.bus_type)}>
                                 <InputLabel id="bus-type-label">نوع الباص</InputLabel>
@@ -232,7 +225,6 @@ const AddBusDialog = ({ open, onClose, onCreated }) => {
                             </FormControl>
                         </Grid>
 
-                        {/* الحالة */}
                         <Grid item xs={12} md={6}>
                             <FormControl fullWidth margin="dense">
                                 <InputLabel id="status-label">الحالة</InputLabel>

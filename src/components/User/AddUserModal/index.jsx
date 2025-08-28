@@ -1,27 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Box, Modal, Paper, Typography, Button, TextField, MenuItem,
     IconButton, Avatar, Grid, CircularProgress
 } from '@mui/material';
 import { Close as CloseIcon, Visibility, VisibilityOff } from '@mui/icons-material';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createUser } from '../../../api/Admin/Users/createUser';
 import { getAllRoles } from '../../../api/Admin/Roles/getAllRoles';
 import SuccessAlert from '../../../layout/SuccessAlert';
 
 const AddUserModal = ({ open, onClose }) => {
-    const queryClient = useQueryClient(); // ⬅️ لتحديث قائمة المستخدمين مباشرة
+    const queryClient = useQueryClient();
 
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [rolesLoading, setRolesLoading] = useState(false);
 
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
-    const [roles, setRoles] = useState([]);
 
-    // تنبيهات نجاح/فشل
     const [showSuccess, setShowSuccess] = useState(false);
     const [showFail, setShowFail] = useState(false);
     const [alertMsg, setAlertMsg] = useState('');
@@ -36,40 +32,17 @@ const AddUserModal = ({ open, onClose }) => {
         image: null
     });
 
-    useEffect(() => {
-        if (open) fetchRoles();
-    }, [open]);
+    const rolesQ = useQuery({
+        queryKey: ['roles:all'],
+        queryFn: getAllRoles,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const fetchRoles = async () => {
-        try {
-            setRolesLoading(true);
-            const rolesData = await getAllRoles();
-            setRoles(rolesData || []);
-        } catch (err) {
-            const msg = err?.response?.data?.message || err.message || 'تعذر تحميل الأدوار';
-            setError(msg);
-            setAlertTitle('خطأ في تحميل الأدوار');
-            setAlertMsg(msg);
-            setShowFail(true);
-            setTimeout(() => setShowFail(false), 3000);
-        } finally {
-            setRolesLoading(false);
-        }
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setUserData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleImageChange = (e) => {
-        const file = e.target.files?.[0];
-        if (file) setUserData((prev) => ({ ...prev, image: file }));
-    };
-
-    const removeImage = () => {
-        setUserData((prev) => ({ ...prev, image: null }));
-    };
+    const roles = useMemo(() => {
+        const raw = rolesQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [rolesQ.data]);
 
     const resetForm = () => {
         setUserData({
@@ -84,71 +57,60 @@ const AddUserModal = ({ open, onClose }) => {
         setError('');
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setFieldErrors({});
-
-        if (userData.password !== userData.password_confirmation) {
-            const msg = 'كلمتا المرور غير متطابقتين';
-            setError(msg);
-            setAlertTitle('فشل الإضافة');
-            setAlertMsg(msg);
-            setShowFail(true);
-            setTimeout(() => setShowFail(false), 3000);
-            return;
-        }
-
-        try {
-            setLoading(true);
-
-            // لو API يتطلب multipart عند وجود صورة:
-            let payload = {
+    const saveMut = useMutation({
+        mutationFn: async () => {
+            if (userData.password !== userData.password_confirmation) {
+                const msg = 'كلمتا المرور غير متطابقتين';
+                const err = new Error(msg);
+                err.details = { password_confirmation: [msg] };
+                throw err;
+            }
+            const payload = {
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
                 password_confirmation: userData.password_confirmation,
                 role: userData.role,
-                image: userData.image
+                image: userData.image,
             };
-
-            // ⚠️ إذا createUser داخليًا لا يتعامل مع FormData، فكّ التعليق التالي:
-            // if (userData.image instanceof File) {
-            //   const fd = new FormData();
-            //   Object.entries(payload).forEach(([k, v]) => fd.append(k, v ?? ''));
-            //   payload = fd;
-            // }
-
-            await createUser(payload);
-
-            // ✅ نجاح: أظهر التنبيه وحدّث الجدول فورًا
+            return createUser(payload);
+        },
+        onSuccess: async () => {
             setAlertTitle('تم إنشاء المستخدم بنجاح!');
             setAlertMsg('تمت إضافة المستخدم إلى النظام.');
             setShowSuccess(true);
-
-            // 🔄 تحديث الجدول مباشرة
             await queryClient.invalidateQueries({ queryKey: ['users'] });
-
-            // اغلق بعد لحظات قصيرة حتى يرى المستخدم التنبيه
             setTimeout(() => {
                 setShowSuccess(false);
                 resetForm();
-                onClose();
+                onClose?.();
             }, 1200);
-        } catch (err) {
-            // ❌ فشل
+        },
+        onError: (err) => {
             setFieldErrors(err?.details || {});
-            const msg = err?.message || 'حدث خطأ غير متوقع';
+            const msg = err?.response?.data?.message || err?.message || 'حدث خطأ غير متوقع';
             setError(msg);
-
             setAlertTitle('فشل الإضافة');
             setAlertMsg(msg);
             setShowFail(true);
             setTimeout(() => setShowFail(false), 3000);
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    const loading = saveMut.isPending;
+    const rolesLoading = rolesQ.isLoading;
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setUserData((prev) => ({ ...prev, [name]: value }));
     };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) setUserData((prev) => ({ ...prev, image: file }));
+    };
+
+    const removeImage = () => setUserData((prev) => ({ ...prev, image: null }));
 
     return (
         <Modal
@@ -157,7 +119,6 @@ const AddUserModal = ({ open, onClose }) => {
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl' }}
         >
             <Paper sx={{ borderRadius: '14px', width: '700px', p: 3, position: 'relative' }}>
-                {/* ✅ تنبيهات النجاح/الفشل */}
                 {showSuccess && (
                     <SuccessAlert
                         title={alertTitle || 'تم العملية بنجاح'}
@@ -184,7 +145,15 @@ const AddUserModal = ({ open, onClose }) => {
 
                 {error && <Typography sx={{ color: 'red', mb: 2, fontSize: '14px' }}>{error}</Typography>}
 
-                <Box component="form" onSubmit={handleSubmit}>
+                <Box
+                    component="form"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        setError('');
+                        setFieldErrors({});
+                        saveMut.mutate();
+                    }}
+                >
                     <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 3 }}>
                         <Grid item xs={8}>
                             <Box sx={{ mb: 2 }}>

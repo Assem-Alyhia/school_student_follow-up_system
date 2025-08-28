@@ -6,8 +6,6 @@ import SortIcon from '@mui/icons-material/Sort';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-
-// عدّل المسار حسب مكان الملف لديك
 import AddExamModal from '../AddExamModal';
 
 const Section1 = () => {

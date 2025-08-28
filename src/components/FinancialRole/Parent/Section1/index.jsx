@@ -124,7 +124,6 @@ export default function Section1() {
     );
 }
 
-// ————————————— بطاقة وليّ الأمر (مكيّفة للحقول المتاحة) —————————————
 function ParentCard({ parent }) {
     const name = getName(parent);
     const code = getCode(parent);

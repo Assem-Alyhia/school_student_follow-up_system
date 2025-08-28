@@ -24,7 +24,6 @@ import {
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 
 export default function UserDetails({ open, onClose, user }) {
-    // يدعم التمرير كائن مستخدم مباشرة أو داخل { data: ... }
     const u = (user && (user.data || user)) || {};
 
     const prefix = u.prefix || "—";
@@ -58,7 +57,6 @@ export default function UserDetails({ open, onClose, user }) {
                     direction: "rtl",
                 }}
             >
-                {/* إغلاق */}
                 <IconButton
                     onClick={onClose}
                     sx={{ position: "absolute", top: 14, left: 18, color: "#308A9F" }}
@@ -66,7 +64,6 @@ export default function UserDetails({ open, onClose, user }) {
                     <CloseIcon />
                 </IconButton>
 
-                {/* بادجين أعلى اليمين */}
                 <Box
                     sx={{
                         position: "absolute",
@@ -97,7 +94,6 @@ export default function UserDetails({ open, onClose, user }) {
                     />
                 </Box>
 
-                {/* أعلى: أفاتار + اسم + إيميل */}
                 <Box sx={{ mt: 4.5, textAlign: "center" }}>
                     <Avatar
                         src={avatarSrc || undefined}
@@ -133,7 +129,6 @@ export default function UserDetails({ open, onClose, user }) {
                     </Box>
                 </Box>
 
-                {/* معلومات أساسية */}
                 <Box sx={{ mt: 3 }}>
                     <Grid container spacing={2.2}>
                         <Grid item xs={12} sm={6}>
@@ -147,7 +142,6 @@ export default function UserDetails({ open, onClose, user }) {
 
                 <Divider sx={{ my: 2.5 }} />
 
-                {/* الأدوار والصلاحيات */}
                 <Grid container spacing={2.2}>
                     <Grid item xs={12} md={4}>
                         <SectionLabel icon={<RolesIcon />} text="الأدوار" />
@@ -168,7 +162,6 @@ export default function UserDetails({ open, onClose, user }) {
     );
 }
 
-/* عناصر مساعدة صغيرة */
 
 function InfoRow({ icon, label, value }) {
     return (

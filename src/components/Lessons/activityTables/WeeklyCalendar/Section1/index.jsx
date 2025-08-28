@@ -18,7 +18,6 @@ const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأ�
 const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const colors = ['#FFD700', '#90CAF9', '#A5D6A7', '#FFCC80', '#F48FB1', '#CE93D8', '#B2DFDB'];
 
-// وقت 12 ساعة مع ص/م
 const formatTime = (iso) => {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -38,8 +37,8 @@ const WeeklyEventsCalendar = () => {
 
     const getStartOfWeek = (date) => {
         const d = new Date(date);
-        const day = d.getDay();         // 0-6
-        const diff = d.getDate() - day; // بداية الأسبوع على الأحد
+        const day = d.getDay();         
+        const diff = d.getDate() - day; 
         return new Date(d.setDate(diff));
     };
 
@@ -53,14 +52,12 @@ const WeeklyEventsCalendar = () => {
     const [academicYears, setAcademicYears] = useState([]);
     const [selectedClassroom, setSelectedClassroom] = useState('');
 
-    // popover للحركة
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    // تعديل
     const [openEditModal, setOpenEditModal] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [editSchedule, setEditSchedule] = useState(null);
@@ -178,7 +175,6 @@ const WeeklyEventsCalendar = () => {
     const classroomName = useMemo(() => {
         const f = classrooms.find(c => c.id === selectedClassroom);
         return f?.name || '—';
-        // يُستخدم للعرض في البوب أوفر لو لم يأت الاسم مع الحدث
     }, [classrooms, selectedClassroom]);
 
     return (
@@ -303,7 +299,6 @@ const WeeklyEventsCalendar = () => {
                                                 <Typography variant="caption" sx={{ color: '#fff' }}>
                                                     {event.title}
                                                 </Typography>
-                                                {/* أيقونة الضبط تفتح Popover */}
                                                 <IconButton
                                                     size="small"
                                                     onClick={(e) => { e.stopPropagation(); openPopover(e, event); }}
@@ -320,7 +315,6 @@ const WeeklyEventsCalendar = () => {
                 </Grid>
             </Paper>
 
-            {/* Popover تفاصيل + تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -374,7 +368,6 @@ const WeeklyEventsCalendar = () => {
                 )}
             </Popover>
 
-            {/* مودال التعديل */}
             <UpdateScheduleModal
                 open={openEditModal}
                 onClose={() => {
@@ -384,7 +377,6 @@ const WeeklyEventsCalendar = () => {
                 schedule={editSchedule}
                 name="تعديل الحدث"
                 onUpdated={() => {
-                    // بعد الحفظ نعيد جلب الأحداث
                     fetchEvents();
                 }}
             />

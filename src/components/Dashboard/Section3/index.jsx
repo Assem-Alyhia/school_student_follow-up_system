@@ -73,7 +73,6 @@ const QuickAccessSection = () => {
 
     return (
         <Grid container spacing={3} sx={{ direction: 'rtl', width: '95%', margin: '2rem auto' }}>
-            {/* التقويم والأحداث */}
             <Grid item xs={12} md={8}>
                 <Paper sx={{ borderRadius: 3 }}>
                     <Box

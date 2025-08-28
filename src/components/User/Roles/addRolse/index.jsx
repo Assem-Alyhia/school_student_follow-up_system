@@ -34,7 +34,7 @@ const AddRoles = () => {
 
             setTimeout(() => {
                 setShowSuccess(false);
-                navigate('/dashboard/users/roles'); // التوجيه بعد النجاح
+                navigate('/dashboard/users/roles'); 
             }, 2000);
         },
         onError: (err) => {
@@ -48,7 +48,7 @@ const AddRoles = () => {
 
         const payload = {
             name: roleName,
-            permissions: selectedPermissions.map(p => p.label), // إرسال أسماء الصلاحيات
+            permissions: selectedPermissions.map(p => p.label), 
         };
         mutation.mutate(payload);
     };

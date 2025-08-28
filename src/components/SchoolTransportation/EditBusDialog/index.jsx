@@ -6,6 +6,7 @@ import {
     Select, InputLabel, FormControl, CircularProgress,
     Alert, Box, FormHelperText
 } from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { updateBus } from "../../../api/Admin/Buses/updateBus";
 import { getAllSupervisors } from "../../../api/Admin/Supervisors/getAllSupervisors";
@@ -35,46 +36,47 @@ const defaultForm = {
 
 const EditBusDialog = ({ open, busId, onClose, onUpdated }) => {
     const [form, setForm] = useState(defaultForm);
-    const [supervisors, setSupervisors] = useState([]);
-    const [loadingLists, setLoadingLists] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [errorMsg, setErrorMsg] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
+    const [errorMsg, setErrorMsg] = useState("");
+
+    const queryClient = useQueryClient();
+
+    const supervisorsQ = useQuery({
+        queryKey: ["supervisors:all"],
+        queryFn: getAllSupervisors,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const busQ = useQuery({
+        queryKey: ["bus", busId],
+        queryFn: () => getBusById(busId),
+        enabled: !!open && !!busId,
+    });
+
+    useEffect(() => {
+        const res = busQ.data;
+        const bus = res?.data?.data ?? res?.data ?? res;
+        if (!open || !bus) return;
+        setForm({
+            supervisor_id: bus?.supervisor_id ?? bus?.supervisor?.id ?? "",
+            driver_name: bus?.driver_name ?? "",
+            driver_number: bus?.driver_number ?? "",
+            capacity: bus?.capacity ?? "",
+            bus_type: bus?.bus_type ?? "",
+            status: bus?.status ?? "active",
+        });
+    }, [open, busQ.data]);
+
+    const supervisors = useMemo(() => {
+        const raw = supervisorsQ.data;
+        return Array.isArray(raw) ? raw : raw?.data || [];
+    }, [supervisorsQ.data]);
 
     const selectedSupervisor = useMemo(
         () => supervisors.find(s => String(s?.id) === String(form.supervisor_id)) || null,
         [supervisors, form.supervisor_id]
     );
-
-    useEffect(() => {
-        if (!open || !busId) return;
-        const load = async () => {
-            setLoadingLists(true);
-            setErrorMsg("");
-            setFieldErrors({});
-            try {
-                const [bus, supsRaw] = await Promise.all([
-                    getBusById(busId),
-                    getAllSupervisors(),
-                ]);
-                const sups = Array.isArray(supsRaw) ? supsRaw : Array.isArray(supsRaw?.data) ? supsRaw.data : [];
-                setSupervisors(sups);
-                setForm({
-                    supervisor_id: bus?.supervisor_id ?? bus?.supervisor?.id ?? "",
-                    driver_name: bus?.driver_name ?? "",
-                    driver_number: bus?.driver_number ?? "",
-                    capacity: bus?.capacity ?? "",
-                    bus_type: bus?.bus_type ?? "",
-                    status: bus?.status ?? "active",
-                });
-            } catch (e) {
-                setErrorMsg(e?.message || "تعذر تحميل بيانات الباص");
-            } finally {
-                setLoadingLists(false);
-            }
-        };
-        load();
-    }, [open, busId]);
 
     const setField = (k, v) => {
         setFieldErrors(prev => ({ ...prev, [k]: undefined }));
@@ -93,6 +95,36 @@ const EditBusDialog = ({ open, busId, onClose, onUpdated }) => {
         );
     }, [form]);
 
+    const saveMut = useMutation({
+        mutationFn: async () => {
+            const payload = {
+                supervisor_id: Number(form.supervisor_id),
+                driver_name: form.driver_name.trim(),
+                driver_number: String(form.driver_number || "").trim(),
+                capacity: Number(form.capacity),
+                bus_type: form.bus_type,
+                status: form.status,
+            };
+            return updateBus(busId, payload);
+        },
+        onSuccess: (updated) => {
+            queryClient.invalidateQueries({ queryKey: ["buses"] });
+            queryClient.invalidateQueries({ queryKey: ["bus", busId] });
+            onUpdated?.(updated);
+        },
+        onError: (e) => {
+            const apiErrors = e?.response?.data?.errors || {};
+            if (apiErrors.bus_type?.length) {
+                setFieldErrors(prev => ({ ...prev, bus_type: apiErrors.bus_type[0] }));
+            }
+            setErrorMsg(e?.response?.data?.message || e?.message || "فشل في تعديل بيانات الباص");
+        },
+        onSettled: () => { },
+    });
+
+    const loadingLists = supervisorsQ.isLoading || busQ.isLoading;
+    const submitting = saveMut.isPending;
+
     const handleSubmit = async () => {
         setFieldErrors({});
         setErrorMsg("");
@@ -100,28 +132,8 @@ const EditBusDialog = ({ open, busId, onClose, onUpdated }) => {
             setFieldErrors(prev => ({ ...prev, bus_type: "يجب اختيار نوع الحافلة من القائمة." }));
             return;
         }
-        if (!isValid) return;
-        setSubmitting(true);
-        try {
-            const payload = {
-                supervisor_id: Number(form.supervisor_id),
-                driver_name: form.driver_name.trim(),
-                driver_number: form.driver_number?.trim() || "",
-                capacity: Number(form.capacity),
-                bus_type: form.bus_type,
-                status: form.status,
-            };
-            const updated = await updateBus(busId, payload);
-            onUpdated?.(updated);
-        } catch (e) {
-            const apiErrors = e?.response?.data?.errors || {};
-            if (apiErrors.bus_type?.length) {
-                setFieldErrors(prev => ({ ...prev, bus_type: apiErrors.bus_type[0] }));
-            }
-            setErrorMsg(e?.response?.data?.message || e?.message || "فشل في تعديل بيانات الباص");
-        } finally {
-            setSubmitting(false);
-        }
+        if (!isValid || submitting || loadingLists) return;
+        saveMut.mutate();
     };
 
     const handleClose = () => {
@@ -132,6 +144,12 @@ const EditBusDialog = ({ open, busId, onClose, onUpdated }) => {
         onClose?.();
     };
 
+    const topError =
+        errorMsg ||
+        (busQ.isError && (busQ.error?.response?.data?.message || busQ.error?.message)) ||
+        (supervisorsQ.isError && (supervisorsQ.error?.response?.data?.message || supervisorsQ.error?.message)) ||
+        "";
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth dir="rtl" keepMounted>
             <DialogTitle sx={{ fontWeight: 700, color: "#308A9F" }}>
@@ -139,7 +157,7 @@ const EditBusDialog = ({ open, busId, onClose, onUpdated }) => {
             </DialogTitle>
 
             <DialogContent dividers>
-                {errorMsg ? <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert> : null}
+                {topError ? <Alert severity="error" sx={{ mb: 2 }}>{topError}</Alert> : null}
 
                 {loadingLists ? (
                     <Box display="flex" justifyContent="center" py={6}>

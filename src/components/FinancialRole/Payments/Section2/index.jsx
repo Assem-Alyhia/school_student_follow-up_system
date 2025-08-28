@@ -33,7 +33,6 @@ export default function Section2({ financials = [] }) {
 
     const rows = Array.isArray(financials) ? financials : [];
 
-    // قيمة الحقل حسب المفتاح (تدعم الحقول المشتقة مثل اسم الطالب/ولي الأمر)
     const getVal = (row, key) => {
         switch (key) {
             case "parent_name": return row?.parent?.name ?? "";
@@ -202,7 +201,6 @@ export default function Section2({ financials = [] }) {
                 </TableContainer>
             </Paper>
 
-            {/* قائمة الإجراءات */}
             <Menu
                 anchorEl={actionsAnchor}
                 open={openActions}
@@ -233,7 +231,6 @@ export default function Section2({ financials = [] }) {
                 </MenuItem>
             </Menu>
 
-            {/* المودالات */}
             <PaymentDetails open={openView} onClose={() => setOpenView(false)} payment={viewRow} />
             <EditPaymentModal open={openEdit} onClose={() => setOpenEdit(false)} initialData={editRow} />
         </Box>

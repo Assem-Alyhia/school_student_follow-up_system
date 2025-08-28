@@ -10,8 +10,6 @@ import { getEventsSchedule } from '../../../../../api/Admin/EventSchedule/getEve
 import { getAllClassrooms } from '../../../../../api/Admin/Classrooms/getAllClassrooms';
 import { getAllAcademicYears } from '../../../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { deleteSchedule } from '../../../../../api/Admin/Schedules/deleteSchedule';
-
-// جديد: نفس أسلوب الجلب والتعديل السابق
 import UpdateScheduleModal from '../../../UpdateScheduleModal';
 import { getScheduleById } from '../../../../../api/Admin/Schedules/getScheduleById';
 
@@ -44,14 +42,12 @@ const EventScheduleTable = () => {
 
     const [events, setEvents] = useState([]);
 
-    // popover
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const popoverOpen = Boolean(anchorEl);
     const openPopover = (e, ev) => { setAnchorEl(e.currentTarget); setSelectedEvent(ev); };
     const closePopover = () => { setAnchorEl(null); setSelectedEvent(null); };
 
-    // حالات الموديال (تعديل)
     const [openEditModal, setOpenEditModal] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [editSchedule, setEditSchedule] = useState(null);
@@ -112,7 +108,6 @@ const EventScheduleTable = () => {
         }
     };
 
-    // جلب بيانات الحدث وفتح موديال التعديل
     const handleEdit = async (ev) => {
         try {
             setEditLoading(true);
@@ -196,7 +191,6 @@ const EventScheduleTable = () => {
     return (
         <Box sx={{ width: '100%', p: isMobile ? 1 : 3, bgcolor: '#f5f7fa' }}>
             <Paper sx={{ p: isMobile ? 1 : 3, bgcolor: 'white', direction: 'rtl' }}>
-                {/* الفلاتر */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                     <FormControl sx={{ minWidth: 180 }}>
                         <Typography variant="caption" color="gray">اختر الصف</Typography>
@@ -212,7 +206,6 @@ const EventScheduleTable = () => {
                     </FormControl>
                 </Box>
 
-                {/* أزرار التنقل في الشهر */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton onClick={handlePrevMonth}><ChevronRight /></IconButton>
@@ -239,7 +232,6 @@ const EventScheduleTable = () => {
                     <IconButton onClick={handleToday}><Today /></IconButton>
                 </Box>
 
-                {/* ترويسة أيام الأسبوع */}
                 <Grid container spacing={1} sx={{ mb: 1 }}>
                     {arabicDays.map((day) => (
                         <Grid item xs key={day} sx={{ textAlign: 'center' }}>
@@ -248,7 +240,6 @@ const EventScheduleTable = () => {
                     ))}
                 </Grid>
 
-                {/* التقويم الشهري مع عدّاد الأحداث وشاشة الإعداد */}
                 <Box>
                     {calendarWeeks.map((week, i) => (
                         <Grid container spacing={1} key={i}>
@@ -323,7 +314,6 @@ const EventScheduleTable = () => {
                 </Box>
             </Paper>
 
-            {/* Popover تفاصيل + تعديل/حذف */}
             <Popover
                 open={popoverOpen}
                 anchorEl={anchorEl}
@@ -374,7 +364,6 @@ const EventScheduleTable = () => {
                 )}
             </Popover>
 
-            {/* موديال التعديل */}
             <UpdateScheduleModal
                 open={openEditModal}
                 onClose={() => {
@@ -384,7 +373,6 @@ const EventScheduleTable = () => {
                 schedule={editSchedule}
                 name="تعديل الحدث"
                 onUpdated={() => {
-                    // بعد الحفظ أعد تحميل الأحداث
                     fetchEvents();
                 }}
             />

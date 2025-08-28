@@ -1,4 +1,3 @@
-// AddPaymentDialog.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
@@ -7,8 +6,8 @@ import {
     CircularProgress, Alert, Box
 } from "@mui/material";
 import dayjs from "dayjs";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// APIs
 import { getAllStudentsNoPaginate } from "../../../api/Admin/Students/getAllStudentsNoPaginate";
 import { getAllAcademicYears } from "../../../api/Admin/AcademicYears/getAllAcademicYears";
 import { createPayment } from "./../../../api/Admin/Payments/createPayment";
@@ -42,51 +41,49 @@ const discountStatuses = [
 
 const AddPaymentDialog = ({ open, onClose, onCreated }) => {
     const [form, setForm] = useState(defaultForm);
-
-    const [parents, setParents] = useState([]);
-    const [students, setStudents] = useState([]);
-    const [years, setYears] = useState([]);
-    const [fees, setFees] = useState([]);
-
-    const [loadingLists, setLoadingLists] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const queryClient = useQueryClient();
+
+    const parentsQ = useQuery({
+        queryKey: ["parents:nopage"],
+        queryFn: getAllParentsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+    const studentsQ = useQuery({
+        queryKey: ["students:nopage"],
+        queryFn: getAllStudentsNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+    const yearsQ = useQuery({
+        queryKey: ["academic-years"],
+        queryFn: getAllAcademicYears,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+    const feesQ = useQuery({
+        queryKey: ["school-fees:nopage"],
+        queryFn: getAllSchoolFeesNoPaginate,
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const parents = useMemo(() => Array.isArray(parentsQ.data) ? parentsQ.data : parentsQ.data?.data || [], [parentsQ.data]);
+    const students = useMemo(() => Array.isArray(studentsQ.data) ? studentsQ.data : studentsQ.data?.data || [], [studentsQ.data]);
+    const years = useMemo(() => Array.isArray(yearsQ.data) ? yearsQ.data : yearsQ.data?.data || [], [yearsQ.data]);
+    const fees = useMemo(() => Array.isArray(feesQ.data) ? feesQ.data : feesQ.data?.data || [], [feesQ.data]);
 
     useEffect(() => {
         if (!open) return;
-
-        const load = async () => {
-            setLoadingLists(true);
-            setErrorMsg("");
-            try {
-                const [parentsRes, studentsRes, yearsRes, feesRes] = await Promise.all([
-                    getAllParentsNoPaginate(),
-                    getAllStudentsNoPaginate(),
-                    getAllAcademicYears(),
-                    getAllSchoolFeesNoPaginate(),
-                ]);
-                setParents(Array.isArray(parentsRes) ? parentsRes : []);
-                setStudents(Array.isArray(studentsRes) ? studentsRes : []);
-                setYears(Array.isArray(yearsRes) ? yearsRes : []);
-                setFees(Array.isArray(feesRes) ? feesRes : []);
-            } catch (e) {
-                setErrorMsg(e?.message || "تعذّر تحميل القوائم");
-            } finally {
-                setLoadingLists(false);
-            }
-        };
-
         setForm(defaultForm);
-        load();
+        setErrorMsg("");
     }, [open]);
 
-    // ✅ فلترة الطلاب حسب وليّ الأمر فقط إذا كانت عناصر الطلاب تمتلك parent_id
     const filteredStudents = useMemo(() => {
         if (!form.parent_id) return students;
-        const hasParentId = students.some((s) => s?.parent_id != null); // FIX
-        return hasParentId
-            ? students.filter((s) => String(s.parent_id) === String(form.parent_id))
-            : students; // لا تُصفّي إذا لم يتوفر parent_id في البيانات
+        const hasParentId = students.some((s) => s?.parent_id != null);
+        return hasParentId ? students.filter((s) => String(s.parent_id) === String(form.parent_id)) : students;
     }, [students, form.parent_id]);
 
     const setField = (key, val) => setForm((f) => ({ ...f, [key]: val }));
@@ -103,11 +100,8 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
         );
     }, [form]);
 
-    const handleSubmit = async () => {
-        if (!isValid) return;
-        setSubmitting(true);
-        setErrorMsg("");
-        try {
+    const createMut = useMutation({
+        mutationFn: async () => {
             const payload = {
                 parent_id: Number(form.parent_id),
                 student_id: Number(form.student_id),
@@ -119,22 +113,26 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                 discount: form.discount === "" ? 0 : Number(form.discount),
                 discount_status: form.discount_status || "none",
             };
-
-            await createPayment(payload);
-            onCreated?.();
-        } catch (e) {
-            setErrorMsg(e?.message || "فشل في إضافة دفعة جديدة");
-        } finally {
-            setSubmitting(false);
-        }
-    };
+            return createPayment(payload);
+        },
+        onSuccess: async (res) => {
+            await queryClient.invalidateQueries({ queryKey: ["payments"] });
+            onCreated?.(res);
+            onClose?.();
+        },
+        onError: (e) => {
+            setErrorMsg(e?.response?.data?.message || e?.message || "فشل في إضافة دفعة جديدة");
+        },
+    });
 
     const handleClose = () => {
-        if (submitting) return;
+        if (createMut.isPending) return;
         setForm(defaultForm);
         setErrorMsg("");
         onClose?.();
     };
+
+    const loadingLists = parentsQ.isLoading || studentsQ.isLoading || yearsQ.isLoading || feesQ.isLoading;
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth dir="rtl" keepMounted>
@@ -151,7 +149,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                     </Box>
                 ) : (
                     <Grid container spacing={2}>
-                        {/* ولي الأمر */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={parents}
@@ -163,12 +160,11 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* الطالب */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={filteredStudents}
                                 getOptionLabel={(o) =>
-                                    o?.name || o?.user?.name || o?.full_name || `#${o?.id}` || "" // FIX
+                                    o?.name || o?.user?.name || o?.full_name || `#${o?.id}` || ""
                                 }
                                 onChange={(e, v) => setField("student_id", v?.id || "")}
                                 renderInput={(params) => (
@@ -177,7 +173,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* السنة الدراسية */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={years}
@@ -189,7 +184,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* الرسوم (Fee) */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={fees}
@@ -205,7 +199,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* المبلغ */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="المبلغ"
@@ -219,7 +212,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* حالة الدفع */}
                         <Grid item xs={12} md={6}>
                             <FormControl fullWidth margin="dense">
                                 <InputLabel id="status-label">حالة الدفع</InputLabel>
@@ -237,18 +229,17 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             </FormControl>
                         </Grid>
 
-                        {/* تاريخ الدفع */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="تاريخ الدفع"
-                                type="datetime-local" // FIX
+                                type="datetime-local"
                                 margin="dense"
                                 fullWidth
-                                value={dayjs(form.paid_at).format("YYYY-MM-DDTHH:mm")} 
+                                value={dayjs(form.paid_at).format("YYYY-MM-DDTHH:mm")}
                                 onChange={(e) =>
                                     setField(
                                         "paid_at",
-                                        dayjs(e.target.value).format("YYYY-MM-DD HH:mm:ss") 
+                                        dayjs(e.target.value).format("YYYY-MM-DD HH:mm:ss")
                                     )
                                 }
                                 InputLabelProps={{ shrink: true }}
@@ -256,8 +247,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-
-                        {/* الخصم */}
                         <Grid item xs={12} md={6}>
                             <TextField
                                 label="قيمة الخصم"
@@ -270,7 +259,6 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
-                        {/* حالة/سبب الخصم */}
                         <Grid item xs={12} md={6}>
                             <FormControl fullWidth margin="dense">
                                 <InputLabel id="discount-status-label">سبب/حالة الخصم</InputLabel>
@@ -291,16 +279,16 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
             </DialogContent>
 
             <DialogActions sx={{ px: 3, py: 2 }}>
-                <Button onClick={handleClose} variant="outlined" disabled={submitting} sx={{ ml:3 }}>
+                <Button onClick={handleClose} variant="outlined" disabled={createMut.isPending} sx={{ ml: 3 }}>
                     إلغاء
                 </Button>
                 <Button
-                    onClick={handleSubmit}
+                    onClick={() => createMut.mutate()}
                     variant="contained"
                     sx={{ backgroundColor: "#35AFBC" }}
-                    disabled={!isValid || submitting || loadingLists}
+                    disabled={!isValid || createMut.isPending || loadingLists}
                 >
-                    {submitting ? <CircularProgress size={20} sx={{ color: "white" }} /> : "أضف دفعة جديدة"}
+                    {createMut.isPending ? <CircularProgress size={20} sx={{ color: "white" }} /> : "أضف دفعة جديدة"}
                 </Button>
             </DialogActions>
         </Dialog>

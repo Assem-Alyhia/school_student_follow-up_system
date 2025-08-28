@@ -14,6 +14,7 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 
 import SuccessAlert from "../../../layout/SuccessAlert";
 import { createParent } from "../../../api/Admin/Parents/createParent";
@@ -60,15 +61,15 @@ export default function ParentFormAdd() {
 
     const toISOIfDate = (d) => (d ? new Date(d).toISOString() : "");
 
-    const handleSubmit = async () => {
-        try {
+    const saveMut = useMutation({
+        mutationFn: async () => {
             const payload = {
                 ...formData,
                 dob: toISOIfDate(formData.dob),
             };
-
-            await createParent(payload);
-
+            return createParent(payload);
+        },
+        onSuccess: () => {
             setAlertConfig({
                 title: "تم إنشاء وليّ الأمر بنجاح!",
                 message: "تمت إضافة وليّ الأمر إلى النظام.",
@@ -76,14 +77,20 @@ export default function ParentFormAdd() {
             });
             setShowSuccess(true);
             setTimeout(() => navigate("/dashboard/guardian"), 1000);
-        } catch (err) {
+        },
+        onError: (err) => {
             setAlertConfig({
                 title: "فشل في إنشاء وليّ الأمر!",
                 message: err?.response?.data?.message || err.message,
                 severity: "error",
             });
             setShowSuccess(true);
-        }
+        },
+    });
+
+    const handleSubmit = () => {
+        if (saveMut.isPending) return;
+        saveMut.mutate();
     };
 
     return (
@@ -111,6 +118,7 @@ export default function ParentFormAdd() {
                             value={formData.name}
                             onChange={handleChange}
                             margin="dense"
+                            disabled={saveMut.isPending}
                         />
 
                         <Grid container spacing={2} mt={1}>
@@ -127,6 +135,8 @@ export default function ParentFormAdd() {
                                         flexDirection: "column",
                                         alignItems: "center",
                                         justifyContent: "center",
+                                        cursor: saveMut.isPending ? "not-allowed" : "pointer",
+                                        opacity: saveMut.isPending ? 0.7 : 1,
                                     }}
                                 >
                                     {previewImage ? (
@@ -146,10 +156,10 @@ export default function ParentFormAdd() {
                                             <Typography sx={{ fontSize: 14 }}>اختر صورة</Typography>
                                         </>
                                     )}
-                                    <Button component="span" variant="outlined" size="small" sx={{ mt: 1 }}>
+                                    <Button component="span" variant="outlined" size="small" sx={{ mt: 1 }} disabled={saveMut.isPending}>
                                         تحميل صورة
                                     </Button>
-                                    <input type="file" id="upload-photo" hidden onChange={handleFileChange} />
+                                    <input type="file" id="upload-photo" hidden onChange={handleFileChange} disabled={saveMut.isPending} />
                                 </Box>
                             </Grid>
 
@@ -163,6 +173,7 @@ export default function ParentFormAdd() {
                                     value={formData.dob}
                                     onChange={handleChange}
                                     margin="dense"
+                                    disabled={saveMut.isPending}
                                 />
 
                                 <TextField
@@ -172,12 +183,12 @@ export default function ParentFormAdd() {
                                     value={formData.phone}
                                     onChange={handleChange}
                                     margin="dense"
+                                    disabled={saveMut.isPending}
                                 />
                             </Grid>
                         </Grid>
                     </Paper>
 
-                    {/* معلومات التواصل */}
                     <Paper sx={{ mt: 3, p: 2 }}>
                         <Typography variant="h6">معلومات التواصل</Typography>
                         <TextField
@@ -187,12 +198,12 @@ export default function ParentFormAdd() {
                             value={formData.email}
                             onChange={handleChange}
                             margin="dense"
+                            disabled={saveMut.isPending}
                         />
                     </Paper>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                    {/* معلومات الحساب */}
                     <Paper sx={{ p: 2 }}>
                         <Typography variant="h6">معلومات الحساب</Typography>
 
@@ -204,11 +215,12 @@ export default function ParentFormAdd() {
                             value={formData.password}
                             onChange={handleChange}
                             margin="dense"
+                            disabled={saveMut.isPending}
                             slotProps={{
                                 input: {
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="start">
+                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="start" disabled={saveMut.isPending}>
                                                 {showPassword ? <VisibilityOff /> : <Visibility />}
                                             </IconButton>
                                         </InputAdornment>
@@ -225,6 +237,7 @@ export default function ParentFormAdd() {
                             value={formData.password_confirmation}
                             onChange={handleChange}
                             margin="dense"
+                            disabled={saveMut.isPending}
                             slotProps={{
                                 input: {
                                     startAdornment: (
@@ -232,6 +245,7 @@ export default function ParentFormAdd() {
                                             <IconButton
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 edge="start"
+                                                disabled={saveMut.isPending}
                                             >
                                                 {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                             </IconButton>
@@ -243,8 +257,8 @@ export default function ParentFormAdd() {
                     </Paper>
 
                     <Box sx={{ display: "flex", justifyContent: "end", mt: 2 }}>
-                        <Button variant="contained" color="primary" onClick={handleSubmit}>
-                            حفظ وليّ الأمر
+                        <Button variant="contained" color="primary" onClick={handleSubmit} disabled={saveMut.isPending}>
+                            {saveMut.isPending ? "جارٍ الحفظ..." : "حفظ وليّ الأمر"}
                         </Button>
                     </Box>
                 </Grid>

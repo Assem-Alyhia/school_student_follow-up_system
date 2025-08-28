@@ -102,8 +102,18 @@ const Section2 = ({ rows = [], page = 1, rowsPerPage = 10 }) => {
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={0} sx={{ padding: 2 }}>
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="قائمة الدرجات">
+                <TableContainer component={Paper} sx={{ direction: 'rtl' }}>
+                    <Table
+                        sx={{
+                            minWidth: 650,
+                            // توسيط كل الخلايا: رؤوس + جسم
+                            '& th, & td': {
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                            },
+                        }}
+                        aria-label="قائمة الدرجات"
+                    >
                         <TableHead sx={{ backgroundColor: '#308A9F' }}>
                             <TableRow>
                                 <TableCell>
@@ -140,35 +150,44 @@ const Section2 = ({ rows = [], page = 1, rowsPerPage = 10 }) => {
                                     </TableSortLabel>
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', color: '#fff' }}>الفصل</TableCell>
+                                {/* يبقى عمود الإجراءات آخر يسار، لكن المحتوى نفسه مُوسّط داخل الخليّة */}
                                 <TableCell sx={{ fontWeight: 'bold', color: '#fff' }}>الإجراءات</TableCell>
                             </TableRow>
                         </TableHead>
+
                         <TableBody>
                             {sortedRows.map((row) => (
                                 <TableRow key={row.id}>
                                     <TableCell>{row.id}</TableCell>
+
                                     <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Avatar src={row.student?.avatar} sx={{ width: 32, height: 32, mr: 1 }} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                            <Avatar src={row.student?.avatar} sx={{ width: 32, height: 32 }} />
                                             <Typography>{row.student?.name ?? `#${row.student_id}`}</Typography>
                                         </Box>
                                     </TableCell>
+
                                     <TableCell>{row.classroom?.name || `#${row.classroom_id}`}</TableCell>
                                     <TableCell>{row.subject?.name || `#${row.subject_id}`}</TableCell>
+
                                     <TableCell sx={{ color: getScoreColor(parseInt(row.final_score, 10)) }}>
                                         {row.final_score}
                                     </TableCell>
+
                                     <TableCell>{row.term}</TableCell>
+
                                     <TableCell>
-                                        <IconButton onClick={() => handleViewClick(row.id)}>
-                                            {loadingViewId === row.id ? <CircularProgress size={18} /> : <VisibilityIcon />}
-                                        </IconButton>
-                                        <IconButton onClick={() => handleEditClick(row)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDeleteClick(row.id)}>
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                            <IconButton onClick={() => handleViewClick(row.id)}>
+                                                {loadingViewId === row.id ? <CircularProgress size={18} /> : <VisibilityIcon />}
+                                            </IconButton>
+                                            <IconButton onClick={() => handleEditClick(row)}>
+                                                <EditIcon />
+                                            </IconButton>
+                                            <IconButton onClick={() => handleDeleteClick(row.id)}>
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -188,7 +207,6 @@ const Section2 = ({ rows = [], page = 1, rowsPerPage = 10 }) => {
                 onClose={() => {
                     setOpenEditModal(false);
                     setEditGrade(null);
-                    // مهم: نفس مفتاح الكاش المستخدم في Section3
                     queryClient.invalidateQueries({ queryKey: ['grades', page, rowsPerPage] });
                 }}
                 grade={editGrade}

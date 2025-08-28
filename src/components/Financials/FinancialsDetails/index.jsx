@@ -29,7 +29,6 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 
 
 export default function FinancialsDetails({ open, onClose, financial }) {
-    // ندعم الشكلين: {data:{...}} أو {...}
     const fin = financial?.data ?? financial ?? {};
     const user = fin.user ?? {};
 
@@ -68,7 +67,6 @@ export default function FinancialsDetails({ open, onClose, financial }) {
                     direction: "rtl",
                 }}
             >
-                {/* زر إغلاق */}
                 <IconButton
                     onClick={onClose}
                     sx={{ position: "absolute", top: 14, left: 18, color: "#308A9F" }}
@@ -76,7 +74,6 @@ export default function FinancialsDetails({ open, onClose, financial }) {
                     <CloseIcon />
                 </IconButton>
 
-                {/* بادجات يمين أعلى */}
                 <Box
                     sx={{
                         position: "absolute",
@@ -107,7 +104,6 @@ export default function FinancialsDetails({ open, onClose, financial }) {
                     />
                 </Box>
 
-                {/* أعلى: أفاتار + اسم + إيميل */}
                 <Box sx={{ mt: 4.5, textAlign: "center" }}>
                     <Avatar
                         src={avatarSrc || undefined}
@@ -143,7 +139,6 @@ export default function FinancialsDetails({ open, onClose, financial }) {
                     </Box>
                 </Box>
 
-                {/* معلومات أساسية */}
                 <Box sx={{ mt: 3 }}>
                     <Grid container spacing={2.2}>
                         <Grid item xs={12} sm={6}>
@@ -169,7 +164,6 @@ export default function FinancialsDetails({ open, onClose, financial }) {
 
                 <Divider sx={{ my: 2.5 }} />
 
-                {/* الأدوار والصلاحيات */}
                 <Grid container spacing={2.2}>
                     <Grid item xs={12} md={4}>
                         <SectionLabel icon={<RolesIcon />} text="الأدوار" />
