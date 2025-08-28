@@ -96,6 +96,7 @@ import FinancialDashboard from "./pages/FinancialRole/dashboard";
 import FinancialStudents from "./pages/FinancialRole/Students";
 import FinancialParents from "./pages/FinancialRole/Parents";
 import Financials from "./pages/Financials";
+import FinancialPayments from "./pages/FinancialRole/Payments";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -207,6 +208,7 @@ const financialDashboard = [
   { path: "settings", element: <ParentSettingNavigation /> },
   { path: "students", element: <FinancialStudents /> },
   { path: "parents", element: <FinancialParents /> },
+  { path: "payments", element: <FinancialPayments /> },
 ];
 
 

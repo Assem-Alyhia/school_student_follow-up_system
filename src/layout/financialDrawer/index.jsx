@@ -121,7 +121,7 @@ export const financialMenu = [
     { text: "لوحة التحكم", icon: <SpaceDashboardIcon />, url: "/financialDashboard" },
     { text: "الطلاب", icon: <PeopleIcon />, url: "/financialDashboard/students" },
     { text: "الآباء", icon: <CoPresentIcon />, url: "/financialDashboard/parents" },
-    { text: "المراحل الدراسية", icon: <SchoolRoundedIcon />, url: "/financialDashboard/levels" },
+    { text: "المدفوعات", icon: <SchoolRoundedIcon />, url: "/financialDashboard/payments" },
 ];
 
 

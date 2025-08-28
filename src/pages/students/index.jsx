@@ -4,7 +4,6 @@ const Students = () => {
     return ( 
         <>
             <Section3/>
-
         </>
     );
 }

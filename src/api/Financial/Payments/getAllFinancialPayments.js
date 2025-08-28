@@ -1,10 +1,10 @@
 // src/api/Financial/Payments/getAllFinancialPayments.js
 import axiosInstance from "../../axiosInstance";
-import api from "../../apiEndpoints";
+import apiEndpoints from "../../apiEndpoints";
 
 export const getAllFinancialPayments = async () => {
   try {
-    const res = await axiosInstance.get(api.finGetAllPayments);
+    const res = await axiosInstance.get(apiEndpoints.finGetAllPayments);
     if (res.status !== 200) throw new Error("فشل في جلب جميع المدفوعات (مالي)");
     return res.data;
   } catch (error) {

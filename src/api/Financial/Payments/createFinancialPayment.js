@@ -1,11 +1,11 @@
 // src/api/Financial/Payments/createFinancialPayment.js
 import axiosInstance from "../../axiosInstance";
-import api from "../../apiEndpoints";
+import apiEndpoints from "../../apiEndpoints";
 
 
 export const createFinancialPayment = async (payload = {}) => {
   try {
-    const res = await axiosInstance.post(api.finCreatePayment, payload);
+    const res = await axiosInstance.post(apiEndpoints.finCreatePayment, payload);
     if (res.status !== 201 && res.status !== 200)
       throw new Error("فشل في إنشاء المدفوع (مالي)");
     return res.data;

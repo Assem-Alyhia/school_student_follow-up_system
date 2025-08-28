@@ -20,7 +20,6 @@ const COLORS = ['#4BA3C3', '#EF476F', '#FFD166'];
 const topStudentBg = ['#B2DFDB', '#BBDEFB', '#E0E0E0'];
 
 const DashboardWidgets = () => {
-    // حالات مبسطة
     const [adminData, setAdminData] = useState(null);
     const [levels, setLevels] = useState([]);
     const [levelId, setLevelId] = useState('');

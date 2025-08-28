@@ -1,13 +1,12 @@
 // src/api/Financial/Payments/updateFinancialPayment.js
 import axiosInstance from "../../axiosInstance";
-import api from "../../apiEndpoints";
-
+import apiEndpoints from "../../apiEndpoints";
 
 export const updateFinancialPayment = async (paymentId, payload = {}) => {
   try {
     if (!paymentId) throw new Error("يجب تمرير معرّف المدفوع");
     const res = await axiosInstance.put(
-      api.finUpdatePayment(paymentId),
+      apiEndpoints.finUpdatePayment(paymentId),
       payload
     );
     if (res.status !== 200) throw new Error("فشل في تحديث المدفوع (مالي)");
