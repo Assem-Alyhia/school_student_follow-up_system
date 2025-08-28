@@ -20,16 +20,9 @@ import { Outlet, useLocation, Link } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import GradeIcon from '@mui/icons-material/Grade';
-import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ReportIcon from '@mui/icons-material/Report';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -37,11 +30,29 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { useState } from 'react';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import SecurityIcon from '@mui/icons-material/Security';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import GroupsIcon from '@mui/icons-material/Groups';
+import LayersIcon from '@mui/icons-material/Layers';
+import ClassIcon from '@mui/icons-material/Class';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import GradingIcon from '@mui/icons-material/Grading';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import { useState, useEffect } from 'react';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { Collapse } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import { clearToken } from '../../api/authApi/tokenManager';
+import { getUserById } from '../../api/Admin/Users/getUserById';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CategoryIcon from '@mui/icons-material/Category';
+import GradeIcon from '@mui/icons-material/Grade';
+
 
 const drawerWidth = 240;
 
@@ -144,25 +155,41 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const menuItems = [
     { text: 'لوحة التحكم', icon: <DashboardIcon />, url: '/dashboard' },
+
     {
         text: 'المستخدمون',
-        icon: <PeopleIcon />,
+        icon: <PeopleAltIcon />,
         url: '/dashboard/users',
         children: [
-            { text: 'الأدوار', icon: <PeopleIcon />, url: '/dashboard/users/roles' },
-            { text: 'الصلاحيات', icon: <PeopleIcon />, url: '/dashboard/users/roles/selectRoles' },
-            { text: 'القوائم', icon: <PeopleIcon />, url: '/dashboard/users' },
+            { text: 'الأدوار', icon: <AdminPanelSettingsIcon />, url: '/dashboard/users/roles' },
+            { text: 'الصلاحيات', icon: <SecurityIcon />, url: '/dashboard/users/permissions' },
+            { text: 'القوائم', icon: <ListAltIcon />, url: '/dashboard/users' },
         ]
     },
-    { text: 'المعلمون', icon: <PersonIcon />, url: '/dashboard/teachers' },
+    { text: 'الطلاب', icon: <GroupsIcon />, url: '/dashboard/students' },
+    { text: 'المعلمون', icon: <SchoolIcon />, url: '/dashboard/teachers' },
+    { text: 'المشرفون', icon: <SchoolIcon />, url: '/dashboard/supervisor' },
     { text: 'أولياء الأمور', icon: <FamilyRestroomIcon />, url: '/dashboard/guardian' },
-    { text: 'المراحل الدراسية', icon: <CalendarTodayIcon />, url: '/dashboard/academicStages' },
-    { text: 'الدروس', icon: <AssignmentIcon />, url: '/dashboard/lessons' },
-    { text: 'الدرجات', icon: <GradeIcon />, url: '/dashboard/grades' },
-    { text: 'الحضور والغياب', icon: <EventAvailableIcon />, url: '/dashboard/attendance' },
-    { text: 'النقل المدرسي', icon: <ReportIcon />, url: '/dashboard/transportation' },
-    { text: 'الشؤون المالية', icon: <AttachMoneyIcon />, url: '/dashboard/finance' },
-    { text: 'الإعدادات', icon: <SettingsIcon />, url: '/dashboard/settings' },
+    { text: 'موظفي المالية', icon: <FamilyRestroomIcon />, url: '/dashboard/financials' },
+    { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
+    { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
+    { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },
+    {
+        text: 'الامتحانات',
+        icon: <AssignmentIcon />,
+        url: '/teacherDashboard/exams',
+        children: [
+            { text: 'قوائم الصفوف', icon: <ListAltIcon />, url: '/dashboard/exam/classesLists' },
+            { text: 'قوائم الامتحانات', icon: <ListAltIcon />, url: '/dashboard/exam/examlists' },
+            { text: 'أنواع الامتحانات', icon: <CategoryIcon />, url: '/dashboard/exam/typesExams' },
+            { text: 'درجات الامتحانات', icon: <GradeIcon />, url: '/dashboard/exam/resultsExams' },
+        ]
+    },
+    { text: 'الدرجات', icon: <GradingIcon />, url: '/dashboard/grades' },
+    { text: 'الحضور والغياب', icon: <HowToRegIcon />, url: '/dashboard/studentsAttending' },
+    { text: 'النقل المدرسي', icon: <DirectionsBusIcon />, url: '/dashboard/schoolTransportation' },
+    { text: 'الشؤون المالية', icon: <RequestQuoteIcon />, url: '/dashboard/fees' },
+    { text: 'التقارير', icon: <AssessmentIcon />, url: '/dashboard/reports' },
 ];
 
 export default function MiniDrawer() {
@@ -206,11 +233,22 @@ export default function MiniDrawer() {
         navigate("/login");
     };
 
-    const [userData, _setUserData] = useState({
-        userFirstName: 'عاصم',
-        userLastName: 'اليحيى',
-        userImage: '/userDashboard/Profile/Profile.png',
-    });
+
+    const [userData, setUserData] = useState(null);
+    const userId = localStorage.getItem("UserId");
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                if (!userId) return;
+                const response = await getUserById(userId);
+                setUserData(response.data);
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+            }
+        };
+
+        fetchUserData();
+    }, [userId]);
 
     return (
         <Box sx={{ display: 'flex', position: 'relative' }}>
@@ -247,9 +285,9 @@ export default function MiniDrawer() {
 
                             <IconButton onClick={handleProfileMenuOpen} sx={{ color: '#fff' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar src={userData.userImage} />
+                                    <Avatar src={userData?.image || '/default-avatar.png'} />
                                     <Typography sx={{ marginLeft: 1, color: '#fff' }}>
-                                        {`${userData.userFirstName} ${userData.userLastName}`}
+                                        {userData?.name || 'المستخدم'}
                                     </Typography>
                                     <ExpandMoreIcon sx={{ color: '#fff', marginLeft: 1 }} />
                                 </Box>
@@ -259,19 +297,88 @@ export default function MiniDrawer() {
                                 anchorEl={anchorEl}
                                 open={Boolean(anchorEl)}
                                 onClose={handleProfileMenuClose}
+                                PaperProps={{
+                                    sx: {
+                                        width: 250,
+                                        borderRadius: 2,
+                                        p: 2,
+                                        boxShadow: 4,
+                                        mt: 1.5
+                                    },
+                                }}
+                                anchorOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'right',
+                                }}
+                                transformOrigin={{
+                                    vertical: 'top',
+                                    horizontal: 'right',
+                                }}
                             >
-                                <MenuItem onClick={handleProfileMenuClose} sx={{ width: '12rem', opacity: '.7' }}>
-                                    <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        <PersonIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                                <Box sx={{ textAlign: 'center', mb: 1 }}>
+                                    <Avatar
+                                        alt={userData?.name}
+                                        src={userData?.image && userData.image !== '' ? userData.image : undefined}
+                                        sx={{
+                                            width: 60,
+                                            height: 60,
+                                            margin: '0 auto 8px',
+                                            fontSize: '1rem',
+                                            fontWeight: 'bold',
+                                            bgcolor: '#ccc',
+                                        }}
+                                    >
+                                        {(!userData?.image || userData.image === '') && userData?.name?.charAt(0)}
+                                    </Avatar>
+                                    <Typography fontWeight="bold" fontSize="1rem">
+                                        {userData?.name || 'اسم المستخدم'}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {userData?.email || 'email@example.com'}
+                                    </Typography>
+
+                                </Box>
+
+                                <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
+
+                                <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
+                                    <Link
+                                        to={`/dashboard/users/usersProfile/${userId}`}
+                                        style={{
+                                            textDecoration: 'none',
+                                            color: 'inherit',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <PersonIcon sx={{ mr: 1 }} />
                                         الملف الشخصي
                                     </Link>
                                 </MenuItem>
-                                <hr style={{ width: '85%', margin: 'auto', opacity: '.6', border: '1.2px solid #ccc' }} />
-                                <MenuItem onClick={handleLogout} sx={{ width: '12rem', opacity: '.7' }}>
-                                    <ExitToAppIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+
+                                <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
+                                    <Link
+                                        to={`/dashboard/users/usersSettings/${userId}`}
+                                        style={{
+                                            textDecoration: 'none',
+                                            color: 'inherit',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <SettingsIcon sx={{ mr: 1 }} />
+                                        الإعدادات
+                                    </Link>
+                                </MenuItem>
+
+                                <Box sx={{ my: 1, borderTop: '1px solid #eee' }} />
+
+                                <MenuItem onClick={handleLogout} sx={{ color: 'red', px: 2 }}>
+                                    <ExitToAppIcon sx={{ mr: 1 }} />
                                     تسجيل الخروج
                                 </MenuItem>
                             </Menu>
+
                         </Toolbar>
                     </AppBar>
 

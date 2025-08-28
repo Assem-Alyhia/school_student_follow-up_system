@@ -1,241 +1,324 @@
-import React from 'react';
-import { Box, Paper, Typography, Button, Grid, IconButton } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import ChatIcon from '@mui/icons-material/Chat';
-import PersonIcon from '@mui/icons-material/Person';
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import {
+    Box, Paper, Typography, Button, Grid, IconButton, Menu, MenuItem, Avatar
+} from "@mui/material";
+import {
+    MoreVert as MoreVertIcon,
+    Email as EmailIcon,
+    Phone as PhoneIcon,
+    Person as PersonIcon,
+    Visibility as VisibilityIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import ChatIcon from "@mui/icons-material/Chat";
 
-const Section2 = () => {
-    const teachers = [
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteTeacher } from "../../../api/Admin/Teachers/deleteTeacher";
+import ConfirmDeleteModal from "../../../layout/ConfirmDeleteModal";
+import SuccessAlert from "../../../layout/SuccessAlert";
+import TeacherDetailsModal from "../TeacherDetailsModal";
+
+const Section2 = ({ teachers = [], page, rowsPerPage }) => {
+    const [selectedTeacher, setSelectedTeacher] = useState(null);
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuTeacherId, setMenuTeacherId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [detailsId, setDetailsId] = useState(null);
+
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+
+    const handleMenuClick = (event, teacherId) => {
+        setMenuAnchorEl(event.currentTarget);
+        setMenuTeacherId(teacherId);
+    };
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuTeacherId(null);
+    };
+
+    const handleDelete = (id) => {
+        setSelectedTeacher(id);
+        setOpenDeleteModal(true);
+    };
+
+    const openDetails = (id) => {
+        setDetailsId(id);
+        setDetailsOpen(true);
+    };
+    const closeDetails = () => {
+        setDetailsOpen(false);
+        setDetailsId(null);
+    };
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteTeacher,
+        onMutate: async (teacherId) => {
+            setIsDeleting(true);
+
+            const qk = ["teachers", page, rowsPerPage];
+            await queryClient.cancelQueries({ queryKey: qk });
+            const previous = queryClient.getQueryData(qk);
+
+            if (previous?.data) {
+                const optimistic = {
+                    ...previous,
+                    data: previous.data.filter((t) => t.id !== teacherId),
+                    meta: previous.meta
+                        ? { ...previous.meta, total: Math.max((previous.meta.total || 1) - 1, 0) }
+                        : previous.meta,
+                };
+                queryClient.setQueryData(qk, optimistic);
+            }
+            return { previous, qk };
         },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
+        onError: (_err, _id, context) => {
+            if (context?.previous) queryClient.setQueryData(context.qk, context.previous);
         },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
+        onSuccess: () => {
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2500);
         },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
+        onSettled: (_data, _error, _variables, context) => {
+            if (context?.qk) queryClient.invalidateQueries({ queryKey: context.qk });
+            setIsDeleting(false);
         },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-        {
-            id: 'T12345',
-            name: 'Joann Michael',
-            email: 'Pateiprince9595@gmail.com',
-            phone: '+123 456 789 123',
-            subject: 'فيزياء',
-            avatar: '/Teachers/1.jpg',
-            status: 'active',
-        },
-        {
-            id: 'T12346',
-            name: 'John Doe',
-            email: 'johndoe@gmail.com',
-            phone: '+123 456 789 124',
-            subject: 'رياضيات',
-            avatar: '/Teachers/1.jpg',
-            status: 'inactive',
-        },
-    ];
+    });
+
+    const confirmDelete = () => {
+        deleteMutation.mutate(selectedTeacher);
+        setOpenDeleteModal(false);
+    };
 
     return (
         <Box sx={{ padding: 3 }}>
             <Grid container spacing={3}>
-                {teachers.map((teacher, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
-                        <Paper elevation={3} sx={{
-                            padding: 2,
-                            height: '100%',
-                            textAlign: 'center',
-                            backgroundColor: '#F5F5F5',
-                            border: '1px solid #308A9F',
-                            maxWidth: '90%',
-                            margin: 'auto',
-                        }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <IconButton>
-                                        <MoreVertIcon />
-                                    </IconButton>
-                                    <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
-                                        {teacher.id}
-                                    </Typography>
-                                </Box>
-                                <IconButton>
-                                    <PersonIcon sx={{ color: '#22385F' }} />
-                                </IconButton>
-                            </Box>
+                {teachers.map((teacher) => {
+                    const user = teacher?.user ?? {};
+                    const name = teacher?.name ?? user?.name ?? "—";
+                    const email = user?.email ?? "—";
+                    const imageRaw = user?.image || "";                // قد يكون رابطًا كاملاً أو فارغًا
+                    const hasImage = Boolean(String(imageRaw).trim()); // هل لدينا صورة؟
 
-                            <Box
+                    return (
+                        <Grid item xs={12} sm={6} md={4} key={teacher.id}>
+                            <Paper
+                                elevation={3}
                                 sx={{
-                                    position: 'relative',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    marginBottom: 2,
-                                    overflow: 'hidden',
-                                    width: 100,
-                                    height: 100,
-                                    margin: 'auto',
-                                    borderRadius: '8px',
+                                    padding: 2,
+                                    height: "100%",
+                                    textAlign: "center",
+                                    backgroundColor: "#F5F5F5",
+                                    border: "1px solid #308A9F",
+                                    maxWidth: "90%",
+                                    margin: "auto",
                                 }}
                             >
-                                <Box
-                                    component="img"
-                                    src={teacher.avatar}
-                                    sx={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                    }}
-                                />
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        bottom: 8,
-                                        right: 8,
-                                        width: 12,
-                                        height: 12,
-                                        borderRadius: '50%',
-                                        backgroundColor: teacher.status === 'active' ? '#4CAF50' : '#F44336',
-                                        border: '2px solid #F5F5F5',
-                                    }}
-                                />
-                            </Box>
+                                {/* الشريط العلوي */}
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                                        <IconButton onClick={(e) => handleMenuClick(e, teacher.id)}>
+                                            <MoreVertIcon />
+                                        </IconButton>
+                                        <Menu
+                                            anchorEl={menuAnchorEl}
+                                            open={Boolean(menuAnchorEl) && menuTeacherId === teacher.id}
+                                            onClose={handleMenuClose}
+                                        >
+                                            <MenuItem
+                                                onClick={() => {
+                                                    openDetails(teacher.id);
+                                                    handleMenuClose();
+                                                }}
+                                            >
+                                                <VisibilityIcon fontSize="small" sx={{ color: "primary.main", mr: 1 }} />
+                                                <Typography sx={{ color: "primary.main" }}>عرض التفاصيل</Typography>
+                                            </MenuItem>
 
-                            {/* اسم المعلم */}
-                            <Typography variant="h6" sx={{
-                                fontWeight: 'bold',
-                                margin: "1rem 0 2rem",
-                                color: '#308A9F',
-                                textShadow: "0 1px  5px rgb(155, 155, 155)"
-                            }}>
-                                {teacher.name}
-                            </Typography>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    navigate(`/dashboard/teacher/updateTeacher/${teacher.id}`);
+                                                    handleMenuClose();
+                                                }}
+                                            >
+                                                <EditIcon fontSize="small" sx={{ color: "#FB8C00", mr: 1 }} />
+                                                <Typography sx={{ color: "#FB8C00" }}>تعديل</Typography>
+                                            </MenuItem>
 
-                            <Box sx={{ marginBottom: 2 }}>
-                                <Typography sx={{ color: '#586E75', marginBottom: 1 }}>
-                                    <strong>البريد الإلكتروني:</strong>
-                                </Typography>
-                                <Box
-                                    sx={{
-                                        background: 'linear-gradient(90deg, #35AFBC, #308A9F,#22385F)',
-                                        padding: '.6rem 1rem',
-                                        borderRadius: 1,
-                                        margin: "0 auto",
-                                        width: "100%",
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <EmailIcon sx={{ color: '#fff', marginRight: 1, fontSize: '16px' }} />
-                                        <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px' }}>
-                                            {teacher.email}
+                                            <MenuItem onClick={() => { handleDelete(teacher.id); handleMenuClose(); }} disabled={isDeleting}>
+                                                <DeleteIcon fontSize="small" sx={{ color: "error.main", mr: 1 }} />
+                                                <Typography sx={{ color: "error.main" }}>حذف</Typography>
+                                            </MenuItem>
+                                        </Menu>
+
+                                        <Typography variant="body2" sx={{ color: "text.secondary", opacity: 0.7 }}>
+                                            {teacher.id || "---"}
                                         </Typography>
                                     </Box>
+                                    <IconButton>
+                                        <PersonIcon sx={{ color: "#22385F" }} />
+                                    </IconButton>
                                 </Box>
-                            </Box>
 
-                            <Box sx={{ marginBottom: 2 }}>
-                                <Typography sx={{ color: '#586E75', marginBottom: 1 }}>
-                                    <strong>رقم الهاتف:</strong>
-                                </Typography>
-                                <Box
+                                {/* الصورة — نفس أسلوب المشرفين/الطلاب */}
+                                <Box sx={{ position: "relative", display: "flex", justifyContent: "center", mb: 2 }}>
+                                    <Avatar
+                                        src={hasImage ? imageRaw : undefined}
+                                        alt=""
+                                        variant="rounded"
+                                        sx={{
+                                            width: 100,
+                                            height: 100,
+                                            bgcolor: "#fff",
+                                            borderRadius: "8px",
+                                            boxShadow: "0 4px 14px rgba(34,56,95,0.12)",
+                                        }}
+                                    >
+                                        {!hasImage && <PersonIcon sx={{ color: "#9aa6b2", fontSize: 42 }} />}
+                                    </Avatar>
+
+                                    {/* مؤشر الحالة (إن كنت تستخدمه) */}
+                                    <Box
+                                        sx={{
+                                            position: "absolute",
+                                            bottom: 8,
+                                            right: 8,
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: "50%",
+                                            backgroundColor: teacher.status === "active" ? "#4CAF50" : "#F44336",
+                                            border: "2px solid #F5F5F5",
+                                        }}
+                                    />
+                                </Box>
+
+                                {/* الاسم */}
+                                <Typography
+                                    variant="h6"
                                     sx={{
-                                        background: 'linear-gradient(90deg, #35AFBC, #308A9F,#22385F)',
-                                        padding: '.6rem 1rem',
-                                        borderRadius: 1,
-                                        margin: "0 auto",
-                                        width: "100%",
+                                        fontWeight: "bold",
+                                        m: "1rem 0 2rem",
+                                        color: "#308A9F",
+                                        textShadow: "0 1px 5px rgb(155,155,155)",
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <PhoneIcon sx={{ color: '#fff', marginRight: 1, fontSize: '16px' }} />
-                                        <Typography variant="body2" sx={{ color: '#fff', fontSize: '14px' }}>
-                                            {teacher.phone}
-                                        </Typography>
+                                    {name}
+                                </Typography>
+
+                                {/* البريد */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography sx={{ color: "#586E75", mb: 1 }}>
+                                        <strong>البريد الإلكتروني:</strong>
+                                    </Typography>
+                                    <Box
+                                        sx={{
+                                            background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)",
+                                            p: ".6rem 1rem",
+                                            borderRadius: 1,
+                                            m: "0 auto",
+                                            width: "100%",
+                                        }}
+                                    >
+                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <EmailIcon sx={{ color: "#fff", mr: 1, fontSize: "16px" }} />
+                                            <Typography variant="body2" sx={{ color: "#fff", fontSize: "14px" }}>
+                                                {email}
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                 </Box>
-                            </Box>
 
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                <Typography variant="body2" sx={{
-                                    color: '#F44336',
-                                    backgroundColor: '#FFCDD2',
-                                    padding: '.4rem 1rem',
-                                    borderRadius: '4px',
-                                }}>
-                                    {teacher.subject}
-                                </Typography>
+                                {/* الهاتف */}
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography sx={{ color: "#586E75", mb: 1 }}>
+                                        <strong>رقم الهاتف:</strong>
+                                    </Typography>
+                                    <Box
+                                        sx={{
+                                            background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)",
+                                            p: ".6rem 1rem",
+                                            borderRadius: 1,
+                                            m: "0 auto",
+                                            width: "100%",
+                                        }}
+                                    >
+                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <PhoneIcon sx={{ color: "#fff", mr: 1, fontSize: "16px" }} />
+                                            <Typography variant="body2" sx={{ color: "#fff", fontSize: "14px" }}>
+                                                {teacher.phone}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
 
+                                {/* أسفل البطاقة */}
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ color: "#22385F" }}
+                                            component="a"
+                                            href={`mailto:${teacher.email || ""}`}
+                                        >
+                                            <ChatIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ color: "#22385F" }}
+                                            component="a"
+                                            href={`tel:${teacher.phone || ""}`}
+                                        >
+                                            <PhoneIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
 
-                                <Button
-                                    component={Link}
-                                    to="/dashboard/teacher/teacherManagement" // المسار الذي تريد الانتقال إليه
-                                    variant="outlined"
-                                    sx={{
-                                        borderColor: '#308A9F',
-                                        color: '#308A9F',
-                                        '&:hover': {
-                                            borderColor: '#22385F',
-                                            backgroundColor: '#308A9F',
-                                            color: '#fff',
-                                        },
-                                        fontSize: '14px',
-                                        padding: '6px 12px',
-                                        textDecoration: 'none',
-                                    }}
-                                >
-                                    عرض التفاصيل
-                                </Button>
-                            </Box>
-                        </Paper>
-                    </Grid>
-                ))}
+                                    <Button
+                                        onClick={() => openDetails(teacher.id)}
+                                        variant="outlined"
+                                        sx={{
+                                            borderColor: "#308A9F",
+                                            color: "#308A9F",
+                                            "&:hover": { borderColor: "#22385F", backgroundColor: "#308A9F", color: "#fff" },
+                                            fontSize: "14px",
+                                            p: "6px 12px",
+                                            textDecoration: "none",
+                                        }}
+                                    >
+                                        عرض التفاصيل
+                                    </Button>
+                                </Box>
+                            </Paper>
+                        </Grid>
+                    );
+                })}
             </Grid>
+
+            <TeacherDetailsModal open={detailsOpen} teacherId={detailsId} onClose={closeDetails} />
+
+            <ConfirmDeleteModal
+                open={openDeleteModal}
+                onClose={() => setOpenDeleteModal(false)}
+                onConfirm={confirmDelete}
+                title="هل أنت متأكد من حذف المعلم؟"
+                message="سيتم حذف بيانات المعلم من النظام."
+                isLoading={isDeleting}
+            />
+
+            {showSuccess && (
+                <SuccessAlert
+                    title="تم حذف المعلم بنجاح!"
+                    message="تمت إزالة بيانات المعلم من النظام."
+                    severity="error"
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </Box>
     );
 };

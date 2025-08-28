@@ -1,169 +1,274 @@
-import React from 'react';
+// src/components/Admin/Dashboard/DashboardWidgets.jsx
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Box,
-    Grid,
-    Paper,
-    Typography,
-    Avatar,
-    Select,
-    MenuItem
+    Box, Grid, Paper, Typography, Avatar, Select, MenuItem, CircularProgress, Button
 } from '@mui/material';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import {
+    PieChart, Pie, Cell, ResponsiveContainer,
+    LineChart, Line, XAxis, YAxis, Tooltip
+} from 'recharts';
 import ManIcon from '@mui/icons-material/Man';
 import WomanIcon from '@mui/icons-material/Woman';
 
+import { useQuery } from '@tanstack/react-query';
+
+import { getAdminDashboard } from '../../../api/Admin/Dashboard/getDashboard';
+import { getAllLevels } from '../../../api/Admin/Levels/getAllLevels';
+import { getTopStudentsByLevel } from '../../../api/Admin/Students/getTopStudentsInClassroom';
+
+const cardStyle = { p: 0, borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' };
+const cardHeaderStyle = { backgroundColor: '#F1F7FA', px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+const COLORS = ['#4BA3C3', '#EF476F', '#FFD166'];
+const topStudentBg = ['#B2DFDB', '#BBDEFB', '#E0E0E0'];
+
 const DashboardWidgets = () => {
-    const pieData = [
-        { name: 'الحضور', value: 45 },
-        { name: 'الغياب', value: 35 },
-        { name: 'التأخر', value: 20 },
-    ];
+    const [levelId, setLevelId] = useState('');
 
-    const COLORS = ['#4BA3C3', '#EF476F', '#FFD166'];
+    // ===== Query: dashboard =====
+    const dashQ = useQuery({
+        queryKey: ['admin:dashboard'],
+        queryFn: getAdminDashboard,
+        staleTime: 60 * 1000,
+        retry: 1,
+    });
 
-    const feesData = [
-        { year: '2021', paid: 80, used: 90 },
-        { year: '2022', paid: 120, used: 110 },
-        { year: '2023', paid: 100, used: 130 },
-        { year: '2024', paid: 150, used: 140 },
-        { year: '2025', paid: 110, used: 100 },
-    ];
+    // ===== Query: levels =====
+    const levelsQ = useQuery({
+        queryKey: ['levels:all'],
+        queryFn: getAllLevels,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const cardStyle = {
-        p: 0,
-        borderRadius: 3,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%'
-    };
+    const levels = useMemo(() => {
+        const raw = levelsQ.data;
+        if (Array.isArray(raw)) return raw;
+        return raw?.data || [];
+    }, [levelsQ.data]);
 
-    const cardHeaderStyle = {
-        backgroundColor: '#F1F7FA',
-        px: 2,
-        py: 1.5,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-    };
+    useEffect(() => {
+        if (!levelId && Array.isArray(levels) && levels.length) {
+            setLevelId(levels[0]?.id ?? '');
+        }
+    }, [levels, levelId]);
 
-    const topStudentBg = ['#B2DFDB', '#BBDEFB', '#E0E0E0'];
+    // ===== Query: top students (depends on levelId) =====
+    const topQ = useQuery({
+        queryKey: ['top-students', String(levelId || '')],
+        queryFn: () => getTopStudentsByLevel(levelId),
+        enabled: !!levelId,
+        staleTime: 60 * 1000,
+    });
+
+    const topStudents = useMemo(() => {
+        const list = Array.isArray(topQ.data) ? topQ.data : [];
+        return list.map((it) => {
+            const s = it?.student ?? {};
+            return {
+                id: s.id,
+                name: s.name ?? '—',
+                prefix: s.prefix ?? '',
+                avg: it?.averageScore ?? 0,
+            };
+        }).slice(0, 3);
+    }, [topQ.data]);
+
+    const adminData = dashQ.data;
+    const feesData = useMemo(() => {
+        const obj = adminData?.feesChartData || {};
+        return Object.entries(obj)
+            .map(([year, total]) => ({ year, total: Number(total) }))
+            .sort((a, b) => a.year.localeCompare(b.year));
+    }, [adminData]);
+
+    const male = adminData?.studentGenderDistribution?.maleStudents ?? 0;
+    const female = adminData?.studentGenderDistribution?.femaleStudents ?? 0;
+    const totalStudents = (male || 0) + (female || 0);
+
 
     return (
-        <Grid container spacing={3} sx={{ padding: '2rem', borderRadius: 3, direction: 'rtl', mt: 2, width: '95%', margin: '2rem auto', boxShadow: "0 0 10px rgb(179, 179, 179)" }}>
-
-            {/* الطلاب */}
+        <Grid
+            container spacing={3}
+            sx={{
+                padding: '2rem', borderRadius: 3, direction: 'rtl', mt: 2,
+                width: '95%', margin: '2rem auto', boxShadow: '0 0 10px rgb(179, 179, 179)'
+            }}
+        >
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} sx={cardStyle}>
                     <Box sx={cardHeaderStyle}>
                         <Typography fontWeight="bold" color="#308A9F">الطلاب</Typography>
-                        <Select size="small" defaultValue="weekly">
-                            <MenuItem value="weekly">أسبوعياً</MenuItem>
-                            <MenuItem value="monthly">شهرياً</MenuItem>
-                        </Select>
+                        <Box sx={{ fontSize: 12, color: '#8F929C' }}>إجمالي: {dashQ.isLoading ? '…' : (totalStudents || 0)}</Box>
                     </Box>
+
                     <Box sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                            <ManIcon sx={{ fontSize: 32, color: '#00B4D8' }} />
-                            <WomanIcon sx={{ fontSize: 32, color: '#F76C6C', ml: 1 }} />
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <Box sx={{ position: 'relative', width: 120, height: 120 }}>
-                                <svg width="120" height="120">
-                                    <circle cx="60" cy="60" r="50" fill="none" stroke="#D9D9D9" strokeWidth="10" />
-                                    <circle cx="60" cy="60" r="50" fill="none" stroke="#00B4D8" strokeWidth="10" strokeDasharray="240" strokeDashoffset="60" />
-                                    <circle cx="60" cy="60" r="40" fill="none" stroke="#F76C6C" strokeWidth="10" strokeDasharray="200" strokeDashoffset="80" />
-                                </svg>
+                        {dashQ.isLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                <CircularProgress />
                             </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
-                            <Box>
-                                <Typography sx={{ fontWeight: 'bold', color: '#00B4D8', textAlign: 'center' }}>325</Typography>
-                                <Typography fontSize="12px" color="textSecondary">طالب</Typography>
+                        ) : dashQ.isError ? (
+                            <Box sx={{ textAlign: 'center', py: 2 }}>
+                                <Typography color="error" sx={{ mb: 1.5 }}>
+                                    {dashQ.error?.message || 'تعذر تحميل بيانات الطلاب'}
+                                </Typography>
+                                <Button variant="outlined" onClick={() => dashQ.refetch()}>إعادة المحاولة</Button>
                             </Box>
-                            <Box>
-                                <Typography sx={{ fontWeight: 'bold', color: '#F76C6C', textAlign: 'center' }}>300</Typography>
-                                <Typography fontSize="12px" color="textSecondary">طالبة</Typography>
-                            </Box>
-                        </Box>
+                        ) : (
+                            <>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+                                    <ManIcon sx={{ fontSize: 32, color: '#00B4D8' }} />
+                                    <WomanIcon sx={{ fontSize: 32, color: '#F76C6C', ml: 1 }} />
+                                </Box>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                                    <Box sx={{ position: 'relative', width: 120, height: 120 }}>
+                                        <svg width="120" height="120">
+                                            <circle cx="60" cy="60" r="50" fill="none" stroke="#D9D9D9" strokeWidth="10" />
+                                            <circle
+                                                cx="60" cy="60" r="50" fill="none" stroke="#00B4D8" strokeWidth="10"
+                                                strokeDasharray="314"
+                                                strokeDashoffset={314 * (1 - (male / (totalStudents || 1)))}
+                                                transform="rotate(-90 60 60)"
+                                            />
+                                            <circle
+                                                cx="60" cy="60" r="40" fill="none" stroke="#F76C6C" strokeWidth="10"
+                                                strokeDasharray="251"
+                                                strokeDashoffset={251 * (1 - (female / (totalStudents || 1)))}
+                                                transform="rotate(-90 60 60)"
+                                            />
+                                        </svg>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#00B4D8', textAlign: 'center' }}>{male}</Typography>
+                                        <Typography fontSize="12px" color="textSecondary">طالب</Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#F76C6C', textAlign: 'center' }}>{female}</Typography>
+                                        <Typography fontSize="12px" color="textSecondary">طالبة</Typography>
+                                    </Box>
+                                </Box>
+                            </>
+                        )}
                     </Box>
                 </Paper>
             </Grid>
 
-            {/* الرسوم */}
+            {/* ===== الرسوم ===== */}
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} sx={cardStyle}>
                     <Box sx={cardHeaderStyle}>
                         <Typography fontWeight="bold" color="#308A9F">الرسوم</Typography>
-                        <Select size="small" defaultValue="yearly">
-                            <MenuItem value="yearly">سنويًا</MenuItem>
-                            <MenuItem value="monthly">شهريًا</MenuItem>
-                        </Select>
+                        <Typography sx={{ fontSize: 12, color: '#8F929C' }}>
+                            {dashQ.isLoading ? '…' : (adminData?.meta?.currentAcademicYear || '')}
+                        </Typography>
                     </Box>
                     <Box sx={{ p: 2 }}>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={feesData}>
-                                <XAxis dataKey="year" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="used" stroke="#F76C6C" strokeWidth={3} />
-                                <Line type="monotone" dataKey="paid" stroke="#3A86FF" strokeWidth={3} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        {dashQ.isLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : dashQ.isError ? (
+                            <Box sx={{ textAlign: 'center', py: 2 }}>
+                                <Typography color="error" sx={{ mb: 1.5 }}>
+                                    {dashQ.error?.message || 'تعذر تحميل بيانات الرسوم'}
+                                </Typography>
+                                <Button variant="outlined" onClick={() => dashQ.refetch()}>إعادة المحاولة</Button>
+                            </Box>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart data={feesData}>
+                                    <XAxis dataKey="year" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="total" stroke="#3A86FF" strokeWidth={3} name="إجمالي الرسوم" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
                     </Box>
                 </Paper>
             </Grid>
 
-            {/* الطلاب الأوائل */}
+            {/* ===== الطلاب الأوائل ===== */}
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} sx={cardStyle}>
                     <Box sx={cardHeaderStyle}>
                         <Typography fontWeight="bold" color="#308A9F">الطلاب الأوائل</Typography>
-                        <Select size="small" defaultValue="2025">
-                            <MenuItem value="2025">2025</MenuItem>
-                            <MenuItem value="2024">2024</MenuItem>
+                        <Select
+                            size="small"
+                            value={levelId || ''}
+                            onChange={(e) => setLevelId(e.target.value)}
+                            displayEmpty
+                            renderValue={(v) => {
+                                if (!v) return 'اختر المستوى';
+                                const lv = levels.find((l) => String(l.id) === String(v));
+                                return lv?.name || `مستوى #${v}`;
+                            }}
+                            sx={{ minWidth: 200 }}
+                        >
+                            {levels.length === 0
+                                ? <MenuItem disabled>لا توجد مستويات…</MenuItem>
+                                : levels.map((l) => (
+                                    <MenuItem key={l.id} value={l.id}>{l.name || l.title || `مستوى #${l.id}`}</MenuItem>
+                                ))}
                         </Select>
                     </Box>
+
                     <Box sx={{ p: 2 }}>
-                        <Grid container spacing={2}>
-                            {[1, 2, 3].map((_, idx) => (
-                                <Grid item xs={12} sm={4} key={idx}>
-                                    <Paper elevation={1} sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: topStudentBg[idx] }}>
-                                        <Typography fontWeight="bold" color="#308A9F" sx={{ mb: 1 }}>{idx + 1}#</Typography>
-                                        <Avatar src="/Students/1.jpg" sx={{ width: 60, height: 60, mx: 'auto', mb: 1 }} />
-                                        <Typography fontWeight="bold" color="#22385F">عاصم اليحيى</Typography>
-                                        <Typography fontSize="14px" color="#8F929C">الصف الخامس</Typography>
-                                    </Paper>
-                                </Grid>
-                            ))}
-                        </Grid>
+                        {levelsQ.isLoading || (topQ.isLoading && !!levelId) ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : (levelsQ.isError || topQ.isError) ? (
+                            <Box sx={{ textAlign: 'center', py: 2 }}>
+                                <Typography color="error" sx={{ mb: 1.5 }}>
+                                    {(levelsQ.error?.message || topQ.error?.message) || 'تعذر تحميل أوائل الطلاب'}
+                                </Typography>
+                                <Button variant="outlined" onClick={() => { levelsQ.refetch(); topQ.refetch(); }}>
+                                    إعادة المحاولة
+                                </Button>
+                            </Box>
+                        ) : (
+                            <Grid container spacing={2}>
+                                {(topStudents.length ? topStudents : Array.from({ length: 3 })).map((st, idx) => {
+                                    const name = st?.name ?? '—';
+                                    const initial = name && name !== '—' ? name[0] : '#';
+                                    const avg = st?.avg ?? 0;
+
+                                    return (
+                                        <Grid item xs={12} sm={4} key={st?.id || idx}>
+                                            <Paper
+                                                elevation={1}
+                                                sx={{ borderRadius: 2, p: 2, textAlign: 'center', backgroundColor: topStudentBg[idx % topStudentBg.length] }}
+                                            >
+                                                <Typography fontWeight="bold" color="#308A9F" sx={{ mb: 1 }}>{idx + 1}#</Typography>
+                                                <Avatar sx={{ width: 60, height: 60, mx: 'auto', mb: 1 }}>{initial}</Avatar>
+                                                <Typography fontWeight="bold" color="#22385F">{name}</Typography>
+                                                <Typography fontSize="13px" color="#8F929C">متوسط: {Number(avg).toFixed(2)}</Typography>
+                                            </Paper>
+                                        </Grid>
+                                    );
+                                })}
+                            </Grid>
+                        )}
                     </Box>
                 </Paper>
             </Grid>
 
-            {/* الحضور */}
+            {/* ===== الحضور (ثابت تجريبي) ===== */}
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} sx={cardStyle}>
                     <Box sx={cardHeaderStyle}>
                         <Typography fontWeight="bold" color="#308A9F">الحضور</Typography>
-                        <Select size="small" defaultValue="weekly" >
-                            <MenuItem value="weekly" >أسبوعياً</MenuItem>
-                            <MenuItem value="monthly">شهرياً</MenuItem>
-                        </Select>
+                        <span />
                     </Box>
                     <Box sx={{ p: 2, position: 'relative', height: 180 }}>
                         <ResponsiveContainer width="100%" height={180}>
                             <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    dataKey="value"
-                                    outerRadius={60}
-                                    innerRadius={40}
-                                    paddingAngle={2}
-                                >
-                                    {pieData.map((_, index) => (
-                                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                                    ))}
+                                <Pie data={[{ name: 'الحضور', value: 45 }, { name: 'الغياب', value: 35 }, { name: 'التأخر', value: 20 }]}
+                                    dataKey="value" outerRadius={60} innerRadius={40} paddingAngle={2}>
+                                    {[0, 1, 2].map((i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
                                 </Pie>
                             </PieChart>
                         </ResponsiveContainer>
@@ -184,7 +289,6 @@ const DashboardWidgets = () => {
                     </Box>
                 </Paper>
             </Grid>
-
         </Grid>
     );
 };

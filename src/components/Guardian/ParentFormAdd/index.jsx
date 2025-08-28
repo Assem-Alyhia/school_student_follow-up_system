@@ -1,0 +1,268 @@
+// src/pages/Admin/Parents/ParentForm.jsx
+import React, { useState } from "react";
+import {
+    Box,
+    Button,
+    Container,
+    Paper,
+    TextField,
+    Typography,
+    Grid,
+} from "@mui/material";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+
+import SuccessAlert from "../../../layout/SuccessAlert";
+import { createParent } from "../../../api/Admin/Parents/createParent";
+
+export default function ParentFormAdd() {
+    const navigate = useNavigate();
+
+    const [formData, setFormData] = useState({
+        image: null,
+        name: "",
+        email: "",
+        phone: "",
+        dob: "",
+        password: "",
+        password_confirmation: "",
+    });
+
+    const [previewImage, setPreviewImage] = useState(null);
+
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({
+        title: "",
+        message: "",
+        severity: "success",
+    });
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setFormData((prev) => ({ ...prev, image: file }));
+            const reader = new FileReader();
+            reader.onloadend = () => setPreviewImage(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const toISOIfDate = (d) => (d ? new Date(d).toISOString() : "");
+
+    const saveMut = useMutation({
+        mutationFn: async () => {
+            const payload = {
+                ...formData,
+                dob: toISOIfDate(formData.dob),
+            };
+            return createParent(payload);
+        },
+        onSuccess: () => {
+            setAlertConfig({
+                title: "تم إنشاء وليّ الأمر بنجاح!",
+                message: "تمت إضافة وليّ الأمر إلى النظام.",
+                severity: "success",
+            });
+            setShowSuccess(true);
+            setTimeout(() => navigate("/dashboard/guardian"), 1000);
+        },
+        onError: (err) => {
+            setAlertConfig({
+                title: "فشل في إنشاء وليّ الأمر!",
+                message: err?.response?.data?.message || err.message,
+                severity: "error",
+            });
+            setShowSuccess(true);
+        },
+    });
+
+    const handleSubmit = () => {
+        if (saveMut.isPending) return;
+        saveMut.mutate();
+    };
+
+    return (
+        <Container maxWidth="lg" dir="rtl">
+            {showSuccess && (
+                <SuccessAlert
+                    title={alertConfig.title}
+                    message={alertConfig.message}
+                    severity={alertConfig.severity}
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
+
+            <Grid container spacing={3} sx={{ padding: "2rem" }}>
+                <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                            المعلومات الأساسية
+                        </Typography>
+
+                        <TextField
+                            fullWidth
+                            label="الاسم الكامل"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            margin="dense"
+                            disabled={saveMut.isPending}
+                        />
+
+                        <Grid container spacing={2} mt={1}>
+                            <Grid item xs={12} md={4}>
+                                <Box
+                                    component="label"
+                                    htmlFor="upload-photo"
+                                    sx={{
+                                        border: "2px dashed #ccc",
+                                        borderRadius: 2,
+                                        p: 2,
+                                        textAlign: "center",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: saveMut.isPending ? "not-allowed" : "pointer",
+                                        opacity: saveMut.isPending ? 0.7 : 1,
+                                    }}
+                                >
+                                    {previewImage ? (
+                                        <img
+                                            src={previewImage}
+                                            alt="معاينة الصورة"
+                                            style={{
+                                                width: 100,
+                                                height: 100,
+                                                borderRadius: 8,
+                                                objectFit: "cover",
+                                            }}
+                                        />
+                                    ) : (
+                                        <>
+                                            <UploadFileIcon sx={{ fontSize: 40, mb: 1 }} />
+                                            <Typography sx={{ fontSize: 14 }}>اختر صورة</Typography>
+                                        </>
+                                    )}
+                                    <Button component="span" variant="outlined" size="small" sx={{ mt: 1 }} disabled={saveMut.isPending}>
+                                        تحميل صورة
+                                    </Button>
+                                    <input type="file" id="upload-photo" hidden onChange={handleFileChange} disabled={saveMut.isPending} />
+                                </Box>
+                            </Grid>
+
+                            <Grid item xs={12} md={8}>
+                                <TextField
+                                    fullWidth
+                                    type="date"
+                                    name="dob"
+                                    label="تاريخ الميلاد"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={formData.dob}
+                                    onChange={handleChange}
+                                    margin="dense"
+                                    disabled={saveMut.isPending}
+                                />
+
+                                <TextField
+                                    fullWidth
+                                    name="phone"
+                                    label="رقم الهاتف"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    margin="dense"
+                                    disabled={saveMut.isPending}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    <Paper sx={{ mt: 3, p: 2 }}>
+                        <Typography variant="h6">معلومات التواصل</Typography>
+                        <TextField
+                            fullWidth
+                            name="email"
+                            label="البريد الإلكتروني"
+                            value={formData.email}
+                            onChange={handleChange}
+                            margin="dense"
+                            disabled={saveMut.isPending}
+                        />
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2 }}>
+                        <Typography variant="h6">معلومات الحساب</Typography>
+
+                        <TextField
+                            fullWidth
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            label="كلمة المرور"
+                            value={formData.password}
+                            onChange={handleChange}
+                            margin="dense"
+                            disabled={saveMut.isPending}
+                            slotProps={{
+                                input: {
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="start" disabled={saveMut.isPending}>
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                },
+                            }}
+                        />
+
+                        <TextField
+                            fullWidth
+                            name="password_confirmation"
+                            type={showConfirmPassword ? "text" : "password"}
+                            label="تأكيد كلمة المرور"
+                            value={formData.password_confirmation}
+                            onChange={handleChange}
+                            margin="dense"
+                            disabled={saveMut.isPending}
+                            slotProps={{
+                                input: {
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconButton
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                edge="start"
+                                                disabled={saveMut.isPending}
+                                            >
+                                                {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                },
+                            }}
+                        />
+                    </Paper>
+
+                    <Box sx={{ display: "flex", justifyContent: "end", mt: 2 }}>
+                        <Button variant="contained" color="primary" onClick={handleSubmit} disabled={saveMut.isPending}>
+                            {saveMut.isPending ? "جارٍ الحفظ..." : "حفظ وليّ الأمر"}
+                        </Button>
+                    </Box>
+                </Grid>
+            </Grid>
+        </Container>
+    );
+}

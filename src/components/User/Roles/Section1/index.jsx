@@ -1,13 +1,16 @@
 import React from 'react';
 import { Box, Grid, Button, IconButton, TextField, Paper } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add'; 
+import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
-import SortIcon from '@mui/icons-material/Sort'; 
-import FilterListIcon from '@mui/icons-material/FilterList'; 
-import SearchIcon from '@mui/icons-material/Search'; 
-import FileDownloadIcon from '@mui/icons-material/FileDownload'; 
+import SortIcon from '@mui/icons-material/Sort';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { useNavigate } from 'react-router-dom';
 
 const Section1 = () => {
+    const navigate = useNavigate();
+
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{ padding: 2 }}>
@@ -40,14 +43,16 @@ const Section1 = () => {
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
-                            sx={{ 
-                                backgroundColor: '#35AFBC', 
+                            onClick={() => navigate('/dashboard/users/rolse/addRolse')}
+                            sx={{
+                                backgroundColor: '#35AFBC',
                                 '&:hover': { backgroundColor: '#30BA9F' },
                                 marginRight: 2
                             }}
                         >
                             إضافة دور جديد
                         </Button>
+
                     </Grid>
                 </Grid>
             </Paper>

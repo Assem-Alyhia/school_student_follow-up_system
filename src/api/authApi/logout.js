@@ -1,18 +1,11 @@
-import axiosInstance from "../axiosInstance";
-import apiEndpoints from "../apiEndpoints";
 import { clearToken } from "./tokenManager";
 
-export const logout = async () => {
-  try {
-    const response = await axiosInstance.post(apiEndpoints.logout);
+export const logout = () => {
+  // امسح كل البيانات الخاصة بالجلسة
+  clearToken();
 
-    if (response.data.status === "failed") {
-      throw new Error(response.data.message);
-    }
-
-    clearToken();
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || "Logout failed");
+  // أعد التوجيه لصفحة تسجيل الدخول
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
   }
 };

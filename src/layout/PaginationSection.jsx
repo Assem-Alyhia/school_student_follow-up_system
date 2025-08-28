@@ -40,7 +40,8 @@ const PaginationSection = ({
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 margin: '0 16px',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                direction: "ltr"
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Typography sx={{ marginRight: 2 }}>

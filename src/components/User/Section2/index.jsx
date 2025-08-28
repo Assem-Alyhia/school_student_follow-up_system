@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box, Paper, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, TableSortLabel, IconButton, Typography, Avatar, CircularProgress
+    TableHead, TableRow, TableSortLabel, IconButton, Typography,
+    Avatar, CircularProgress
 } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,14 +11,25 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllUsers } from '../../../api/Admin/Users/getAllUsers';
 import { deleteUser } from '../../../api/Admin/Users/deleteUser';
+import { getUserById } from '../../../api/Admin/Users/getUserById';
 import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
+import { Link } from 'react-router-dom';
+import UserDetails from '../UserDetails';
+
+const PLACEHOLDER = 'https://via.placeholder.com/40';
+
 const Section2 = ({ page, rowsPerPage }) => {
     const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('prefix');
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    const [openViewModal, setOpenViewModal] = useState(false);
+    const [viewUserData, setViewUserData] = useState(null);
+    const [_loadingUser, setLoadingUser] = useState(false);
+
     const queryClient = useQueryClient();
 
     const { data, isLoading, isError, error } = useQuery({
@@ -35,13 +47,6 @@ const Section2 = ({ page, rowsPerPage }) => {
         },
     });
 
-
-    useEffect(() => {
-        if (data?.data?.length > 0) {
-            console.log("👤 أول مستخدم:", data.data[0]);
-        }
-    }, [data]);
-
     const handleRequestSort = (property) => {
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
@@ -53,7 +58,7 @@ const Section2 = ({ page, rowsPerPage }) => {
     const sortedRows = (data?.data || []).sort((a, b) => {
         const aValue = a[orderBy];
         const bValue = b[orderBy];
-        return order === 'asc' ? aValue > bValue ? 1 : -1 : aValue < bValue ? 1 : -1;
+        return order === 'asc' ? (aValue > bValue ? 1 : -1) : (aValue < bValue ? 1 : -1);
     });
 
     const handleDeleteClick = (id) => {
@@ -66,6 +71,34 @@ const Section2 = ({ page, rowsPerPage }) => {
             deleteMutation.mutate(selectedUserId);
         }
         setOpenDeleteModal(false);
+    };
+
+    const handleViewClick = async (id) => {
+        setLoadingUser(true);
+        setOpenViewModal(true);
+        try {
+            const res = await getUserById(id);
+            setViewUserData(res.data);
+        } catch (err) {
+            console.error('❌ فشل في جلب بيانات المستخدم', err);
+        } finally {
+            setLoadingUser(false);
+        }
+    };
+
+    // 🔧 بناء رابط الصورة مباشرة من قيمة الحقل
+    const buildAvatarUrl = (img, updatedAt) => {
+        if (!img) return PLACEHOLDER;
+        // رابط كامل من السيرفر (مثال: http://localhost:8000/storage/4/1.jpg)
+        if (/^https?:\/\//i.test(img)) return img;
+        // مسار نسبي: نركّبه على origin للتطبيق
+        const base = window.location.origin;
+        const trimEnd = (s = '') => s.replace(/\/+$/g, '');
+        const trimStart = (s = '') => s.replace(/^\/+/g, '');
+        const url = `${trimEnd(base)}/${trimStart(String(img))}`;
+        // كسر كاش اختياري باستخدام updated_at إن وُجد
+        const t = updatedAt ? new Date(updatedAt).getTime() : '';
+        return t ? `${url}?t=${t}` : url;
     };
 
     if (isLoading) return <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>;
@@ -101,38 +134,61 @@ const Section2 = ({ page, rowsPerPage }) => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {sortedRows.map((user) => (
-                                <TableRow key={user.prefix}>
-                                    <TableCell>{user.prefix}</TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Avatar src={user.image || 'https://via.placeholder.com/40'} sx={{ width: 40, height: 40, marginRight: 2 }} />
-                                            <Box>
-                                                <Typography>{user.name}</Typography>
-                                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                    {user.email}
-                                                </Typography>
+                            {sortedRows.map((user) => {
+                                // يدعم الحقل الكامل كما جاء في مثالك:
+                                // "image": "http://localhost:8000/storage/4/1.jpg"
+                                const avatarSrc = buildAvatarUrl(user.image, user.updated_at);
+
+                                return (
+                                    <TableRow key={user.id ?? user.prefix}>
+                                        <TableCell>{user.prefix}</TableCell>
+                                        <TableCell>
+                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                <Avatar
+                                                    src={avatarSrc}
+                                                    alt={user.name}
+                                                    sx={{ width: 40, height: 40, marginRight: 2 }}
+                                                    imgProps={{
+                                                        onError: (e) => { e.currentTarget.src = PLACEHOLDER; }
+                                                    }}
+                                                />
+                                                <Box>
+                                                    <Typography>{user.name}</Typography>
+                                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                                        {user.email}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>{user.roles?.[0] || '—'}</TableCell>
-                                    <TableCell>{new Date(user.created_at).toLocaleDateString('ar-EG')}</TableCell>
-                                    <TableCell>
-                                        <Typography sx={{ color: getStatusColor('نشط') }}>نشط</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <IconButton><EditIcon /></IconButton>
-                                        <IconButton onClick={() => handleDeleteClick(user.id)}>
-                                            <DeleteIcon />
-                                        </IconButton>
-                                        {/* <IconButton><VisibilityIcon /></IconButton> */}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                        </TableCell>
+                                        <TableCell>{user.roles?.[0] || '—'}</TableCell>
+                                        <TableCell>{new Date(user.created_at).toLocaleDateString('ar-EG')}</TableCell>
+                                        <TableCell>
+                                            <Typography sx={{ color: getStatusColor('نشط') }}>نشط</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <IconButton component={Link} to={`/dashboard/users/updateUser/${user.id}`}>
+                                                <EditIcon />
+                                            </IconButton>
+                                            <IconButton onClick={() => handleDeleteClick(user.id)}>
+                                                <DeleteIcon />
+                                            </IconButton>
+                                            <IconButton onClick={() => handleViewClick(user.id)}>
+                                                <VisibilityIcon />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
             </Paper>
+
+            <UserDetails
+                open={openViewModal}
+                onClose={() => setOpenViewModal(false)}
+                user={viewUserData}
+            />
 
             <ConfirmDeleteModal
                 open={openDeleteModal}
@@ -142,13 +198,12 @@ const Section2 = ({ page, rowsPerPage }) => {
                 message="سيتم إزالة جميع البيانات المرتبطة به"
             />
 
-
             {showSuccess && (
                 <SuccessAlert
                     title="تم حذف المستخدم بنجاح!"
                     message="تم حذف بيانات المستخدم من النظام."
                     onClose={() => setShowSuccess(false)}
-                    type="error" // ✅ هذا السطر هو المفتاح لتغيير اللون والتصميم
+                    severity="error"
                 />
             )}
         </Box>

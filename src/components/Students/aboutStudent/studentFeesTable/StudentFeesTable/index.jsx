@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/Students/Fees/StudentFeesTable.jsx
+import React, { useMemo, useState } from "react";
 import {
     Box,
     Typography,
@@ -10,268 +11,323 @@ import {
     TableHead,
     TableRow,
     Chip,
+    TableSortLabel,
     TextField,
-    InputAdornment,
-    Select,
-    MenuItem,
     Grid,
-    TableSortLabel
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+    Button,
+    CircularProgress,
+    Alert,
+} from "@mui/material";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import { useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-const StudentFeesTable = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+import { getAllPaymentsNoPaginate } from "../../../../../api/Admin/Payments/getAllPaymentsNoPaginate";
+import PaymentModal from "./../../../PaymentModal";
 
-    const feesData = [
-        {
-            id: '001', family: '0', receipt: '#435453', paymentDate: '2025/02/17',
-            status: 'مدفوع', amount: 50, dueDate: '2025/02/17', feeType: 'رسوم التسجيل',
-            discount: '10%', class: '100'
-        },
-        {
-            id: '002', family: '0', receipt: '#435455', paymentDate: '2025/02/16',
-            status: 'غير مدفوع', amount: 100, dueDate: '2025/02/16', feeType: 'رسوم المواصلات',
-            discount: '25%', class: '600'
-        },
-        {
-            id: '003', family: '0', receipt: '#435448', paymentDate: '2025/02/14',
-            status: 'مدفوع', amount: 800, dueDate: '2025/02/14', feeType: 'الرسوم السنوية',
-            discount: '0', class: '50'
-        },
-        {
-            id: '004', family: '0', receipt: '#435453', paymentDate: '2025/02/13',
-            status: 'غير مدفوع', amount: 50, dueDate: '2025/02/13', feeType: 'رسوم الكتب المدرسية',
-            discount: '0', class: '0'
-        },
-        {
-            id: '005', family: '0', receipt: '#435453', paymentDate: '2025/02/10',
-            status: 'مدفوع', amount: 25, dueDate: '2025/02/10', feeType: 'رسوم النشاطات',
-            discount: '10%', class: '100'
-        },
-    ];
+export default function StudentFeesTable() {
+    const { id } = useParams();
+    const queryClient = useQueryClient();
 
-    const requestSort = (key) => {
-        let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const filteredData = feesData.filter(fee => {
-        // Search filter
-        const matchesSearch = fee.feeType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            fee.receipt.toLowerCase().includes(searchTerm.toLowerCase());
-
-        // Status filter
-        const matchesStatus = statusFilter === 'all' || fee.status === statusFilter;
-
-        return matchesSearch && matchesStatus;
-    }).sort((a, b) => {
-        if (sortConfig.key) {
-            if (a[sortConfig.key] < b[sortConfig.key]) {
-                return sortConfig.direction === 'asc' ? -1 : 1;
-            }
-            if (a[sortConfig.key] > b[sortConfig.key]) {
-                return sortConfig.direction === 'asc' ? 1 : -1;
-            }
-        }
-        return 0;
+    const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
+    const [filters, setFilters] = useState({
+        student: "",
+        parent: "",
+        feeType: "",
+        status: "",
     });
 
+    const [openPaymentModal, setOpenPaymentModal] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+
+    const handleOpenPayment = () => {
+        setSelectedStudent({ id: Number(id) });
+        setOpenPaymentModal(true);
+    };
+    const handleClosePayment = () => {
+        setSelectedStudent(null);
+        setOpenPaymentModal(false);
+    };
+
+    // -------- Fetch payments with React Query --------
+    const {
+        data: payments = [],
+        isLoading,
+        isError,
+        error,
+    } = useQuery({
+        queryKey: ["payments:student", String(id)],
+        queryFn: async () => {
+            const all = await getAllPaymentsNoPaginate();
+            const list = Array.isArray(all) ? all : all?.data ?? [];
+            return list.filter(
+                (p) => String(p?.student?.id ?? p?.student_id) === String(id)
+            );
+        },
+        enabled: Boolean(id),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const requestSort = (key) => {
+        setSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+        }));
+    };
+
+    // -------- Filters --------
+    const filtered = useMemo(() => {
+        const f = (v) => String(v ?? "").toLowerCase();
+        return payments.filter(
+            (item) =>
+                f(item?.student?.name).includes(f(filters.student)) &&
+                f(item?.parent?.name).includes(f(filters.parent)) &&
+                f(item?.schoolFee?.name ?? item?.school_fee?.name).includes(
+                    f(filters.feeType)
+                ) &&
+                f(item?.status).includes(f(filters.status))
+        );
+    }, [payments, filters]);
+
+    // -------- Sorting --------
+    const sorted = useMemo(() => {
+        const arr = [...filtered];
+        const dir = sortConfig.direction === "asc" ? 1 : -1;
+
+        const valueByKey = (row, key) => {
+            switch (key) {
+                case "id":
+                    return row.id;
+                case "student":
+                    return row.student?.name ?? "";
+                case "parent":
+                    return row.parent?.name ?? "";
+                case "feeType":
+                    return row.schoolFee?.name ?? row.school_fee?.name ?? "";
+                case "fullAmount":
+                    return row.schoolFee?.amount ?? row.school_fee?.amount ?? 0;
+                case "paidAmount":
+                    return row.amount ?? 0;
+                case "discount":
+                    return row.discount ?? 0;
+                case "discountStatus":
+                    return row.discount_status ?? "";
+                case "remaining":
+                    return row.remaining_amount ?? 0;
+                case "paymentNo":
+                    return row.payment_number ?? "";
+                case "date":
+                    return row.paid_at ?? "";
+                case "status":
+                    return row.status ?? "";
+                default:
+                    return "";
+            }
+        };
+
+        arr.sort((a, b) => {
+            const va = valueByKey(a, sortConfig.key);
+            const vb = valueByKey(b, sortConfig.key);
+            if (va == null && vb == null) return 0;
+            if (va == null) return -1 * dir;
+            if (vb == null) return 1 * dir;
+            if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+            return String(va).localeCompare(String(vb), "ar") * dir;
+        });
+
+        return arr;
+    }, [filtered, sortConfig]);
+
     return (
-        <Box sx={{ p: 3, direction: 'ltr' }}>
-            {/* Filter Controls */}
-            <Box sx={{ padding: 0, backgroundColor: '#f5f5f5', p: 2, mb: 3 }}>
-                <Grid container spacing={2} alignItems="center">
-                    {/* Left Side - Controls */}
-                    <Grid item xs={8} sx={{ display: 'flex', gap: 2 }}>
-                        {/* Search */}
-                        <TextField
-                            placeholder="بحث..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            size="small"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" color="#308A9F" />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{
-                                flexGrow: 1,
-                                '& .MuiInputBase-root': {
-                                    height: 40,
-                                    backgroundColor: 'white',
-                                    '& fieldset': {
-                                        borderColor: '#308A9F'
-                                    }
-                                }
-                            }}
-                        />
+        <Box sx={{ p: 3 }}>
+            {/* Header + Add button */}
+            <Box
+                sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                    flexWrap: "wrap",
+                    gap: 1,
+                }}
+            >
+                <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+                    تفاصيل الرسوم للطالب #{id}
+                </Typography>
 
-                        {/* Sort Dropdown */}
-                        <Select
-                            value={sortConfig.key || ''}
-                            onChange={(e) => requestSort(e.target.value)}
-                            displayEmpty
-                            sx={{
-                                minWidth: 120,
-                                height: 40,
-                                backgroundColor: 'white',
-                                '& .MuiSelect-select': {
-                                    padding: '8px 12px',
-                                    fontSize: '14px',
-                                    color: '#308A9F'
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#308A9F'
-                                }
-                            }}
-                        >
-                            <MenuItem value="" disabled>ترتيب حسب</MenuItem>
-                            <MenuItem value="paymentDate">تاريخ الدفع</MenuItem>
-                            <MenuItem value="dueDate">تاريخ التسليم</MenuItem>
-                            <MenuItem value="amount">المبلغ</MenuItem>
-                        </Select>
-
-                        {/* Filter Dropdown */}
-                        <Select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            displayEmpty
-                            sx={{
-                                minWidth: 120,
-                                height: 40,
-                                backgroundColor: 'white',
-                                '& .MuiSelect-select': {
-                                    padding: '8px 12px',
-                                    fontSize: '14px',
-                                    color: '#308A9F'
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#308A9F'
-                                }
-                            }}
-                        >
-                            <MenuItem value="all">الكل</MenuItem>
-                            <MenuItem value="مدفوع">مدفوع</MenuItem>
-                            <MenuItem value="غير مدفوع">غير مدفوع</MenuItem>
-                        </Select>
-                    </Grid>
-
-                    {/* Right Side - Title */}
-                    <Grid item xs={4} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Typography variant="h5" sx={{
-                            fontWeight: 'bold',
-                            color: '#308A9F',
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}>
-                            الرسوم
-                        </Typography>
-                    </Grid>
-                </Grid>
+                <Button
+                    variant="contained"
+                    onClick={handleOpenPayment}
+                    sx={{
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        background: "linear-gradient(90deg, #308A9F,#22385F)",
+                        "&:hover": { opacity: 0.95 },
+                    }}
+                >
+                    أضف الرسوم
+                </Button>
             </Box>
 
+            {/* Loading / Error */}
+            {isLoading && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                    <CircularProgress size={20} /> جاري تحميل المدفوعات...
+                </Box>
+            )}
+            {isError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    خطأ أثناء جلب المدفوعات: {error?.message || "حدث خطأ غير متوقع"}
+                </Alert>
+            )}
+
+            {/* Filters */}
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="بحث باسم الطالب"
+                        value={filters.student}
+                        onChange={(e) => setFilters({ ...filters, student: e.target.value })}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="بحث باسم ولي الأمر"
+                        value={filters.parent}
+                        onChange={(e) => setFilters({ ...filters, parent: e.target.value })}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="بحث بنوع الرسوم"
+                        value={filters.feeType}
+                        onChange={(e) => setFilters({ ...filters, feeType: e.target.value })}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="بحث بالحالة"
+                        value={filters.status}
+                        onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    />
+                </Grid>
+            </Grid>
+
             {/* Table */}
-            <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #E0E0E0' }}>
+            <TableContainer component={Paper}>
                 <Table>
-                    <TableHead sx={{ backgroundColor: '#F5F5F5' }}>
+                    <TableHead>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>
-                                <TableSortLabel
-                                    active={sortConfig.key === 'id'}
-                                    direction={sortConfig.direction}
-                                    onClick={() => requestSort('id')}
-                                    IconComponent={sortConfig.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon}
+                            {[
+                                { key: "id", label: "المعرف" },
+                                { key: "student", label: "اسم الطالب" },
+                                { key: "parent", label: "اسم ولي الأمر" },
+                                { key: "feeType", label: "نوع الرسوم" },
+                                { key: "fullAmount", label: "المبلغ الكامل" },
+                                { key: "paidAmount", label: "المبلغ المدفوع" },
+                                { key: "discount", label: "الخصم" },
+                                { key: "discountStatus", label: "حالة الخصم" },
+                                { key: "remaining", label: "المبلغ المتبقي" },
+                                { key: "paymentNo", label: "رقم الدفع" },
+                                { key: "date", label: "تاريخ الدفع" },
+                                { key: "status", label: "الحالة" },
+                            ].map((col) => (
+                                <TableCell
+                                    key={col.key}
+                                    sx={{ fontWeight: "bold", color: "#22385F", cursor: "pointer" }}
                                 >
-                                    المنشئ
-                                </TableSortLabel>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>
-                                <TableSortLabel
-                                    active={sortConfig.key === 'discount'}
-                                    direction={sortConfig.direction}
-                                    onClick={() => requestSort('discount')}
-                                    IconComponent={sortConfig.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon}
-                                >
-                                    الحسم
-                                </TableSortLabel>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>العائلة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>رقم الوصل</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>
-                                <TableSortLabel
-                                    active={sortConfig.key === 'paymentDate'}
-                                    direction={sortConfig.direction}
-                                    onClick={() => requestSort('paymentDate')}
-                                    IconComponent={sortConfig.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon}
-                                >
-                                    تاريخ الدفع
-                                </TableSortLabel>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>المادة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>
-                                <TableSortLabel
-                                    active={sortConfig.key === 'amount'}
-                                    direction={sortConfig.direction}
-                                    onClick={() => requestSort('amount')}
-                                    IconComponent={sortConfig.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon}
-                                >
-                                    التعبئة
-                                </TableSortLabel>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>
-                                <TableSortLabel
-                                    active={sortConfig.key === 'dueDate'}
-                                    direction={sortConfig.direction}
-                                    onClick={() => requestSort('dueDate')}
-                                    IconComponent={sortConfig.direction === 'asc' ? ArrowUpwardIcon : ArrowDownwardIcon}
-                                >
-                                    تاريخ التسليم
-                                </TableSortLabel>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>نوع الرسوم</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>اسم الرسوم</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#22385F' }}>الصفوف</TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === col.key}
+                                        direction={sortConfig.direction}
+                                        onClick={() => requestSort(col.key)}
+                                        IconComponent={
+                                            sortConfig.direction === "asc" ? ArrowUpwardIcon : ArrowDownwardIcon
+                                        }
+                                    >
+                                        {col.label}
+                                    </TableSortLabel>
+                                </TableCell>
+                            ))}
                         </TableRow>
                     </TableHead>
+
                     <TableBody>
-                        {filteredData.map((fee) => (
-                            <TableRow key={fee.id} hover>
-                                <TableCell>{fee.id}</TableCell>
-                                <TableCell>{fee.discount}</TableCell>
-                                <TableCell>{fee.family}</TableCell>
-                                <TableCell>{fee.receipt}</TableCell>
-                                <TableCell>{fee.paymentDate}</TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={fee.status}
-                                        sx={{
-                                            backgroundColor: fee.status === 'مدفوع' ? '#E8F5E9' : '#FFEBEE',
-                                            color: fee.status === 'مدفوع' ? '#2E7D32' : '#C62828',
-                                            fontWeight: 'bold'
-                                        }}
-                                    />
+                        {!isLoading && sorted.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={12} align="center">
+                                    لا توجد بيانات
                                 </TableCell>
-                                <TableCell>{fee.amount}</TableCell>
-                                <TableCell>{fee.dueDate}</TableCell>
-                                <TableCell>{fee.feeType}</TableCell>
-                                <TableCell>{fee.feeType}</TableCell>
-                                <TableCell>{fee.class}</TableCell>
                             </TableRow>
-                        ))}
+                        ) : (
+                            sorted.map((row) => (
+                                <TableRow key={row.id}>
+                                    <TableCell>{row.id}</TableCell>
+                                    <TableCell>{row.student?.name}</TableCell>
+                                    <TableCell>{row.parent?.name}</TableCell>
+                                    <TableCell>{row.schoolFee?.name ?? row.school_fee?.name}</TableCell>
+                                    <TableCell>{row.schoolFee?.amount ?? row.school_fee?.amount}</TableCell>
+                                    <TableCell>{row.amount}</TableCell>
+                                    <TableCell>{row.discount}</TableCell>
+                                    <TableCell>{row.discount_status}</TableCell>
+                                    <TableCell>{row.remaining_amount}</TableCell>
+                                    <TableCell>{row.payment_number}</TableCell>
+                                    <TableCell>
+                                        {row.paid_at
+                                            ? row.paid_at.includes("T")
+                                                ? row.paid_at.split("T")[0]
+                                                : String(row.paid_at).split(" ")[0]
+                                            : "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={
+                                                row.status === "completed"
+                                                    ? "مدفوع"
+                                                    : row.status === "pending"
+                                                        ? "قيد المعالجة"
+                                                        : "فشل الدفع"
+                                            }
+                                            sx={{
+                                                backgroundColor:
+                                                    row.status === "completed"
+                                                        ? "#E8F5E9"
+                                                        : row.status === "pending"
+                                                            ? "#FFF8E1"
+                                                            : "#FFEBEE",
+                                                color:
+                                                    row.status === "completed"
+                                                        ? "#2E7D32"
+                                                        : row.status === "pending"
+                                                            ? "#F9A825"
+                                                            : "#C62828",
+                                                fontWeight: "bold",
+                                            }}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <PaymentModal
+                open={openPaymentModal}
+                handleClose={handleClosePayment}
+                student={selectedStudent}
+                onCreated={() =>
+                    queryClient.invalidateQueries({ queryKey: ["payments:student", String(id)] })
+                }
+            />
         </Box>
     );
-};
-
-export default StudentFeesTable;
+}

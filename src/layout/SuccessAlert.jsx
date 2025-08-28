@@ -38,9 +38,9 @@ const colorStyles = {
     },
 };
 
-const SuccessAlert = ({ title, message, onClose, type = 'success' }) => {
-    const icon = iconMap[type] || <SentimentSatisfiedAltIcon fontSize="large" />;
-    const colors = colorStyles[type] || colorStyles.success;
+const SuccessAlert = ({ title, message, onClose, severity = 'success' }) => {
+    const icon = iconMap[severity] || <SentimentSatisfiedAltIcon fontSize="large" />;
+    const colors = colorStyles[severity] || colorStyles.success;
 
     return (
         <Box
@@ -57,7 +57,7 @@ const SuccessAlert = ({ title, message, onClose, type = 'success' }) => {
             <Alert
                 variant="filled"
                 icon={icon}
-                severity={type}
+                severity={severity}
                 action={
                     <IconButton
                         aria-label="close"

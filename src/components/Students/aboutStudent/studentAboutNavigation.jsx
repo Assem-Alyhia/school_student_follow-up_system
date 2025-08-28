@@ -4,15 +4,16 @@ import StudentDetails from './studentDetails';
 import DailySchedule from './DailySchedule';
 import StudentFeesAboutTable from './studentFeesTable';
 import ExamResults from './ExamResults';
-
+import WeeklySchedule from './WeeklySchedule';
+import StudentDayTimeline from './StudentDayTimeline/StudentDayTimeline';
+import { useParams } from 'react-router-dom';
 
 const StudentNavigation = () => {
     const [activeTab, setActiveTab] = useState('تفاصيل الطالب');
-
     const handleTabChange = (tabName) => {
         setActiveTab(tabName);
     };
-
+    const { id } = useParams();
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={3} sx={{
@@ -21,7 +22,6 @@ const StudentNavigation = () => {
                 borderRadius: 2,
                 direction: 'rtl'
             }}>
-                {/* Navigation Buttons */}
                 <Box sx={{
                     display: 'flex',
                     gap: 1,
@@ -39,7 +39,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '25%',
+                            minWidth: '16%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -48,17 +48,45 @@ const StudentNavigation = () => {
 
                     <Button
                         variant="contained"
-                        onClick={() => handleTabChange('الجدول اليومي')}
+                        onClick={() => handleTabChange('التقويم الشهري')}
                         sx={{
-                            backgroundColor: activeTab === 'الجدول اليومي' ? '#22385F' : '#35AFBC',
+                            backgroundColor: activeTab === 'التقويم الشهري' ? '#22385F' : '#35AFBC',
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '25%',
+                            minWidth: '16%',
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        الجدول اليومي
+                        التقويم الشهري
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleTabChange('التقويم الاسبوعي')}
+                        sx={{
+                            backgroundColor: activeTab === 'التقويم الاسبوعي' ? '#22385F' : '#35AFBC',
+                            '&:hover': { backgroundColor: '#30BA9F' },
+                            fontSize: '14px',
+                            padding: '8px 16px',
+                            minWidth: '16%',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        التقويم الاسبوعي
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleTabChange('التقويم اليومي')}
+                        sx={{
+                            backgroundColor: activeTab === 'التقويم اليومي' ? '#22385F' : '#35AFBC',
+                            '&:hover': { backgroundColor: '#30BA9F' },
+                            fontSize: '14px',
+                            padding: '8px 16px',
+                            minWidth: '16%',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        التقويم اليومي
                     </Button>
 
                     <Button
@@ -69,7 +97,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '25%',
+                            minWidth: '16%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -84,7 +112,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '25%',
+                            minWidth: '16%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -97,12 +125,17 @@ const StudentNavigation = () => {
                     {activeTab === 'تفاصيل الطالب' && (
                         <StudentDetails />
                     )}
-                    {activeTab === 'الجدول اليومي' && (
+                    {activeTab === 'التقويم الشهري' && (
                         <DailySchedule />
+                    )}
+                    {activeTab === 'التقويم الاسبوعي' && (
+                        <WeeklySchedule />
+                    )}
+                    {activeTab === 'التقويم اليومي' && (
+                        <StudentDayTimeline studentId={id} />
                     )}
                     {activeTab === 'الرسوم' && (
                         <StudentFeesAboutTable />
-
                     )}
                     {activeTab === 'نتائج الامتحانات' && (
                         <ExamResults />

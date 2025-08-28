@@ -6,7 +6,7 @@ const ExamResults = () => {
     return ( 
         <>
             <StudentStats/>
-            <StudentExamsTable/>
+            <StudentExamsTable />
             <PaginationSection />
         </>
     );
