@@ -9,7 +9,7 @@ const getPosOnce = (opts) =>
   );
 
 export default function useSupervisorLocationSender({
-  sendIntervalMs = 30000,
+  sendIntervalMs = 10000,
   minDistanceMeters = 0,
 } = {}) {
   const lastPosRef = useRef(null);
@@ -103,7 +103,7 @@ export default function useSupervisorLocationSender({
           console.warn("PERMISSION_DENIED: فعّل إذن الموقع للمتصفح/الموقع.");
         } else if (err?.code === 2) {
           console.warn(
-            "POSITION_UNAVAILABLE: مزوّد الموقع غير متاح (جرّب Wi‑Fi/خدمة الموقع)."
+            "POSITION_UNAVAILABLE: مزوّد الموقع غير متاح (جرّب Wi-Fi/خدمة الموقع)."
           );
         } else if (err?.code === 3) {
           console.warn("TIMEOUT: انتهت مهلة تحديد الموقع، سنحاول مجددًا.");
@@ -113,11 +113,9 @@ export default function useSupervisorLocationSender({
       }
     };
 
-    // إرسال فوري ثم كل 30 ثانية
     sendTick();
     sendTimerRef.current = setInterval(sendTick, sendIntervalMs);
 
-    // تنظيف
     return () => {
       if (watchIdRef.current != null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
