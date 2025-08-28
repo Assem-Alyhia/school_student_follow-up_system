@@ -7,7 +7,7 @@ import { getStudentBuses } from "../../../../api/Student/Buses/getStudentBuses";
 
 export default function Section2() {
     const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(9); 
+    const [rowsPerPage, setRowsPerPage] = useState(10); 
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["student-buses", page, rowsPerPage],
