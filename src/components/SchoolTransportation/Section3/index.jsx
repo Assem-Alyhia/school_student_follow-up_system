@@ -15,9 +15,9 @@ import ConfirmDeleteModal from '../../../layout/ConfirmDeleteModal';
 import SuccessAlert from '../../../layout/SuccessAlert';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { deleteBus } from '../../../api/Admin/Buses/deleteBus';
-
 import EditBusDialog from '../EditBusDialog';
+import BusDetailsModal from '../BusDetailsModal';
+import { deleteBus } from './../../../api/Admin/Buses/deleteBus';
 
 const HEAD_CELLS = [
     { key: 'id', label: 'المعرف', sortable: true },
@@ -34,6 +34,7 @@ const HEAD_CELLS = [
 const Section3 = ({ buses = [] }) => {
     const [order, setOrder] = useState('asc');
     const [orderBy, setOrderBy] = useState('id');
+
     const [openMapDialog, setOpenMapDialog] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
 
@@ -43,6 +44,9 @@ const Section3 = ({ buses = [] }) => {
 
     const [openEditDialog, setOpenEditDialog] = useState(false);
     const [editBusId, setEditBusId] = useState(null);
+
+    const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+    const [detailsBusId, setDetailsBusId] = useState(null);
 
     const queryClient = useQueryClient();
 
@@ -84,10 +88,14 @@ const Section3 = ({ buses = [] }) => {
         setOpenDeleteModal(false);
     }, [busToDelete, deleteMutation]);
 
-
     const handleEditClick = useCallback((row) => {
-        setEditBusId(row.id);       
-        setOpenEditDialog(true);    
+        setEditBusId(row.id);
+        setOpenEditDialog(true);
+    }, []);
+
+    const handleOpenDetails = useCallback((row) => {
+        setDetailsBusId(row.id);
+        setOpenDetailsDialog(true);
     }, []);
 
     const dateFormatter = useMemo(() => new Intl.DateTimeFormat('ar-EG'), []);
@@ -133,12 +141,16 @@ const Section3 = ({ buses = [] }) => {
     return (
         <Box sx={{ padding: 3 }}>
             <Paper elevation={0} sx={{ padding: 2 }}>
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ direction: 'rtl' }}>
                     <Table>
                         <TableHead sx={{ backgroundColor: '#308A9F' }}>
                             <TableRow>
                                 {HEAD_CELLS.map((cell) => (
-                                    <TableCell key={cell.key} sx={{ fontSize: '0.75rem', color: '#fff' }}>
+                                    <TableCell
+                                        key={cell.key}
+                                        align="center" // توسيط عناوين الأعمدة
+                                        sx={{ fontSize: '0.75rem', color: '#fff' }}
+                                    >
                                         {cell.sortable ? (
                                             <TableSortLabel
                                                 active={orderBy === cell.key}
@@ -164,40 +176,41 @@ const Section3 = ({ buses = [] }) => {
                         <TableBody>
                             {sortedRows.map((row) => (
                                 <TableRow key={row.id}>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.id}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.driver_name}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.driver_number}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.capacity}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.bus_type}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem', color: getStatusColor(row.status) }}>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.id}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.driver_name}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.driver_number}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.capacity}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.bus_type}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem', color: getStatusColor(row.status) }}>
                                         {row.status === 'active' ? 'نشط' : 'غير نشط'}
                                     </TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>{row.supervisor?.name || '-'}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>{row.supervisor?.name || '-'}</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>
                                         {row.created_at ? dateFormatter.format(new Date(row.created_at)) : '-'}
                                     </TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem' }}>
-                                        {/* ✨ فتح مودال التعديل */}
-                                        <IconButton size="small" onClick={() => handleEditClick(row)}>
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
 
-                                        <IconButton size="small" onClick={() => handleDeleteClick(row)}>
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                    <TableCell align="center" sx={{ fontSize: '0.75rem' }}>
+                                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                            <IconButton size="small" onClick={() => handleEditClick(row)}>
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
 
-                                        <IconButton size="small">
-                                            <VisibilityIcon fontSize="small" />
-                                        </IconButton>
+                                            <IconButton size="small" onClick={() => handleDeleteClick(row)}>
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
 
-                                        <IconButton size="small" onClick={() => handleOpenMap(row)}>
-                                            <MapIcon fontSize="small" />
-                                        </IconButton>
+                                            <IconButton size="small" onClick={() => handleOpenDetails(row)}>
+                                                <VisibilityIcon fontSize="small" />
+                                            </IconButton>
+
+                                            <IconButton size="small" onClick={() => handleOpenMap(row)}>
+                                                <MapIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
-
                     </Table>
                 </TableContainer>
             </Paper>
@@ -211,16 +224,20 @@ const Section3 = ({ buses = [] }) => {
                 />
             )}
 
-            {/* ✨ مودال التعديل */}
             <EditBusDialog
                 open={openEditDialog}
                 busId={editBusId}
                 onClose={() => setOpenEditDialog(false)}
                 onUpdated={() => {
-                    // إعادة تحميل القائمة بعد الحفظ
                     queryClient.invalidateQueries(['buses']);
                     setOpenEditDialog(false);
                 }}
+            />
+
+            <BusDetailsModal
+                open={openDetailsDialog}
+                onClose={() => setOpenDetailsDialog(false)}
+                id={detailsBusId}
             />
 
             <ConfirmDeleteModal
