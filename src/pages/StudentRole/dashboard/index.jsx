@@ -1,11 +1,9 @@
-import OverviewSection from "../../../components/SupervisorRole/Dashboard/Section1";
-import QuickAccessSection from "../../../components/SupervisorRole/Dashboard/Section2";
+import OverviewSection from "../../../components/StudentRole/Dashboard/Section1";
 
 const StudentDashboard = () => {
     return ( 
         <>
             <OverviewSection/>
-            <QuickAccessSection/>
         </>
     );
 }

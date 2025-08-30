@@ -1,13 +1,9 @@
-import StudentCardsGrid from "../../../components/ParentRole/Dashboard/Section1";
-import QuickAccessSection from "../../../components/ParentRole/Dashboard/Section2";
 
-
-
+import ParentDetailsWithChartsAndChildren from './../../../components/ParentRole/Dashboard/Section1/index';
 const ParentDashboard = () => {
     return ( 
         <>
-            <StudentCardsGrid/>
-            <QuickAccessSection/>
+            <ParentDetailsWithChartsAndChildren/>
         </>
     );
 }

@@ -180,6 +180,9 @@ const apiEndpoints = {
   // ******************************{techers}**************************************
   // *****************************************************************************
 
+  // داشبورد
+  getTeacherDashboard: "/teacher/dashboard",
+
   // الصفحة الشخصية
   getTeacherProfile: "teacher/profile",
   updateTeacherProfile: (id) => `teacher/profile/${id}`,
@@ -240,6 +243,9 @@ const apiEndpoints = {
   // ******************************{parent}***************************************
   // *****************************************************************************
 
+  // داشبورد
+  getParentDashboard: "/parent/dashboard",
+
   // الصفحة الشخصية
   getParentProfile: "parent/profile",
   updateParentProfile: (parentId) => `parent/profile/${parentId}`,
@@ -275,6 +281,9 @@ const apiEndpoints = {
   // ******************************{supervisor}***********************************
   // *****************************************************************************
 
+  // Dashboards
+  getSupervisorDashboard: "/supervisor/dashboard",
+
   // الصفحة الشخصية
   getSupervisorProfile: "supervisor/profile",
   updateSupervisorProfile: (supervisorId) =>
@@ -300,6 +309,9 @@ const apiEndpoints = {
   // *****************************************************************************
   // ******************************{student}**************************************
   // *****************************************************************************
+
+  // داشبورد
+  getStudentDashboard: "/student/dashboard",
 
   // الصفحة الشخصية - الطالب
   getStudentProfile: "student/profile",
@@ -333,6 +345,9 @@ const apiEndpoints = {
   // *****************************************************************************
   // ******************************{Financial}************************************
   // *****************************************************************************
+
+  // Dashboards
+  getFinancialDashboard: "/financial/dashboard",
 
   // Profile
   finGetProfile: "financial/profile",
