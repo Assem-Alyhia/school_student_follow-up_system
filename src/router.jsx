@@ -17,7 +17,6 @@ import Guardian from "./pages/guardian";
 import AcademicStages from "./pages/academicStages";
 import Lessons from "./pages/Lessons";
 import Grades from "./pages/grades";
-import StudentsAttending from "./pages/studentsAttending";
 import SchoolTransportation from "./pages/schoolTransportation";
 import TeacherManagement from "./pages/teachers/teacherManagement";
 import StudentForm from "./components/Students/studentForAdd";
@@ -128,7 +127,6 @@ const dashboardRoutes = [
   { path: "exam/examlists", element: <AdminExamLists /> },
   { path: "exam/typesExams", element: <AdminTypesExams /> },
   { path: "exam/resultsExams", element: <AdminResultsExam /> },
-  { path: "studentsAttending", element: <StudentsAttending /> },
   { path: "schoolTransportation", element: <SchoolTransportation /> },
   { path: "teacher/teacherManagement", element: <TeacherManagement /> },
   { path: "student/studentFormAdd", element: <StudentForm /> },

@@ -71,12 +71,15 @@ export default function Section2({ financials = [] }) {
     }, [rows, order, orderBy]);
 
     const headerCell = (key, label) => (
-        <TableCell>
+        <TableCell align="center" sx={{ px: 1.5 }}>
             <TableSortLabel
                 active={orderBy === key}
                 direction={orderBy === key ? order : "asc"}
                 onClick={() => handleRequestSort(key)}
-                sx={{ fontWeight: "bold", color: "#fff" }}
+                sx={{
+                    fontWeight: 800, color: "#fff",
+                    "&.Mui-active": { color: "#fff" }, "& .MuiTableSortLabel-icon": { color: "#fff !important" }
+                }}
             >
                 {label}
                 {orderBy === key && (
@@ -94,44 +97,51 @@ export default function Section2({ financials = [] }) {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Paper elevation={0}>
-                <TableContainer component={Paper} sx={{ direction: "rtl" }}>
-                    <Table aria-label="جدول المدفوعات" sx={{ minWidth: 980 }}>
-                        <TableHead sx={{ bgcolor: "#308A9F" }}>
+            <Paper elevation={0} sx={{ borderRadius: 3, overflow: "hidden" }}>
+                <TableContainer component={Paper} sx={{ direction: "rtl", borderRadius: 3, overflow: "hidden" }}>
+                    <Table
+                        aria-label="جدول المدفوعات"
+                        sx={{
+                            minWidth: 980,
+                            "& td, & th": { textAlign: "center" }, // توسيط كل الخلايا
+                            "& thead th": { fontWeight: 800, color: "#fff" },
+                        }}
+                    >
+                        <TableHead sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F)" }}>
                             <TableRow>
                                 {headerCell("id", "المعرّف")}
                                 {headerCell("parent_name", "وليّ الأمر")}
                                 {headerCell("student_name", "الطالب")}
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>الصف</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>المرحلة</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>السنة</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>اسم الرسم</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>الدورية</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>$ المبلغ</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>المَدفوع</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>المتبقي</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>الموعد النهائي</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>الحالة</TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#fff" }}>الإجراءات</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>الصف</TableCell>
+                                {/* تمت إزالة عمود المرحلة */}
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>السنة</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>اسم الرسم</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>الدورية</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>$ المبلغ</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>المَدفوع</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>المتبقي</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>الموعد النهائي</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>الحالة</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 800, color: "#fff" }}>الإجراءات</TableCell>
                             </TableRow>
                         </TableHead>
 
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={14} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={13} align="center" sx={{ py: 6 }}>
                                         <CircularProgress />
                                     </TableCell>
                                 </TableRow>
                             ) : isError ? (
                                 <TableRow>
-                                    <TableCell colSpan={14} align="center" sx={{ py: 3, color: "error.main", fontWeight: 700 }}>
+                                    <TableCell colSpan={13} align="center" sx={{ py: 3, color: "error.main", fontWeight: 700 }}>
                                         خطأ: {error?.message || "تعذر جلب البيانات"}
                                     </TableCell>
                                 </TableRow>
                             ) : sorted.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={14} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                    <TableCell colSpan={13} align="center" sx={{ py: 3, color: "text.secondary" }}>
                                         لا توجد بيانات
                                     </TableCell>
                                 </TableRow>
@@ -141,7 +151,6 @@ export default function Section2({ financials = [] }) {
                                     const studentName = r?.student?.name ?? "—";
 
                                     const classroom = r?.student?.classroom;
-                                    const level = classroom?.level ?? "—";
                                     const className = classroom?.name ?? "—";
                                     const year = new Date(r?.paid_at || r?.student?.created_at || Date.now()).getFullYear();
                                     const fee = r?.schoolFee;
@@ -153,13 +162,27 @@ export default function Section2({ financials = [] }) {
                                     const statusKey = r?.status ?? "pending";
                                     const statusAr = STATUS_AR[statusKey] || statusKey;
 
+                                    const chipStyle =
+                                        statusKey === "completed"
+                                            ? { color: "#0E7D5A", bgcolor: "rgba(14,125,90,.10)" }
+                                            : statusKey === "pending"
+                                                ? { color: "#C62828", bgcolor: "rgba(198,40,40,.10)" }
+                                                : { color: "#8a6d00", bgcolor: "rgba(255,193,7,.18)" };
+
                                     return (
-                                        <TableRow key={r.id}>
+                                        <TableRow
+                                            key={r.id}
+                                            sx={{
+                                                "&:nth-of-type(odd)": { bgcolor: "rgba(0,0,0,0.015)" },
+                                                "&:hover": { bgcolor: "rgba(53,175,188,.08)" },
+                                                transition: "background-color .15s ease-in-out",
+                                            }}
+                                        >
                                             <TableCell>{r.id}</TableCell>
                                             <TableCell>{parentName}</TableCell>
                                             <TableCell>{studentName}</TableCell>
                                             <TableCell>{className}</TableCell>
-                                            <TableCell>{level}</TableCell>
+                                            {/* المرحلة محذوفة */}
                                             <TableCell>{year}</TableCell>
                                             <TableCell>{fee?.name ?? "—"}</TableCell>
                                             <TableCell>{freqAr}</TableCell>
@@ -168,18 +191,7 @@ export default function Section2({ financials = [] }) {
                                             <TableCell>{remain}</TableCell>
                                             <TableCell>{deadline}</TableCell>
                                             <TableCell>
-                                                <Chip
-                                                    size="small"
-                                                    label={statusAr}
-                                                    sx={{
-                                                        color: statusKey === "completed" ? "#12805C" : statusKey === "pending" ? "#C62828" : "#806500",
-                                                        bgcolor:
-                                                            statusKey === "completed" ? "rgba(18,128,92,.08)" :
-                                                                statusKey === "pending" ? "rgba(198,40,40,.08)" :
-                                                                    "rgba(255,193,7,.12)",
-                                                        fontWeight: 700,
-                                                    }}
-                                                />
+                                                <Chip size="small" label={statusAr} sx={{ fontWeight: 700, ...chipStyle }} />
                                             </TableCell>
                                             <TableCell>
                                                 <Button
@@ -187,7 +199,11 @@ export default function Section2({ financials = [] }) {
                                                     variant="outlined"
                                                     endIcon={<MoreVertIcon />}
                                                     onClick={(e) => handleOpenActions(e, r)}
-                                                    sx={{ borderColor: "#35AFBC", color: "#35AFBC" }}
+                                                    sx={{
+                                                        borderColor: "#35AFBC",
+                                                        color: "#35AFBC",
+                                                        "&:hover": { borderColor: "#2a8a89", color: "#2a8a89", bgcolor: "rgba(53,175,188,.08)" },
+                                                    }}
                                                 >
                                                     الإجراءات
                                                 </Button>

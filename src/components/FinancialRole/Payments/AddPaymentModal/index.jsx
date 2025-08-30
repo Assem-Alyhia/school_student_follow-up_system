@@ -138,14 +138,16 @@ export default function AddPaymentModal({ open, onClose }) {
             school_fee_id: Number(feeOpt?.id),
             amount: Number(form.amount),
             status: form.status,
-            paid_at: toDateTime(form.paid_at), 
+            paid_at: toDateTime(form.paid_at),
             discount: form.discount ? Number(form.discount) : 0,
             discount_status: form.discount_status,
         };
 
-        console.log("Create payment payload →", payload);
-
         m.mutate(payload);
+    };
+
+    const fieldSX = {
+        "& .MuiOutlinedInput-root": { borderRadius: 2, minHeight: 44 },
     };
 
     return (
@@ -154,7 +156,7 @@ export default function AddPaymentModal({ open, onClose }) {
             onClose={onClose}
             sx={{ display: "flex", alignItems: "center", justifyContent: "center", direction: "rtl" }}
         >
-            <Paper sx={{ width: 760, maxWidth: "96vw", borderRadius: 3, overflow: "hidden" }}>
+            <Paper sx={{ width: 860, maxWidth: "96vw", borderRadius: 3, overflow: "hidden", boxShadow: 8 }}>
                 <Box
                     sx={{
                         p: 2.2, px: 3,
@@ -163,8 +165,8 @@ export default function AddPaymentModal({ open, onClose }) {
                         display: "flex", alignItems: "center", justifyContent: "space-between"
                     }}
                 >
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography sx={{ fontWeight: 800 }}>إضافة دفعة</Typography>
+                    <Stack direction="row" spacing={1.2} alignItems="center">
+                        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>إضافة دفعة</Typography>
                         <Chip size="small" label="نموذج" sx={{ bgcolor: "rgba(255,255,255,.18)", color: "#fff", fontWeight: "bold" }} />
                     </Stack>
                     <IconButton onClick={onClose} sx={{ color: "#fff" }}>
@@ -172,30 +174,12 @@ export default function AddPaymentModal({ open, onClose }) {
                     </IconButton>
                 </Box>
 
-                <Box component="form" onSubmit={submit} sx={{ p: 3 }}>
+                <Box component="form" onSubmit={submit} sx={{ p: 3.2 }}>
                     {errMsg && <Alert severity="error" sx={{ mb: 2 }}>{errMsg}</Alert>}
 
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
-                            <Autocomplete
-                                options={parents}
-                                loading={parentsQ.isLoading}
-                                value={parentOpt}
-                                onChange={(_, v) => { setParentOpt(v); setStudentOpt(null); }}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
-                                getOptionLabel={(o) => o?.label || ""}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="وليّ الأمر"
-                                        size="small"
-                                        error={!!fieldErrors?.parent_id}
-                                        helperText={fieldErrors?.parent_id?.[0] || ""}
-                                    />
-                                )}
-                            />
-                        </Grid>
-
+                    {/* مسافات أوسع: spacing=3 وارتفاع مدخلات أكبر */}
+                    <Grid container spacing={3}>
+                        {/* الطالب أولاً */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={studentsFiltered}
@@ -208,7 +192,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                     <TextField
                                         {...params}
                                         label="الطالب"
-                                        size="small"
+                                        size="medium"
+                                        sx={fieldSX}
                                         error={!!fieldErrors?.student_id}
                                         helperText={fieldErrors?.student_id?.[0] || ""}
                                     />
@@ -216,6 +201,29 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
+                        {/* ولي الأمر ثانياً */}
+                        <Grid item xs={12} md={4}>
+                            <Autocomplete
+                                options={parents}
+                                loading={parentsQ.isLoading}
+                                value={parentOpt}
+                                onChange={(_, v) => { setParentOpt(v); /* إعادة تصفية الطلاب عند تغيير الولي */ setStudentOpt(null); }}
+                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                getOptionLabel={(o) => o?.label || ""}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="وليّ الأمر"
+                                        size="medium"
+                                        sx={fieldSX}
+                                        error={!!fieldErrors?.parent_id}
+                                        helperText={fieldErrors?.parent_id?.[0] || ""}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        {/* رسم المدرسة */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={fees}
@@ -228,7 +236,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                     <TextField
                                         {...params}
                                         label="رسم المدرسة"
-                                        size="small"
+                                        size="medium"
+                                        sx={fieldSX}
                                         error={!!fieldErrors?.school_fee_id}
                                         helperText={fieldErrors?.school_fee_id?.[0] || ""}
                                     />
@@ -236,20 +245,24 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
+                        {/* تاريخ الدفع */}
                         <Grid item xs={12} md={4}>
                             <TextField
-                                label="المبلغ المدفوع"
-                                name="amount"
-                                value={form.amount}
+                                type="date"
+                                label="تاريخ الدفع"
+                                name="paid_at"
+                                value={form.paid_at}
                                 onChange={onChange}
                                 fullWidth
-                                size="small"
-                                InputProps={{ endAdornment: <InputAdornment position="end"></InputAdornment> }}
-                                error={!!fieldErrors?.amount}
-                                helperText={fieldErrors?.amount?.[0] || ""}
+                                size="medium"
+                                sx={fieldSX}
+                                InputLabelProps={{ shrink: true }}
+                                error={!!fieldErrors?.paid_at}
+                                helperText={fieldErrors?.paid_at?.[0] || ""}
                             />
                         </Grid>
 
+                        {/* الحالة */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 select
@@ -258,7 +271,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                 value={form.status}
                                 onChange={onChange}
                                 fullWidth
-                                size="small"
+                                size="medium"
+                                sx={fieldSX}
                                 error={!!fieldErrors?.status}
                                 helperText={fieldErrors?.status?.[0] || ""}
                             >
@@ -268,21 +282,23 @@ export default function AddPaymentModal({ open, onClose }) {
                             </TextField>
                         </Grid>
 
+                        {/* المبلغ */}
                         <Grid item xs={12} md={4}>
                             <TextField
-                                type="date"
-                                label="تاريخ الدفع"
-                                name="paid_at"
-                                value={form.paid_at}
+                                label="المبلغ المدفوع"
+                                name="amount"
+                                value={form.amount}
                                 onChange={onChange}
                                 fullWidth
-                                size="small"
-                                InputLabelProps={{ shrink: true }}
-                                error={!!fieldErrors?.paid_at}
-                                helperText={fieldErrors?.paid_at?.[0] || ""}
+                                size="medium"
+                                sx={fieldSX}
+                                InputProps={{ endAdornment: <InputAdornment position="end"></InputAdornment> }}
+                                error={!!fieldErrors?.amount}
+                                helperText={fieldErrors?.amount?.[0] || ""}
                             />
                         </Grid>
 
+                        {/* الخصم */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 label="الخصم"
@@ -290,13 +306,15 @@ export default function AddPaymentModal({ open, onClose }) {
                                 value={form.discount}
                                 onChange={onChange}
                                 fullWidth
-                                size="small"
+                                size="medium"
+                                sx={fieldSX}
                                 InputProps={{ endAdornment: <InputAdornment position="end"></InputAdornment> }}
                                 error={!!fieldErrors?.discount}
                                 helperText={fieldErrors?.discount?.[0] || ""}
                             />
                         </Grid>
 
+                        {/* نوع الخصم */}
                         <Grid item xs={12} md={4}>
                             <TextField
                                 select
@@ -305,7 +323,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                 value={form.discount_status}
                                 onChange={onChange}
                                 fullWidth
-                                size="small"
+                                size="medium"
+                                sx={fieldSX}
                                 error={!!fieldErrors?.discount_status}
                                 helperText={fieldErrors?.discount_status?.[0] || ""}
                             >
@@ -316,14 +335,14 @@ export default function AddPaymentModal({ open, onClose }) {
                         </Grid>
                     </Grid>
 
-                    <Divider sx={{ my: 3 }} />
+                    <Divider sx={{ my: 3.5 }} />
 
-                    <Stack direction="row" justifyContent="center" spacing={2}>
+                    <Stack direction="row" justifyContent="center" spacing={2.5}>
                         <Button
                             type="submit"
                             disabled={!canSubmit || m.isPending}
                             sx={{
-                                width: "14rem", color: "#fff", fontWeight: 700, borderRadius: 2,
+                                width: "16rem", color: "#fff", fontWeight: 700, borderRadius: 2.2,
                                 background: "linear-gradient(90deg,#00C6FF,#002952)"
                             }}
                         >
@@ -332,7 +351,7 @@ export default function AddPaymentModal({ open, onClose }) {
                         <Button
                             onClick={onClose}
                             variant="outlined"
-                            sx={{ width: "14rem", borderRadius: 2, color: "#2a8a89", borderColor: "#2a8a89" }}
+                            sx={{ width: "16rem", borderRadius: 2.2, color: "#2a8a89", borderColor: "#2a8a89" }}
                         >
                             إلغاء
                         </Button>

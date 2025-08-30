@@ -186,7 +186,6 @@ const menuItems = [
         ]
     },
     { text: 'الدرجات', icon: <GradingIcon />, url: '/dashboard/grades' },
-    { text: 'الحضور والغياب', icon: <HowToRegIcon />, url: '/dashboard/studentsAttending' },
     { text: 'النقل المدرسي', icon: <DirectionsBusIcon />, url: '/dashboard/schoolTransportation' },
     { text: 'الشؤون المالية', icon: <RequestQuoteIcon />, url: '/dashboard/fees' },
     { text: 'التقارير', icon: <AssessmentIcon />, url: '/dashboard/reports' },

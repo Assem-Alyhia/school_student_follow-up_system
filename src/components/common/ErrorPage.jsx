@@ -9,7 +9,7 @@ const COLORS = {
     textLight: "#7A8899",
 };
 
-const BOY_IMG = "/NotFound/404-boy.png";
+const BOY_IMG = "/NotFound/404-boy.svg";
 
 const getHomeFromLocal = () => {
     try {
@@ -58,25 +58,21 @@ export default function ErrorPage() {
             <Box
                 sx={{
                     width: "100%",
-                    maxWidth: 1200,
+                    maxWidth: "70%",
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr", md: "1.1fr 0.9fr" },
+                    gridTemplateColumns: { xs: "1fr", md: "1fr 1.5fr" },
                     alignItems: "center",
-                    gap: { xs: 3, md: 8 },
+                    gap: { xs: 3, md: 0 },
                 }}
             >
-                {/* النصوص */}
                 <Stack spacing={2} sx={{ order: { xs: 2, md: 1 } }}>
-                    {/* عنوان كبير جدًا مثل الصورة */}
                     <Typography
                         component="h1"
                         sx={{
                             fontWeight: 900,
-                            // حجم ضخم متدرّج حسب العرض
                             fontSize: { xs: "56px", sm: "84px", md: "112px", lg: "128px" },
                             lineHeight: 1,
                             letterSpacing: "-1px",
-                            // تدرّج الألوان (قريب من البرتقالي في الصورة لكن بألوانك المحدّدة)
                             background: `linear-gradient(90deg, ${COLORS.c1}, ${COLORS.c2}, ${COLORS.c3})`,
                             WebkitBackgroundClip: "text",
                             WebkitTextFillColor: "transparent",
@@ -86,17 +82,14 @@ export default function ErrorPage() {
                         {title}
                     </Typography>
 
-                    {/* سطر فرعي غامق */}
                     <Typography sx={{ color: COLORS.c3, fontSize: { xs: 18, md: 22 }, fontWeight: 800 }}>
                         لا يمكننا العثور على الصفحة التي تبحث عنها.
                     </Typography>
 
-                    {/* وصف بلون خفيف */}
                     <Typography sx={{ color: COLORS.textLight, maxWidth: 650, fontSize: { xs: 15, md: 16 } }}>
                         {description}
                     </Typography>
 
-                    {/* كود الخطأ */}
                     <Chip
                         label={`رمز الخطأ: ${status}`}
                         sx={{
@@ -112,8 +105,7 @@ export default function ErrorPage() {
                         variant="outlined"
                     />
 
-                    {/* الأزرار */}
-                    <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: "wrap" }}>
+                    <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: "wrap" ,gap:3}}>
                         <Button
                             variant="contained"
                             onClick={() => navigate(-1)}
@@ -164,8 +156,8 @@ export default function ErrorPage() {
                         src={BOY_IMG}
                         alt="لا يوجد صفحة"
                         sx={{
-                            width: { xs: "70%", sm: "60%", md: "80%" },
-                            maxWidth: 520,
+                            width: { xs: "70%", sm: "60%", md: "100%" },
+                            maxWidth: 700,
                             height: "auto",
                             objectFit: "contain",
                             filter: "drop-shadow(0px 10px 30px rgba(0,0,0,0.10))",
