@@ -1,15 +1,8 @@
 // src/components/SupervisorRole/Parents/ParentsCards.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
-    Box,
-    Paper,
-    Typography,
-    Grid,
-    IconButton,
-    Button,
-    Avatar,
-    AvatarGroup,
-    Chip,
+    Box, Paper, Typography, Grid, IconButton, Button,
+    Avatar, AvatarGroup, Chip
 } from "@mui/material";
 import {
     Email as EmailIcon,
@@ -17,14 +10,18 @@ import {
     CalendarMonth as CalendarMonthIcon,
     Person as PersonIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+
+import ParentDetailsModal from "../ParentDetailsModal";
 
 const GRADIENT = "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)";
-
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 
 export default function Section2({ parents = [] }) {
-    const navigate = useNavigate();
+    const [open, setOpen] = useState(false);
+    const [selectedId, setSelectedId] = useState(null);
+
+    const openModal = (id) => { setSelectedId(id); setOpen(true); };
+    const closeModal = () => { setOpen(false); setSelectedId(null); };
 
     return (
         <Box sx={{ p: 3, direction: "rtl" }}>
@@ -40,7 +37,6 @@ export default function Section2({ parents = [] }) {
                         p?.phone ||
                         (Array.isArray(p?.students) && p.students[0]?.phone) ||
                         "—";
-
                     const students = Array.isArray(p?.students) ? p.students : [];
 
                     return (
@@ -57,7 +53,6 @@ export default function Section2({ parents = [] }) {
                                     minHeight: { xs: 420, sm: 430 },
                                 }}
                             >
-                                {/* أعلى البطاقة: رقم وليّ الأمر + شارة */}
                                 <Typography
                                     variant="caption"
                                     sx={{ position: "absolute", top: 12, left: 14, color: "#A0A8B0" }}
@@ -244,40 +239,20 @@ export default function Section2({ parents = [] }) {
                                     </Box>
                                 )}
 
-                                {/* أزرار أسفل البطاقة */}
+                                {/* زر عرض التفاصيل يفتح الموديال */}
                                 <Box
                                     sx={{
                                         display: "flex",
-                                        justifyContent: "space-between",
+                                        justifyContent: "flex-end",
                                         alignItems: "center",
                                         mt: 2.2,
                                         direction: "ltr",
                                     }}
                                 >
-                                    <Box sx={{ display: "flex", gap: 1.2 }}>
-                                        {[<PhoneIcon />, <EmailIcon />].map((Icon, i) => (
-                                            <IconButton
-                                                key={i}
-                                                size="small"
-                                                sx={{
-                                                    width: 34,
-                                                    height: 34,
-                                                    bgcolor: "#F4F7F9",
-                                                    border: "1px solid #E3ECEF",
-                                                    boxShadow: "0 3px 8px rgba(34,56,95,0.10)",
-                                                }}
-                                            >
-                                                {React.cloneElement(Icon, { sx: { color: "#8FA0AE", fontSize: 17 } })}
-                                            </IconButton>
-                                        ))}
-                                    </Box>
-
                                     <Button
                                         variant="outlined"
                                         size="medium"
-                                        onClick={() =>
-                                            navigate(`/supervisorDashboard/parents/details/${id}`)
-                                        }
+                                        onClick={() => openModal(id)}
                                         sx={{
                                             borderRadius: 2,
                                             px: 2.6,
@@ -296,6 +271,8 @@ export default function Section2({ parents = [] }) {
                     );
                 })}
             </Grid>
+
+            <ParentDetailsModal open={open} onClose={closeModal} id={selectedId} />
         </Box>
     );
 }

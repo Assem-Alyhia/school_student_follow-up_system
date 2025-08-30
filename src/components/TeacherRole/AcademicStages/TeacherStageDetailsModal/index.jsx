@@ -144,7 +144,6 @@ const TeacherStageDetailsModal = ({ open, onClose, stageKey, stageTitle }) => {
                                     <TableCell align="center">#</TableCell>
                                     <TableCell align="center">الصف</TableCell>
                                     <TableCell align="center">سعة الصف</TableCell>
-                                    <TableCell align="center">عدد المواد</TableCell>
                                     <TableCell align="center">المستوى</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -161,12 +160,6 @@ const TeacherStageDetailsModal = ({ open, onClose, stageKey, stageTitle }) => {
                                             {row.capacity ??
                                                 row.capacity ??
                                                 row.capacity?.length ??
-                                                '—'}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            {row.level.subjects_count ??
-                                                row.level.subjects_count ??
-                                                row.level.subjects_count?.length ??
                                                 '—'}
                                         </TableCell>
                                         <TableCell align="center">

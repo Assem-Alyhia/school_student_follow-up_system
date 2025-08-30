@@ -161,14 +161,20 @@ const apiEndpoints = {
   getAdminStudentsInClassroom: (classroomId) =>
     `/admin/students/get-in-classroom/${classroomId}`,
 
-
   // المالية
-  getAllFinancials: "admin/financials", 
-  createFinancial: "admin/financials", 
-  getAllFinancialsNoPaginate: "admin/financials/get-all", 
-  getFinancialById: (id) => `admin/financials/${id}`, 
-  updateFinancial: (id) => `admin/financials/${id}`, 
+  getAllFinancials: "admin/financials",
+  createFinancial: "admin/financials",
+  getAllFinancialsNoPaginate: "admin/financials/get-all",
+  getFinancialById: (id) => `admin/financials/${id}`,
+  updateFinancial: (id) => `admin/financials/${id}`,
   deleteFinancial: (id) => `admin/financials/${id}`,
+
+  //  تعليق
+  getAdminComments: () => `/admin/comments`,
+  createAdminComment: () => `/admin/comments`,
+  getAdminCommentById: (id) => `/admin/comments/${id}`,
+  updateAdminComment: (id) => `/admin/comments/${id}`,
+  deleteAdminComment: (id) => `/admin/comments/${id}`,
 
   // *****************************************************************************
   // ******************************{techers}**************************************
@@ -223,6 +229,13 @@ const apiEndpoints = {
   deleteTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
   updateTeacherGrade: (gradeId) => `teacher/grades/${gradeId}`,
 
+  //تعليقات
+  teacherComments: () => `/teacher/comments`,
+  createTeacherComment: () => `/teacher/comments`,
+  getTeacherCommentById: (id) => `/teacher/comments/${id}`,
+  updateTeacherComment: (id) => `/teacher/comments/${id}`,
+  deleteTeacherComment: (id) => `/teacher/comments/${id}`,
+
   // *****************************************************************************
   // ******************************{parent}***************************************
   // *****************************************************************************
@@ -255,6 +268,9 @@ const apiEndpoints = {
   getParentStudentLocation: (supervisorId) =>
     `parent/locations/${supervisorId}`,
 
+  //التعليقات
+  parentComments: () => `/parent/comments`,
+
   // *****************************************************************************
   // ******************************{supervisor}***********************************
   // *****************************************************************************
@@ -272,6 +288,7 @@ const apiEndpoints = {
 
   // الآباء
   getSupervisorParents: "supervisor/parents",
+  supervisorParentById: (id) => `/supervisor/parents/${id}`,
 
   // الباصات
   getSupervisorBuses: "supervisor/buses",

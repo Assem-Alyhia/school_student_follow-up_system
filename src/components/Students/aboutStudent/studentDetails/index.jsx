@@ -13,19 +13,14 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-
 import { getStudentById } from "../../../../api/Admin/Students/getStudentById";
+import ChatCommentsStudentDetails from "./_CommentsSection";
 
 export default function StudentDetails() {
     const { id } = useParams();
     const gradientColor = "linear-gradient(90deg, #35AFBC, #308A9F, #22385F)";
 
-    const {
-        data: studentData,
-        isLoading,
-        isError,
-        error,
-    } = useQuery({
+    const { data: studentData, isLoading, isError, error } = useQuery({
         queryKey: ["student", String(id)],
         queryFn: () => getStudentById(id),
         enabled: Boolean(id),
@@ -50,9 +45,7 @@ export default function StudentDetails() {
         );
     }
 
-    if (!studentData) {
-        return <Typography sx={{ p: 5 }}>لا توجد بيانات.</Typography>;
-    }
+    if (!studentData) return <Typography sx={{ p: 5 }}>لا توجد بيانات.</Typography>;
 
     const _handlePrint = () => window.print();
 
@@ -99,20 +92,17 @@ export default function StudentDetails() {
 
                         <Box sx={{ display: "flex", justifyContent: "center", gap: 3, mb: 2 }}>
                             <Typography sx={{ color: "#308A9F" }}>
-                                رقم التسجيل:
-                                <br />
+                                رقم التسجيل:<br />
                                 <span style={{ color: "#586E75" }}>{studentData.prefix}</span>
                             </Typography>
                             <Typography sx={{ color: "#308A9F" }}>
-                                الجنس:
-                                <br />
+                                الجنس:<br />
                                 <span style={{ color: "#586E75" }}>
                                     {studentData.gender === "male" ? "ذكر" : "أنثى"}
                                 </span>
                             </Typography>
                             <Typography sx={{ color: "#308A9F" }}>
-                                تاريخ الانضمام:
-                                <br />
+                                تاريخ الانضمام:<br />
                                 <span style={{ color: "#586E75" }}>
                                     {studentData.enrollment_date
                                         ? new Date(studentData.enrollment_date).toLocaleDateString("ar-EG")
@@ -140,17 +130,13 @@ export default function StudentDetails() {
                         </Box>
                         <Box sx={{ p: 2 }}>
                             <Grid container spacing={1}>
-                                <Grid item xs={6}>
-                                    <Typography sx={{ color: "#586E75" }}>المدينة</Typography>
-                                </Grid>
+                                <Grid item xs={6}><Typography sx={{ color: "#586E75" }}>المدينة</Typography></Grid>
                                 <Grid item xs={6}>
                                     <Typography sx={{ color: "#308A9F" }}>
                                         {studentData.address?.split("\n")[1] || "---"}
                                     </Typography>
                                 </Grid>
-                                <Grid item xs={6}>
-                                    <Typography sx={{ color: "#586E75" }}>العنوان</Typography>
-                                </Grid>
+                                <Grid item xs={6}><Typography sx={{ color: "#586E75" }}>العنوان</Typography></Grid>
                                 <Grid item xs={6}>
                                     <Typography sx={{ color: "#308A9F" }}>
                                         {studentData.address?.split("\n")[0] || "---"}
@@ -168,19 +154,12 @@ export default function StudentDetails() {
                                 </Typography>
                             </Box>
                             <Box sx={{ p: 2 }}>
-                                {studentData.siblings.map((sibling, index) => (
-                                    <Box key={index} sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                        <Avatar
-                                            src={`/Students/sibling${index + 1}.png`}
-                                            sx={{ width: 50, height: 50, ml: 1 }}
-                                        />
+                                {studentData.siblings.map((s, i) => (
+                                    <Box key={i} sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <Avatar src={`/Students/sibling${i + 1}.png`} sx={{ width: 50, height: 50, ml: 1 }} />
                                         <Box>
-                                            <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>
-                                                {sibling.name}
-                                            </Typography>
-                                            <Typography sx={{ color: "#586E75" }}>
-                                                {sibling.gender || "---"}
-                                            </Typography>
+                                            <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>{s.name}</Typography>
+                                            <Typography sx={{ color: "#586E75" }}>{s.gender || "---"}</Typography>
                                         </Box>
                                     </Box>
                                 ))}
@@ -196,17 +175,15 @@ export default function StudentDetails() {
                                 تفاصيل ولي الأمر
                             </Typography>
                         </Box>
-                        <Box sx={{ padding: " 1rem 2rem" }}>
+                        <Box sx={{ p: "1rem 2rem" }}>
                             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
                                 <Avatar src="/Students/father.png" sx={{ width: 80, height: 80, borderRadius: 2 }} />
-                                <Box sx={{ margin: "1rem 0" }}>
+                                <Box sx={{ m: "1rem 0" }}>
                                     <Typography sx={{ color: "#586E75" }}>
-                                        <strong style={{ color: "#308A9F" }}>رقم الهاتف:</strong>{" "}
-                                        {studentData.parent?.user?.phone || "---"}
+                                        <strong style={{ color: "#308A9F" }}>رقم الهاتف:</strong> {studentData.parent?.user?.phone || "---"}
                                     </Typography>
                                     <Typography sx={{ color: "#586E75" }}>
-                                        <strong style={{ color: "#308A9F" }}>البريد الإلكتروني:</strong>{" "}
-                                        {studentData.parent?.user?.email || "---"}
+                                        <strong style={{ color: "#308A9F" }}>البريد الإلكتروني:</strong> {studentData.parent?.user?.email || "---"}
                                     </Typography>
                                     <Typography sx={{ color: "#22385F", fontWeight: "bold" }}>
                                         {studentData.parent?.user?.name || "---"}
@@ -225,24 +202,14 @@ export default function StudentDetails() {
                         </Box>
                         <Box sx={{ p: 2 }}>
                             {[
-                                {
-                                    label: "المشرفة",
-                                    name: studentData.supervisor?.name || "---",
-                                    avatar: "/Students/supervisor.png",
-                                },
-                                {
-                                    label: "السائق",
-                                    name: "أبو محمد",
-                                    avatar: "/Students/driver.png",
-                                },
-                            ].map((person, i) => (
+                                { label: "المشرفة", name: studentData.supervisor?.name || "---", avatar: "/Students/supervisor.png" },
+                                { label: "السائق", name: "أبو محمد", avatar: "/Students/driver.png" },
+                            ].map((p, i) => (
                                 <Box key={i} sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                    <Avatar src={person.avatar} sx={{ width: 50, height: 50, ml: 1 }} />
+                                    <Avatar src={p.avatar} sx={{ width: 50, height: 50, ml: 1 }} />
                                     <Box>
-                                        <Typography sx={{ color: "#308A9F" }}>{person.label}</Typography>
-                                        <Typography sx={{ color: "#22385F", fontWeight: "bold" }}>
-                                            {person.name}
-                                        </Typography>
+                                        <Typography sx={{ color: "#308A9F" }}>{p.label}</Typography>
+                                        <Typography sx={{ color: "#22385F", fontWeight: "bold" }}>{p.name}</Typography>
                                     </Box>
                                 </Box>
                             ))}
@@ -259,23 +226,19 @@ export default function StudentDetails() {
                             <Grid container spacing={2}>
                                 <Grid item xs={6}>
                                     <Typography sx={{ color: "#586E75" }}>موعد الانطلاق</Typography>
-                                    <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>
-                                        7:15 صباحاً
-                                    </Typography>
+                                    <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>7:15 صباحاً</Typography>
                                 </Grid>
                                 <Grid item xs={6}>
                                     <Typography sx={{ color: "#586E75" }}>موعد العودة</Typography>
-                                    <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>
-                                        2:45 ظهراً
-                                    </Typography>
+                                    <Typography sx={{ color: "#308A9F", fontWeight: "bold" }}>2:45 ظهراً</Typography>
                                 </Grid>
                                 <Grid item xs={12}>
                                     <Typography sx={{ color: "#586E75" }}>الملاحظات</Typography>
                                     {[
                                         "يجب على الطلاب الحضور إلى نقطة التجمع قبل 7:10 صباحاً",
                                         "في حال تغييرات طارئة يتم التواصل مع المشرفة مباشرة",
-                                    ].map((note, index) => (
-                                        <Box key={index} sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                                    ].map((note, i) => (
+                                        <Box key={i} sx={{ display: "flex", alignItems: "center", mt: 1 }}>
                                             <CheckCircleIcon sx={{ color: "#4CAF50", fontSize: 20, mr: 1, ml: 1 }} />
                                             <Typography sx={{ color: "#308A9F" }}>{note}</Typography>
                                         </Box>
@@ -284,6 +247,10 @@ export default function StudentDetails() {
                             </Grid>
                         </Box>
                     </Paper>
+                </Grid>
+
+                <Grid item xs={12}>
+                    <ChatCommentsStudentDetails studentId={String(id)} />
                 </Grid>
             </Grid>
         </Box>

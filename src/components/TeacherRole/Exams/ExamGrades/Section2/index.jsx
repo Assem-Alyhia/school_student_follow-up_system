@@ -52,6 +52,8 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                 id: item?.id ?? "",
                 score: item?.score ?? "",
                 term: item?.exam?.term ?? "",
+                // اسم المادة المضاف
+                subject_name: item?.exam?.subject?.name ?? "",
                 start_time_raw: startISO,
                 end_time_raw: endISO,
                 start_time: onlyTime(startISO),
@@ -61,7 +63,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                 student_prefix: item?.student?.prefix ?? "",
                 student_id: item?.student?.id ?? "",
                 student_name: item?.student?.name ?? "",
-                // نمرّر بيانات أصلية للموديال ليستعملها كـ fallback
+                // بيانات مساعدة للمودال
                 _raw: item,
                 exam_id: item?.exam_id ?? item?.exam?.id ?? "",
                 exam: item?.exam ?? null,
@@ -113,9 +115,11 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
         closeEdit();
     };
 
+    // أضفنا "subject_name"
     const columns = [
         { key: "student_prefix", label: "رقم الطالب", sortable: true },
         { key: "student_name", label: "اسم الطالب", sortable: true },
+        { key: "subject_name", label: "اسم المادة", sortable: true },
         { key: "term", label: "الفصل", sortable: true },
         { key: "start_time", label: "وقت البداية", sortable: true },
         { key: "end_time", label: "وقت النهاية", sortable: true },
@@ -129,7 +133,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
         <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
+                    <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1100, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
                         <TableHead>
                             <TableRow sx={{ background: "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)" }}>
                                 {columns.map((col) => (
@@ -137,7 +141,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                                         {col.sortable ? (
                                             <TableSortLabel
                                                 active={orderBy === col.key}
-                                                direction={orderBy === col.key ? order : "asc"}
+                                                direction={orderBy === col.key ? "desc" : "asc"}
                                                 onClick={() => handleRequestSort(col.key)}
                                                 sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
                                             >
@@ -180,6 +184,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                                                 {row.student_name}
                                             </Typography>
                                         </TableCell>
+                                        <TableCell>{row.subject_name}</TableCell>
                                         <TableCell>{row.term}</TableCell>
                                         <TableCell>{row.start_time}</TableCell>
                                         <TableCell>{row.end_time}</TableCell>
@@ -210,7 +215,7 @@ const Section2 = ({ rows = [], loading = false, errorMessage = null }) => {
                 open={editOpen}
                 onClose={closeEdit}
                 onUpdated={afterUpdated}
-                examResult={selectedRow}   // يحتوي الآن exam/student/classroom أو _raw كفاية
+                examResult={selectedRow}
                 title="تعديل درجة امتحان"
             />
 

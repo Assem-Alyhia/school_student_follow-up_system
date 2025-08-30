@@ -100,8 +100,8 @@ function Login() {
                 )}
 
                 <TextField
-                    label="اسم المستخدم"
-                    placeholder="أدخل اسم المستخدم"
+                    label="البريد الإلكتروني"
+                    placeholder="ادخل البريد الإلكتروني"
                     variant="outlined"
                     fullWidth
                     sx={{ mb: 2 }}

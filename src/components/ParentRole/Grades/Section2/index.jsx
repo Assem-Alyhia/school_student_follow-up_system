@@ -59,23 +59,19 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
         ? (error?.response?.data?.message || error?.message || null)
         : null;
 
-    // تطبيع البيانات القادمة من الـ API
     const rowsAll = useMemo(() => {
         if (isError) return [];
         const src = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 
         return src.map((x) => {
-            const subjectTerm = x?.subject?.term ?? "";    // term 1/2/3
-            const examTerm = x?.term ?? "";                // final/mid/...
-            const classroomName = x?.student?.classroom?.name ?? "";
-
+            const subjectTerm = x?.subject?.term ?? "";    
+            const examTerm = x?.term ?? "";             
             const score = x?.final_score ?? x?.score ?? 0;
 
             return {
                 id: x?.id ?? "",
                 student_prefix: x?.student?.prefix ?? "",
                 student_name: x?.student?.name ?? "",
-                classroom_name: classroomName || "—",
                 subject_name: x?.subject?.name ?? "",
                 subject_term: subjectTerm,
                 exam_term: examTerm,
@@ -97,7 +93,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
             if (term && r.subject_term !== term) return false;
 
             if (q) {
-                const hay = `${r.subject_name} ${r.student_name} ${r.classroom_name} ${r.id}`.toLowerCase();
+                const hay = `${r.subject_name} ${r.student_name} ${r.id}`.toLowerCase();
                 if (!hay.includes(q)) return false;
             }
 
@@ -158,7 +154,6 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
         { key: "student_prefix", label: "رقم الطالب", sortable: true },
         { key: "student_name", label: "اسم الطالب", sortable: true },
         { key: "subject_name", label: "المادة", sortable: true },
-        { key: "classroom_name", label: "الصف", sortable: true },
         { key: "subject_term", label: "الفصل الدراسي", sortable: true },
         { key: "exam_term", label: "نوع التقييم", sortable: true },
         { key: "score_num", label: "العلامة", sortable: true },
@@ -175,8 +170,6 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
                 return <Typography sx={{ fontWeight: 700, color: "#22385F" }}>{r.student_name || "—"}</Typography>;
             case "subject_name":
                 return <Typography sx={{ fontWeight: 700, color: "#22385F" }}>{r.subject_name || "—"}</Typography>;
-            case "classroom_name":
-                return r.classroom_name || "—";
             case "subject_term":
                 return (
                     <Chip

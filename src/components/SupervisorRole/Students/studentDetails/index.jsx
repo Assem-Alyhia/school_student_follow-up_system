@@ -15,7 +15,6 @@ import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PersonIcon from "@mui/icons-material/Person";
 import SendIcon from "@mui/icons-material/Send";
-import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getSupervisorStudentById } from "../../../../api/Supervisor/Students/getSupervisorStudentById";
@@ -24,9 +23,8 @@ const GRADIENT = "linear-gradient(90deg, #35AFBC, #308A9F, #22385F)";
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("ar-EG") : "—");
 const asArGender = (g) => (g === "male" ? "ذكر" : g === "female" ? "أنثى" : "—");
 const arStatus = (s) => {
-    if (!s) return "—";
-    const map = { active: "نشط", inactive: "غير نشط", at_home: "في المنزل" };
-    return map[s] || s;
+    const map = { at_home: "بالبيت", on_way: "على الطريق", in_school: "في المدرسة" };
+    return s ? map[s] || "—" : "—";
 };
 
 export default function StudentDetails() {
@@ -38,7 +36,6 @@ export default function StudentDetails() {
         enabled: !!id,
     });
 
-    // مشتقات البيانات
     const student = data?.data || {};
     const user = student.user || {};
     const parent = student.parent || {};
@@ -50,9 +47,8 @@ export default function StudentDetails() {
     const medicalDescription = student.medical_info || "";
     const showMedicalCard = Boolean(medicalDescription);
 
-    // الدردشة
     const [messages, setMessages] = useState([]);
-    const [draft, setDraft] = useState("");
+    // const [draft, setDraft] = useState("");
     const parentName = parentUser.name || parent.name || "وليّ الأمر";
 
     useEffect(() => {
@@ -69,26 +65,22 @@ export default function StudentDetails() {
         }
     }, [parentName, id, messages.length]);
 
-    const sendMessage = () => {
-        const t = draft.trim();
-        if (!t) return;
-        setMessages((prev) => [
-            ...prev,
-            { id: prev.length + 1, author: "أنت", role: "supervisor", text: t, date: new Date() },
-        ]);
-        setDraft("");
-    };
+    // const sendMessage = () => {
+    //     const t = draft.trim();
+    //     if (!t) return;
+    //     setMessages((prev) => [
+    //         ...prev,
+    //         { id: prev.length + 1, author: "أنت", role: "supervisor", text: t, date: new Date() },
+    //     ]);
+    //     setDraft("");
+    // };
 
     return (
         <Box sx={{ p: 2, direction: "rtl", bgcolor: "#f5f6fa" }}>
-            {/* رسائل النظام */}
             {isLoading && <Typography sx={{ mb: 2, p: 2 }}>جاري تحميل البيانات...</Typography>}
-            {isError && (
-                <Typography sx={{ mb: 2, p: 2, color: "error.main" }}>خطأ: {error?.message}</Typography>
-            )}
+            {isError && <Typography sx={{ mb: 2, p: 2, color: "error.main" }}>خطأ: {error?.message}</Typography>}
 
             <Grid container spacing={2}>
-                {/* يمين: بطاقة الطالب — دائماً أولاً */}
                 <Grid item xs={12} md={4} order={{ xs: 1, md: 1 }}>
                     <Paper
                         elevation={0}
@@ -171,7 +163,7 @@ export default function StudentDetails() {
                         />
                     </Paper>
 
-                    {(student.address && student.address.trim()) && (
+                    {student.address && student.address.trim() && (
                         <Paper elevation={0} sx={{ border: "1px solid #308A9F", borderRadius: 2, mb: 2 }}>
                             <Box sx={{ bgcolor: "#e0e0e0", p: 1.5 }}>
                                 <Typography fontWeight="bold" sx={{ color: "#308A9F", textAlign: "center" }}>
@@ -180,13 +172,17 @@ export default function StudentDetails() {
                             </Box>
                             <Box sx={{ p: 2 }}>
                                 <Grid container spacing={1}>
-                                    <Grid item xs={6}><Typography sx={{ color: "#586E75" }}>المدينة</Typography></Grid>
+                                    <Grid item xs={6}>
+                                        <Typography sx={{ color: "#586E75" }}>المدينة</Typography>
+                                    </Grid>
                                     <Grid item xs={6}>
                                         <Typography sx={{ color: "#308A9F" }}>
                                             {(student.address || "").split("\n")[1] || "—"}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6}><Typography sx={{ color: "#586E75" }}>العنوان</Typography></Grid>
+                                    <Grid item xs={6}>
+                                        <Typography sx={{ color: "#586E75" }}>العنوان</Typography>
+                                    </Grid>
                                     <Grid item xs={6}>
                                         <Typography sx={{ color: "#308A9F" }}>
                                             {(student.address || "").split("\n")[0] || "—"}
@@ -198,7 +194,6 @@ export default function StudentDetails() {
                     )}
                 </Grid>
 
-                {/* الوسط/يسار: تفاصيل ولي الأمر والسجل الطبي — ثانياً */}
                 <Grid item xs={12} md={8} order={{ xs: 2, md: 2 }}>
                     {showParentCard && (
                         <Paper elevation={0} sx={{ border: "1px solid #308A9F", borderRadius: 2, mb: 2 }}>
@@ -260,8 +255,7 @@ export default function StudentDetails() {
                         </Paper>
                     )}
                 </Grid>
-
-                {/* الدردشة — دائماً أخيراً */}
+{/* 
                 <Grid item xs={12} order={{ xs: 3, md: 3 }}>
                     <Paper elevation={0} sx={{ border: "1px solid #308A9F", borderRadius: 2 }}>
                         <Box
@@ -278,7 +272,6 @@ export default function StudentDetails() {
                             </Typography>
                         </Box>
 
-                        {/* إدخال رسالة */}
                         <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1 }}>
                             <IconButton onClick={sendMessage} sx={{ bgcolor: "#308A9F", "&:hover": { bgcolor: "#22385F" } }}>
                                 <SendIcon sx={{ color: "#fff" }} />
@@ -294,7 +287,6 @@ export default function StudentDetails() {
 
                         <Divider />
 
-                        {/* قائمة الرسائل */}
                         <Box sx={{ p: 2 }}>
                             {messages.map((m) => (
                                 <Box key={m.id} sx={{ display: "flex", alignItems: "flex-start", mb: 2 }}>
@@ -313,7 +305,7 @@ export default function StudentDetails() {
                             ))}
                         </Box>
                     </Paper>
-                </Grid>
+                </Grid> */}
             </Grid>
         </Box>
     );

@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 
-// نفس الألوان/التدرج المستخدمة مسبقًا
 const HEADER_GRADIENT = "linear-gradient(90deg,#35AFBC,#308A9F,#22385F)";
 
 const TERM_OPTIONS = [
@@ -30,14 +29,12 @@ const onlyTime = (iso) => {
 };
 
 const timeToMinutes = (t) => {
-    // t: "HH:MM" أو Date ISO
     if (!t) return null;
     if (typeof t === "string" && t.includes(":") && t.length <= 5) {
         const [h, m] = t.split(":").map(Number);
         if (Number.isNaN(h) || Number.isNaN(m)) return null;
         return h * 60 + m;
     }
-    // ISO -> استخرج الوقت
     const d = new Date(t);
     if (Number.isNaN(d.getTime())) return null;
     return d.getHours() * 60 + d.getMinutes();
@@ -51,12 +48,10 @@ export default function ResultsTable({
     const [order, setOrder] = useState("asc");
     const [orderBy, setOrderBy] = useState("student_name");
 
-    // فلاتر: بحث + فصل + نطاق وقت (من/إلى)
     const [filters, setFilters] = useState({ q: "", term: "", fromTime: "", toTime: "" });
     const set = (k) => (e) => setFilters((s) => ({ ...s, [k]: e.target.value }));
     const resetFilters = () => setFilters({ q: "", term: "", fromTime: "", toTime: "" });
 
-    // تجهيز الصفوف من الـ props
     const preparedRows = useMemo(() => {
         const mapped = rows.map((item) => {
             const startISO = item?.exam?.start_time ?? "";
@@ -74,12 +69,12 @@ export default function ResultsTable({
                 student_prefix: item?.student?.prefix ?? "",
                 student_id: item?.student?.id ?? "",
                 student_name: item?.student?.name ?? "",
+                subject_name: item?.exam?.subject?.name ?? "",
             };
         });
         return mapped;
     }, [rows]);
 
-    // تطبيق الفلاتر محليًا (حسب البيانات الموجودة)
     const filteredRows = useMemo(() => {
         const q = (filters.q || "").toLowerCase().trim();
         const term = filters.term || "";
@@ -87,28 +82,23 @@ export default function ResultsTable({
         const toMin = filters.toTime ? timeToMinutes(filters.toTime) : null;
 
         return preparedRows.filter((r) => {
-            // الفصل
             if (term && r.term !== term) return false;
 
-            // البحث: رقم الطالب + اسم الطالب
             if (q) {
-                const hay = `${r.student_prefix || ""} ${r.student_name || ""}`.toLowerCase();
+                const hay = `${r.student_prefix || ""} ${r.student_name || ""} ${r.subject_name || ""}`.toLowerCase();
                 if (!hay.includes(q)) return false;
             }
 
-            // نطاق الوقت (يعتمد على start_time_raw)
             if (fromMin !== null || toMin !== null) {
                 const startMinutes = timeToMinutes(r.start_time_raw);
                 if (startMinutes === null) return false;
                 if (fromMin !== null && startMinutes < fromMin) return false;
                 if (toMin !== null && startMinutes > toMin) return false;
             }
-
             return true;
         });
     }, [preparedRows, filters]);
 
-    // الفرز
     const sortedRows = useMemo(() => {
         const arr = [...filteredRows];
         arr.sort((a, b) => {
@@ -133,6 +123,7 @@ export default function ResultsTable({
     const columns = [
         { key: "student_prefix", label: "رقم الطالب", sortable: true },
         { key: "student_name", label: "اسم الطالب", sortable: true },
+        { key: "subject_name", label: "المادة", sortable: true },
         { key: "term", label: "الفصل", sortable: true },
         { key: "start_time", label: "وقت البداية", sortable: true },
         { key: "end_time", label: "وقت النهاية", sortable: true },
@@ -150,7 +141,7 @@ export default function ResultsTable({
                         <TextField
                             value={filters.q}
                             onChange={set("q")}
-                            placeholder="بحث برقم/اسم الطالب..."
+                            placeholder="بحث برقم/اسم الطالب أو المادة..."
                             fullWidth
                             sx={fieldSx}
                         />
@@ -166,7 +157,6 @@ export default function ResultsTable({
                         </FormControl>
                     </Grid>
 
-                    {/* من/إلى بالوقت */}
                     <Grid item xs={6} md={2}>
                         <TextField
                             type="time"
@@ -175,7 +165,7 @@ export default function ResultsTable({
                             fullWidth
                             sx={fieldSx}
                             placeholder="من (وقت)"
-                            inputProps={{ step: 60 }} // دقيقة
+                            inputProps={{ step: 60 }}
                         />
                     </Grid>
 
@@ -200,11 +190,15 @@ export default function ResultsTable({
 
                 {/* الجدول */}
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1000, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
+                    <Table aria-label="نتائج الامتحانات" sx={{ minWidth: 1000 }}>
                         <TableHead>
                             <TableRow sx={{ background: HEADER_GRADIENT }}>
                                 {columns.map((col) => (
-                                    <TableCell key={col.key} sx={{ color: "#fff", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                                    <TableCell
+                                        key={col.key}
+                                        align="center"                                       // <-- التوسيط في الرأس
+                                        sx={{ color: "#fff", fontWeight: "bold", whiteSpace: "nowrap" }}
+                                    >
                                         {col.sortable ? (
                                             <TableSortLabel
                                                 active={orderBy === col.key}
@@ -230,13 +224,13 @@ export default function ResultsTable({
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={columns.length} align="center">
+                                    <TableCell align="center" colSpan={columns.length}>
                                         <Box sx={{ py: 4 }}><CircularProgress /></Box>
                                     </TableCell>
                                 </TableRow>
                             ) : sortedRows.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={columns.length} align="center">
+                                    <TableCell align="center" colSpan={columns.length}>
                                         <Typography color="text.secondary">
                                             {errorMessage ? `لا يوجد بيانات (${errorMessage})` : "لا يوجد بيانات"}
                                         </Typography>
@@ -245,18 +239,19 @@ export default function ResultsTable({
                             ) : (
                                 sortedRows.map((row, idx) => (
                                     <TableRow key={`${row.id}-${idx}`} hover>
-                                        <TableCell>{row.student_prefix}</TableCell>
-                                        <TableCell>
-                                            <Typography sx={{ fontWeight: 600, color: "#22385F", textAlign: "center" }}>
+                                        <TableCell align="center">{row.student_prefix}</TableCell>
+                                        <TableCell align="center">
+                                            <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
                                                 {row.student_name}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{row.term}</TableCell>
-                                        <TableCell>{row.start_time}</TableCell>
-                                        <TableCell>{row.end_time}</TableCell>
-                                        <TableCell>{row.max_score}</TableCell>
-                                        <TableCell>{row.weight}%</TableCell>
-                                        <TableCell>{row.score}</TableCell>
+                                        <TableCell align="center">{row.subject_name}</TableCell>
+                                        <TableCell align="center">{row.term}</TableCell>
+                                        <TableCell align="center">{row.start_time}</TableCell>
+                                        <TableCell align="center">{row.end_time}</TableCell>
+                                        <TableCell align="center">{row.max_score}</TableCell>
+                                        <TableCell align="center">{row.weight}%</TableCell>
+                                        <TableCell align="center">{row.score}</TableCell>
                                     </TableRow>
                                 ))
                             )}
