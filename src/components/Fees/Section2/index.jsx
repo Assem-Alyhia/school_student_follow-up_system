@@ -201,7 +201,7 @@ const Section2 = ({ payments = [], onSearchChange }) => {
                                     {row.schoolFee?.deadline ? new Date(row.schoolFee.deadline).toLocaleDateString() : '—'}
                                 </TableCell>
 
-                                <TableCell align="center">{row.schoolFee?.amount + '$'}</TableCell>
+                                <TableCell align="center">{row.amount + '$'}</TableCell>
                                 <TableCell align="center">{row.student?.classroom?.name || '-'}</TableCell>
 
                                 <TableCell align="center">
