@@ -323,49 +323,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         return picked > now;
     }, [form.paid_at]);
 
-    const createMut = useMutation({
-        mutationFn: createPayment,
-        onSuccess: (created) => {
-            queryClient.invalidateQueries({ queryKey: ["payments"] });
-            if (form.student_id) {
-                queryClient.invalidateQueries({ queryKey: ["student", String(form.student_id)] });
-                queryClient.invalidateQueries({ queryKey: ["student:payments", String(form.student_id)] });
-            }
-            setAlert({
-                type: "success",
-                title: "تمت العملية",
-                message: "تم تسجيل عملية الدفع وحفظها في النظام.",
-            });
-            onCreated && onCreated(created);
-            setForm((f) => ({
-                ...f,
-                amount: "",
-                discount: "",
-                discount_status: "none",
-                paid_at: "",
-                status: "pending",
-            }));
-        },
-        onError: (err) => {
-            const apiMsg = err?.response?.data?.message || "فشل إنشاء عملية الدفع";
-            const apiErrors = err?.response?.data?.errors || {};
-            const fieldMsgs = Object.values(apiErrors).flat().join(" • ");
-            const finalMsg = fieldMsgs ? `${apiMsg}: ${fieldMsgs}` : apiMsg;
-            setAlert({ type: "error", title: "فشل العملية", message: finalMsg });
-        },
-        onSettled: () => setSaving(false),
-    });
-
-    const _statusColor = useMemo(
-        () =>
-            form.status === "completed"
-                ? "rgba(76,175,80,.9)"
-                : form.status === "pending"
-                    ? "rgba(255,152,0,.9)"
-                    : "rgba(244,67,54,.9)",
-        [form.status]
-    );
-
     const formatDateTime = (d) => {
         const pad = (n) => String(n).padStart(2, "0");
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
@@ -389,12 +346,169 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         }
     };
 
+    const paymentKeysForStudent = (sid) => [
+        ["payments:student", String(sid)],   
+        ["student:payments", String(sid)],  
+    ];
+
+    const buildOptimisticPayment = (tempId) => {
+        const studentObj =
+            students.find((s) => String(s?.id) === String(form.student_id)) || selectedStudent || { id: form.student_id };
+        const parentObj =
+            parents.find((p) => String(p?.id) === String(form.parent_id)) || studentObj?.parent || { id: form.parent_id };
+        const feeObj =
+            fees.find((f) => String(f?.id) === String(form.school_fee_id)) || selectedFee || { id: form.school_fee_id };
+
+        const paidAt =
+            form.paid_at
+                ? (() => {
+                    const d = new Date(form.paid_at);
+                    return Number.isNaN(d.valueOf()) ? form.paid_at : formatDateTime(d);
+                })()
+                : null;
+
+        const remaining =
+            Math.max(
+                Number(feeObj?.amount ?? feeObj?.value ?? 0) -
+                Number(form.amount || 0) -
+                Number(form.discount || 0),
+                0
+            );
+
+        return {
+            id: tempId,
+            payment_number: `TMP-${tempId}`,
+            status: form.status,
+            amount: Number(form.amount || 0),
+            discount: Number(form.discount || 0),
+            discount_status: form.discount_status,
+            remaining_amount: remaining,
+            paid_at: paidAt,
+            student: studentObj ? { id: studentObj.id, name: studentObj.name } : { id: form.student_id },
+            parent: parentObj ? { id: parentObj.id, name: parentObj.name } : { id: form.parent_id },
+            schoolFee: feeObj
+                ? { id: feeObj.id, name: feeObj.name, amount: feeObj.amount ?? feeObj.value }
+                : { id: form.school_fee_id },
+            __optimistic: true,
+        };
+    };
+
+    const createMut = useMutation({
+        mutationFn: createPayment,
+
+        onMutate: async () => {
+            const err = validate();
+            if (err) {
+                setAlert({ type: "error", title: "حقول مطلوبة", message: err });
+                throw new Error(err);
+            }
+
+            setSaving(true);
+
+            const tmpId = `tmp-${Date.now()}`;
+            const optimisticPayment = buildOptimisticPayment(tmpId);
+
+            const sKey1 = ["payments"]; 
+            const sKeyStudent = paymentKeysForStudent(form.student_id);
+
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: sKey1 }),
+                ...sKeyStudent.map((k) => queryClient.cancelQueries({ queryKey: k })),
+            ]);
+
+            // خزن النسخ القديمة لإرجاعها في حال الفشل
+            const prevAll = queryClient.getQueryData(sKey1);
+            const prevStudentLists = sKeyStudent.map((k) => ({
+                key: k,
+                data: queryClient.getQueryData(k),
+            }));
+
+            // حدّث الكاش: أضف التفاؤلي
+            queryClient.setQueryData(sKey1, (old) => {
+                const list = Array.isArray(old) ? old : old?.data ?? [];
+                return Array.isArray(old) ? [optimisticPayment, ...list] : [optimisticPayment, ...list];
+            });
+
+            sKeyStudent.forEach(({ 0: a, 1: b }) => {
+                const key = [a, b];
+                queryClient.setQueryData(key, (old) => {
+                    const list = Array.isArray(old) ? old : old?.data ?? [];
+                    return [optimisticPayment, ...list];
+                });
+            });
+
+            return { tmpId, optimisticPayment, prevAll, prevStudentLists };
+        },
+
+        // ------- عند النجاح: استبدال العنصر المؤقت بنتيجة الخادم -------
+        onSuccess: (created, _vars, ctx) => {
+            const serverItem = created?.data?.data ?? created?.data ?? created;
+            if (!serverItem) return;
+
+            const replaceTmp = (arr) =>
+                (arr || []).map((it) => (String(it?.id) === String(ctx.tmpId) ? serverItem : it));
+
+            // استبدال في القوائم
+            queryClient.setQueryData(["payments"], (old) => {
+                const list = Array.isArray(old) ? old : old?.data ?? [];
+                return replaceTmp(list);
+            });
+
+            paymentKeysForStudent(form.student_id).forEach((k) => {
+                queryClient.setQueryData(k, (old) => {
+                    const list = Array.isArray(old) ? old : old?.data ?? [];
+                    return replaceTmp(list);
+                });
+            });
+
+            // إعادة جلب للتطابق النهائي (لن يؤخر العرض؛ لدينا البيانات أصلاً)
+            queryClient.invalidateQueries({ queryKey: ["payments"] });
+            paymentKeysForStudent(form.student_id).forEach((k) =>
+                queryClient.invalidateQueries({ queryKey: k })
+            );
+
+            setAlert({
+                type: "success",
+                title: "تمت العملية",
+                message: "تم تسجيل عملية الدفع وعرضها فورًا.",
+            });
+
+            // تصفير الحقول فقط (لا نغلق تلقائيًا إلا إذا رغبت)
+            setForm((f) => ({
+                ...f,
+                amount: "",
+                discount: "",
+                discount_status: "none",
+                paid_at: "",
+                status: "pending",
+            }));
+
+            onCreated && onCreated(serverItem);
+        },
+
+        // ------- عند الخطأ: تراجع عن التحديث المتفائل -------
+        onError: (err, _vars, ctx) => {
+            // ارجاع الكاش القديم
+            if (ctx?.prevAll !== undefined) {
+                queryClient.setQueryData(["payments"], ctx.prevAll);
+            }
+            if (ctx?.prevStudentLists) {
+                ctx.prevStudentLists.forEach(({ key, data }) => {
+                    queryClient.setQueryData(key, data);
+                });
+            }
+            const apiMsg = err?.response?.data?.message || err?.message || "فشل إنشاء عملية الدفع";
+            const apiErrors = err?.response?.data?.errors || {};
+            const fieldMsgs = Object.values(apiErrors).flat().join(" • ");
+            const finalMsg = fieldMsgs ? `${apiMsg}: ${fieldMsgs}` : apiMsg;
+            setAlert({ type: "error", title: "فشل العملية", message: finalMsg });
+        },
+
+        onSettled: () => setSaving(false),
+    });
+
     const handleSubmit = () => {
-        const localErr = validate();
-        if (localErr) {
-            setAlert({ type: "error", title: "حقول مطلوبة", message: localErr });
-            return;
-        }
+        // حمّل الـ payload كما هو (سنستعمله في onMutate فقط للتحقق)
         const normalizedStatus = STATUS_NORMALIZE[form.status] ?? "pending";
         let paidAtFormatted = null;
         if (form.paid_at) {
@@ -404,6 +518,7 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         if (normalizedStatus === "completed" && !paidAtFormatted) {
             paidAtFormatted = formatDateTime(new Date());
         }
+
         const payload = {
             parent_id: form.parent_id,
             student_id: form.student_id,
@@ -411,12 +526,11 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
             school_fee_id: form.school_fee_id,
             amount: Number(form.amount) || 0,
             discount: form.discount === "" ? 0 : Number(form.discount),
-            paid_at:
-                paidAtFormatted ?? (normalizedStatus === "completed" ? formatDateTime(new Date()) : null),
+            paid_at: paidAtFormatted ?? (normalizedStatus === "completed" ? formatDateTime(new Date()) : null),
             status: normalizedStatus,
             ...(form.discount_status !== "none" ? { discount_status: form.discount_status } : {}),
         };
-        setSaving(true);
+
         createMut.mutate(payload);
     };
 
@@ -596,7 +710,12 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                             sx={{
                                 "& .MuiInputBase-root": {
                                     color: "#fff",
-                                    backgroundColor: _statusColor,
+                                    backgroundColor:
+                                        form.status === "completed"
+                                            ? "rgba(76,175,80,.9)"
+                                            : form.status === "pending"
+                                                ? "rgba(255,152,0,.9)"
+                                                : "rgba(244,67,54,.9)",
                                 },
                             }}
                         >

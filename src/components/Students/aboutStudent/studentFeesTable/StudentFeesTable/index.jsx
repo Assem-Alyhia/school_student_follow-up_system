@@ -224,7 +224,14 @@ export default function StudentFeesTable() {
 
             {/* Table */}
             <TableContainer component={Paper}>
-                <Table>
+                <Table
+                    sx={{
+                        "& th, & td": {
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                        },
+                    }}
+                >
                     <TableHead>
                         <TableRow>
                             {[
@@ -269,7 +276,7 @@ export default function StudentFeesTable() {
                             </TableRow>
                         ) : (
                             sorted.map((row) => (
-                                <TableRow key={row.id}>
+                                <TableRow key={row.id} hover>
                                     <TableCell>{row.id}</TableCell>
                                     <TableCell>{row.student?.name}</TableCell>
                                     <TableCell>{row.parent?.name}</TableCell>
