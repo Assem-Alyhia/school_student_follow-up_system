@@ -308,14 +308,14 @@ const Section2 = ({ supervisors = [] }) => {
                 message="سيتم حذف بيانات المشرف من النظام."
             />
 
-            {success.show && (
-                <SuccessAlert
-                    title={success.title}
-                    message={success.message}
-                    severity={success.severity}
-                    onClose={() => setSuccess((s) => ({ ...s, show: false }))}
-                />
-            )}
+                {success.show && (
+                    <SuccessAlert
+                        title={success.title}
+                        message={success.message}
+                        severity={success.severity}
+                        onClose={() => setSuccess((s) => ({ ...s, show: false }))}
+                    />
+                )}
         </Box>
     );
 };

@@ -57,6 +57,20 @@ const INITIAL_VALUES = {
     weight: "",
 };
 
+// تحويل قيمة term إلى تسمية عربية ودية
+const termLabelFromValue = (v) =>
+    TERM_OPTIONS.find((o) => o.value === v)?.label ?? (v || "—");
+
+// توحيد شكل عنصر المادة سواء كان مسطحًا أو تحت subject
+const normalizeSubject = (s) => {
+    const subj = s?.subject ?? s ?? {};
+    return {
+        id: subj?.id ?? s?.id ?? "",
+        name: subj?.name ?? s?.name ?? subj?.title ?? s?.title ?? (subj?.id ? `مادة #${subj.id}` : "—"),
+        term: subj?.term ?? s?.term ?? null,
+    };
+};
+
 export default function AddExamModal({
     open,
     onClose,
@@ -167,7 +181,6 @@ export default function AddExamModal({
 
             setValues(INITIAL_VALUES);
             onCreated?.(created);
-            // بإمكانك إبقاء المودال مفتوحًا أو إغلاقه حسب رغبتك:
             // handleClose();
         } catch (e) {
             // فشل ❌
@@ -184,6 +197,12 @@ export default function AddExamModal({
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 9, md: 4 };
     const longFieldCols = { xs: 9, md: 10 };
+
+    // قائمة مواد مُطبّعة للاستعمال المتكرر (تحسين بسيط للأداء/الوضوح)
+    const normalizedSubjects = useMemo(
+        () => subjects.map(normalizeSubject).filter((s) => s.id != null && s.id !== ""),
+        [subjects]
+    );
 
     return (
         <Dialog
@@ -241,10 +260,24 @@ export default function AddExamModal({
                                     onChange={change("subject_id")}
                                     displayEmpty
                                     disabled={saving}
+                                    // لعرض الاسم + الفصل في الحقل بعد الاختيار
+                                    renderValue={(selected) => {
+                                        if (!selected) return "اختر المادة";
+                                        const s = normalizedSubjects.find((x) => String(x.id) === String(selected));
+                                        if (!s) return "اختر المادة";
+                                        return `${s.name} — ${termLabelFromValue(s.term)}`;
+                                    }}
                                 >
                                     <MenuItem value="" disabled>اختر المادة</MenuItem>
-                                    {subjects.map((s) => (
-                                        <MenuItem key={s.id} value={s.id}>{s.name || `مادة #${s.id}`}</MenuItem>
+                                    {normalizedSubjects.map((s) => (
+                                        <MenuItem key={s.id} value={s.id} dir="rtl">
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                                <Typography component="span">{s.name}</Typography>
+                                                <Typography component="span" variant="caption" color="text.secondary">
+                                                    {termLabelFromValue(s.term)}
+                                                </Typography>
+                                            </Box>
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>

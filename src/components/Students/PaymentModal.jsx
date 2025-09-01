@@ -1,18 +1,25 @@
 // src/components/Payments/PaymentModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Box, Modal, Typography, Grid, TextField, MenuItem,
-    Button, CircularProgress
+    Box,
+    Modal,
+    Typography,
+    Grid,
+    TextField,
+    MenuItem,
+    Button,
+    CircularProgress,
+    Chip,
+    Stack,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import SuccessAlert from "../../layout/SuccessAlert";
-import { getAllParentsNoPaginate } from "./../../api/Admin/Parents/getAllParentsNoPaginate";
-import { getAllStudentsNoPaginate } from "./../../api/Admin/Students/getAllStudentsNoPaginate";
-import { getAllAcademicYears } from "./../../api/Admin/AcademicYears/getAllAcademicYears";
-import { getAllSchoolFeesNoPaginate } from "./../../api/Admin/SchoolFees/getAllSchoolFeesNoPaginate";
-import { createPayment } from "./../../api/Admin/Payments/createPayment";
+import { getAllParentsNoPaginate } from "../../api/Admin/Parents/getAllParentsNoPaginate";
+import { getAllStudentsNoPaginate } from "../../api/Admin/Students/getAllStudentsNoPaginate";
+import { getAllAcademicYears } from "../../api/Admin/AcademicYears/getAllAcademicYears";
+import { getAllSchoolFeesNoPaginate } from "../../api/Admin/SchoolFees/getAllSchoolFeesNoPaginate";
+import { createPayment } from "../../api/Admin/Payments/createPayment";
 
 const STATUS_OPTIONS = [
     { value: "pending", label: "قيد الانتظار" },
@@ -36,8 +43,15 @@ const DISCOUNT_STATUS_OPTIONS = [
     { value: "staff", label: "موظفون" },
 ];
 
+const CATEGORY_PCT = {
+    none: 0,
+    orphans: 0.15,
+    siblings: 0.1,
+    staff: 0.2,
+};
+
 function SelectAuto({ label, options, valueId, onChange, loading, getOptionLabel }) {
-    const value = options.find(o => String(o?.id) === String(valueId)) || null;
+    const value = options.find((o) => String(o?.id) === String(valueId)) || null;
     return (
         <Autocomplete
             options={options}
@@ -69,51 +83,41 @@ const nowYear = new Date().getFullYear();
 
 function findParentForStudent(student, parents) {
     if (!student || !Array.isArray(parents) || parents.length === 0) return null;
-
-    const candidateIds = [
-        student?.parent_id,
-        student?.parent?.id,
-        student?.guardian_id,
-    ].filter(Boolean);
-
+    const candidateIds = [student?.parent_id, student?.parent?.id, student?.guardian_id].filter(Boolean);
     for (const cid of candidateIds) {
-        const hit = parents.find(p => String(p?.id) === String(cid));
+        const hit = parents.find((p) => String(p?.id) === String(cid));
         if (hit) return hit.id;
     }
-
     const parentUserId = student?.parent?.user?.id || student?.parent_user_id;
     if (parentUserId) {
-        const hit = parents.find(p => String(p?.user?.id) === String(parentUserId));
+        const hit = parents.find((p) => String(p?.user?.id) === String(parentUserId));
         if (hit) return hit.id;
     }
-
     const parentName = student?.parent?.name;
     if (parentName) {
-        const hit = parents.find(p => String(p?.name || "").trim() === String(parentName).trim());
+        const hit = parents.find((p) => String(p?.name || "").trim() === String(parentName).trim());
         if (hit) return hit.id;
     }
-
     return null;
 }
 
 function pickCurrentAcademicYear(years) {
     if (!Array.isArray(years) || years.length === 0) return null;
-
-    const flagged = years.find(y => isTruthy(y?.is_current) || isTruthy(y?.current) || isTruthy(y?.active));
+    const flagged = years.find((y) => isTruthy(y?.is_current) || isTruthy(y?.current) || isTruthy(y?.active));
     if (flagged) return flagged;
-
-    const inRange = years.find(y => {
+    const inRange = years.find((y) => {
         const s = Number(y?.start_year) || Number(String(y?.name || "").match(/\d{4}/)?.[0]);
         const e = Number(y?.end_year) || Number(String(y?.name || "").match(/(\d{4})(?!.*\d)/)?.[0]);
         if (!s || !e) return false;
         return nowYear >= s && nowYear <= e;
     });
     if (inRange) return inRange;
-
     const sorted = [...years].sort((a, b) => {
-        const ae = Number(a?.end_year) || 0, be = Number(b?.end_year) || 0;
+        const ae = Number(a?.end_year) || 0,
+            be = Number(b?.end_year) || 0;
         if (be !== ae) return be - ae;
-        const as = Number(a?.start_year) || 0, bs = Number(b?.start_year) || 0;
+        const as = Number(a?.start_year) || 0,
+            bs = Number(b?.start_year) || 0;
         return bs - as;
     });
     return sorted[0] || years[0];
@@ -123,35 +127,25 @@ function pickFeeForStudent(fees, student) {
     if (!Array.isArray(fees) || fees.length === 0) return null;
     const levelId = student?.classroom?.level?.id || student?.level?.id;
     const gradeLevel = student?.classroom?.level?.grade_level || student?.level?.grade_level;
-
-    // 1) بالمطابقة المباشرة على level id من fee.level.id أو fee.level_id أو fee.class_level_id
-    const byLevelId = fees.find(f =>
-        String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(levelId)
-    );
+    const byLevelId = fees.find((f) => String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(levelId));
     if (byLevelId) return byLevelId;
-
-    // 2) بالمطابقة على grade_level
-    const byGrade = fees.find(f =>
-        Number(f?.grade_level) === Number(gradeLevel) ||
-        (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
-            String(f?.name || f?.title || "").includes(String(gradeLevel)))
-    );
+    const byGrade =
+        fees.find(
+            (f) =>
+                Number(f?.grade_level) === Number(gradeLevel) ||
+                (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
+                    String(f?.name || f?.title || "").includes(String(gradeLevel)))
+        ) || null;
     if (byGrade) return byGrade;
-
-    // 3) افتراضي معلّم/مفعل
-    const flagged = fees.find(f => isTruthy(f?.is_default) || isTruthy(f?.active));
+    const flagged = fees.find((f) => isTruthy(f?.is_default) || isTruthy(f?.active));
     if (flagged) return flagged;
-
-    // 4) أول عنصر
     return fees[0] || null;
 }
 
 const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated }) => {
     const queryClient = useQueryClient();
-
     const [alert, setAlert] = useState(null);
     const [saving, setSaving] = useState(false);
-
     const [form, setForm] = useState({
         parent_id: null,
         student_id: null,
@@ -163,10 +157,8 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         paid_at: "",
         status: "pending",
     });
+    const setField = (name, value) => setForm((f) => ({ ...f, [name]: value }));
 
-    const setField = (name, value) => setForm(f => ({ ...f, [name]: value }));
-
-    // ========== Queries (fetch on open) ==========
     const {
         data: parentsData,
         isLoading: parentsLoading,
@@ -223,54 +215,45 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
     const anyLoading = parentsLoading || studentsLoading || yearsLoading || feesLoading;
     const anyError = parentsErr || studentsErr || yearsErr || feesErr;
     const firstErrorMsg =
-        parentsError?.message ||
-        studentsError?.message ||
-        yearsError?.message ||
-        feesError?.message;
+        parentsError?.message || studentsError?.message || yearsError?.message || feesError?.message;
 
-    // ========= Prefill on initial open/data ready =========
     useEffect(() => {
         if (!open) return;
-        // تعيين الطالب والولي مباشرة إن وُجدا من props
-        setForm(prev => ({
+        setForm((prev) => ({
             ...prev,
             student_id: initialStudent?.id ?? prev.student_id,
             parent_id: initialStudent?.parent?.id ?? prev.parent_id,
         }));
     }, [open, initialStudent]);
 
-    // الطالب المختار حاليًا (من النموذج أو props كباك أب)
     const selectedStudent = useMemo(() => {
-        const fromList = students.find(s => String(s?.id) === String(form.student_id));
+        const fromList = students.find((s) => String(s?.id) === String(form.student_id));
         return fromList || initialStudent || null;
     }, [students, form.student_id, initialStudent]);
 
     const selectedLevelId = selectedStudent?.classroom?.level?.id || selectedStudent?.level?.id || null;
 
-    // تصفية الرسوم بحسب Level الطالب (مع سقوط رجوعي إلى كافة الرسوم إن لا يوجد مطابق)
     const feesFiltered = useMemo(() => {
         if (!selectedLevelId) return fees;
-        const byLevel = fees.filter(f =>
-            String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(selectedLevelId)
+        const byLevel = fees.filter(
+            (f) => String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(selectedLevelId)
         );
         return byLevel.length ? byLevel : fees;
     }, [fees, selectedLevelId]);
 
-    // عندما تكون القوائم جاهزة، اختر سنة دراسية ورسم مناسبين واضبط المبلغ
     useEffect(() => {
         if (!open) return;
         if (!years.length && !fees.length) return;
-
-        setForm(prev => {
+        setForm((prev) => {
             const next = { ...prev };
-
             if (!next.academic_year_id && years.length) {
                 const y = pickCurrentAcademicYear(years);
                 if (y?.id) next.academic_year_id = y.id;
             }
-
-            // اختر قسطًا بحسب Level الطالب الحالي (إن وُجد)
-            if ((!next.school_fee_id || !fees.find(f => String(f.id) === String(next.school_fee_id))) && fees.length) {
+            if (
+                (!next.school_fee_id || !fees.find((f) => String(f.id) === String(next.school_fee_id))) &&
+                fees.length
+            ) {
                 const fee = pickFeeForStudent(fees, selectedStudent);
                 if (fee?.id) {
                     next.school_fee_id = fee.id;
@@ -280,45 +263,66 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                     }
                 }
             }
-
             return next;
         });
     }, [open, years, fees, selectedStudent]);
 
-    // تزامن ولي الأمر تلقائياً عند تغيير الطالب أو وصول القوائم
     useEffect(() => {
         if (!open || !form.student_id) return;
-        const stu = students.find(s => String(s?.id) === String(form.student_id));
+        const stu = students.find((s) => String(s?.id) === String(form.student_id));
         if (!stu) return;
         const pid = findParentForStudent(stu, parents);
         if (pid && String(form.parent_id) !== String(pid)) {
-            setForm(f => ({ ...f, parent_id: pid }));
+            setForm((f) => ({ ...f, parent_id: pid }));
         }
     }, [open, form.student_id, students, parents]);
 
-    // عند تغيير الطالب أو تغيّر Level، تأكد أن القسط المختار يتبع نفس الـ Level، وإلا اختر قسطًا مناسبًا واضبط المبلغ إن لزم
     useEffect(() => {
         if (!open || !fees.length) return;
-
-        const currentFee = fees.find(f => String(f?.id) === String(form.school_fee_id));
-        const currentFeeLevel = currentFee?.level?.id ?? currentFee?.level_id ?? currentFee?.class_level_id;
-
+        const currentFee = fees.find((f) => String(f?.id) === String(form.school_fee_id));
+        const currentFeeLevel =
+            currentFee?.level?.id ?? currentFee?.level_id ?? currentFee?.class_level_id;
         if (selectedLevelId && String(currentFeeLevel) !== String(selectedLevelId)) {
             const better = pickFeeForStudent(feesFiltered, selectedStudent);
             if (better?.id) {
-                setForm(prev => ({
+                setForm((prev) => ({
                     ...prev,
                     school_fee_id: better.id,
                     ...(prev.amount === "" || Number(prev.amount) === 0
                         ? { amount: String(better?.amount ?? better?.value ?? "") }
-                        : {})
+                        : {}),
                 }));
             }
         }
     }, [open, selectedLevelId, feesFiltered, selectedStudent, fees, form.school_fee_id, form.amount]);
 
-    // ========== Mutation (create payment) ==========
-    const _queryClient = useQueryClient();
+    const selectedFee = useMemo(
+        () => fees.find((f) => String(f?.id) === String(form.school_fee_id)) || null,
+        [fees, form.school_fee_id]
+    );
+    const feeAmount = useMemo(
+        () => Number(selectedFee?.amount ?? selectedFee?.value ?? 0),
+        [selectedFee]
+    );
+
+    const paidSoFar = 0;
+    const categoryPct = CATEGORY_PCT[form.discount_status] ?? 0;
+    const categoryDiscount = +(feeAmount * categoryPct).toFixed(2);
+    const manualDiscount = Number(form.discount || 0);
+    const remainingThisInstallment = Math.max(feeAmount - paidSoFar, 0);
+    const totalDiscount = Math.max(manualDiscount + categoryDiscount, 0);
+    const effectiveDiscount = Math.min(totalDiscount, remainingThisInstallment);
+    const suggestedToPay = +(remainingThisInstallment - effectiveDiscount).toFixed(2);
+    const expectedRemainingAfterPay = +(remainingThisInstallment - suggestedToPay).toFixed(2);
+
+    const paidAtIsFuture = useMemo(() => {
+        if (!form.paid_at) return false;
+        const picked = new Date(form.paid_at);
+        if (Number.isNaN(picked.valueOf())) return false;
+        const now = new Date();
+        return picked > now;
+    }, [form.paid_at]);
+
     const createMut = useMutation({
         mutationFn: createPayment,
         onSuccess: (created) => {
@@ -327,16 +331,13 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                 queryClient.invalidateQueries({ queryKey: ["student", String(form.student_id)] });
                 queryClient.invalidateQueries({ queryKey: ["student:payments", String(form.student_id)] });
             }
-
             setAlert({
                 type: "success",
                 title: "تمت العملية",
                 message: "تم تسجيل عملية الدفع وحفظها في النظام.",
             });
-
             onCreated && onCreated(created);
-
-            setForm(f => ({
+            setForm((f) => ({
                 ...f,
                 amount: "",
                 discount: "",
@@ -350,22 +351,26 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
             const apiErrors = err?.response?.data?.errors || {};
             const fieldMsgs = Object.values(apiErrors).flat().join(" • ");
             const finalMsg = fieldMsgs ? `${apiMsg}: ${fieldMsgs}` : apiMsg;
-
             setAlert({ type: "error", title: "فشل العملية", message: finalMsg });
         },
         onSettled: () => setSaving(false),
     });
 
-    // ========== Helpers ==========
-    const _statusColor = useMemo(() => (
-        form.status === "completed" ? "rgba(76,175,80,.9)"
-            : form.status === "pending" ? "rgba(255,152,0,.9)"
-                : "rgba(244,67,54,.9)"
-    ), [form.status]);
+    const _statusColor = useMemo(
+        () =>
+            form.status === "completed"
+                ? "rgba(76,175,80,.9)"
+                : form.status === "pending"
+                    ? "rgba(255,152,0,.9)"
+                    : "rgba(244,67,54,.9)",
+        [form.status]
+    );
 
     const formatDateTime = (d) => {
         const pad = (n) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+            d.getMinutes()
+        )}:${pad(d.getSeconds())}`;
     };
 
     const validate = () => {
@@ -373,29 +378,25 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         if (!form.student_id) return "يجب اختيار الطالب.";
         if (!form.academic_year_id) return "يجب اختيار السنة الدراسية.";
         if (!form.school_fee_id) return "يجب اختيار نوع الرسوم (المطابق لمستوى الطالب).";
-        if (form.amount === "" || Number(form.amount) <= 0) return "أدخل مبلغًا صالحًا.";
         return null;
     };
 
     const onFeeChange = (id, feeObj) => {
         setField("school_fee_id", id);
-        const feeAmount = feeObj?.amount ?? feeObj?.value;
-        if (feeAmount && (!form.amount || Number(form.amount) === 0)) {
-            setField("amount", String(feeAmount));
+        const feeAmountN = Number(feeObj?.amount ?? feeObj?.value ?? 0);
+        if (feeAmountN && (!form.amount || Number(form.amount) === 0)) {
+            setField("amount", String(feeAmountN));
         }
     };
 
-    // ========== Submit ==========
     const handleSubmit = () => {
         const localErr = validate();
         if (localErr) {
             setAlert({ type: "error", title: "حقول مطلوبة", message: localErr });
             return;
         }
-
         const normalizedStatus = STATUS_NORMALIZE[form.status] ?? "pending";
         let paidAtFormatted = null;
-
         if (form.paid_at) {
             const d = new Date(form.paid_at);
             if (!isNaN(d)) paidAtFormatted = formatDateTime(d);
@@ -403,7 +404,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         if (normalizedStatus === "completed" && !paidAtFormatted) {
             paidAtFormatted = formatDateTime(new Date());
         }
-
         const payload = {
             parent_id: form.parent_id,
             student_id: form.student_id,
@@ -411,28 +411,40 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
             school_fee_id: form.school_fee_id,
             amount: Number(form.amount) || 0,
             discount: form.discount === "" ? 0 : Number(form.discount),
-            paid_at: paidAtFormatted ?? (normalizedStatus === "completed" ? formatDateTime(new Date()) : null),
+            paid_at:
+                paidAtFormatted ?? (normalizedStatus === "completed" ? formatDateTime(new Date()) : null),
             status: normalizedStatus,
             ...(form.discount_status !== "none" ? { discount_status: form.discount_status } : {}),
         };
-
         setSaving(true);
         createMut.mutate(payload);
     };
 
     return (
         <Modal open={open} onClose={handleClose}>
-            <Box sx={{
-                position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-                width: "92%", maxWidth: 900, bgcolor: "background.paper", borderRadius: 3,
-                boxShadow: 10, p: 3, direction: "rtl"
-            }}>
+            <Box
+                sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%,-50%)",
+                    width: "92%",
+                    maxWidth: 900,
+                    bgcolor: "background.paper",
+                    borderRadius: 3,
+                    boxShadow: 10,
+                    p: 3,
+                    direction: "rtl",
+                }}
+            >
                 <Typography align="center" sx={{ fontWeight: 700, mb: 3, color: "#2a8a89" }}>
                     إضافة رسوم للطالب
                 </Typography>
 
                 {(parentsLoading || studentsLoading || yearsLoading || feesLoading) && (
-                    <Box sx={{ p: 1, mb: 2 }}><CircularProgress size={22} /> جاري تحميل القوائم...</Box>
+                    <Box sx={{ p: 1, mb: 2 }}>
+                        <CircularProgress size={22} /> جارِ تحميل القوائم...
+                    </Box>
                 )}
                 {anyError && (
                     <Box sx={{ p: 1, mb: 2, color: "error.main" }}>
@@ -443,43 +455,48 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <SelectAuto
-                            label="ولي الأمر" options={parents}
-                            valueId={form.parent_id} onChange={(id) => setField("parent_id", id)}
-                            loading={parentsLoading} getOptionLabel={(p) => p?.name || ""}
+                            label="ولي الأمر"
+                            options={parents}
+                            valueId={form.parent_id}
+                            onChange={(id) => setField("parent_id", id)}
+                            loading={parentsLoading}
+                            getOptionLabel={(p) => p?.name || ""}
                         />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <SelectAuto
-                            label="الطالب" options={students}
+                            label="الطالب"
+                            options={students}
                             valueId={form.student_id}
                             onChange={(id, opt) => {
                                 setField("student_id", id);
-                                // اضبط وليّ الأمر تلقائياً حسب الطالب
                                 const pid = findParentForStudent(opt, parents);
                                 if (pid) setField("parent_id", pid);
-                                // اضبط نوع القسط بناءً على Level الطالب
                                 const fee = pickFeeForStudent(fees, opt);
                                 if (fee?.id) {
                                     setField("school_fee_id", fee.id);
-                                    const feeAmount = fee?.amount ?? fee?.value;
+                                    const feeAmountN = Number(fee?.amount ?? fee?.value ?? 0);
                                     if (!form.amount || Number(form.amount) === 0) {
-                                        setField("amount", String(feeAmount ?? ""));
+                                        setField("amount", String(feeAmountN || ""));
                                     }
                                 }
                             }}
-                            loading={studentsLoading} getOptionLabel={(s) => s?.name || ""}
+                            loading={studentsLoading}
+                            getOptionLabel={(s) => s?.name || ""}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={6}>
                         <SelectAuto
-                            label="السنة الدراسية" options={years}
-                            valueId={form.academic_year_id} onChange={(id) => setField("academic_year_id", id)}
-                            loading={yearsLoading} getOptionLabel={(y) => y?.name || ""}
+                            label="السنة الدراسية"
+                            options={years}
+                            valueId={form.academic_year_id}
+                            onChange={(id) => setField("academic_year_id", id)}
+                            loading={yearsLoading}
+                            getOptionLabel={(y) => y?.name || ""}
                         />
                     </Grid>
 
-                    {/* نوع الرسوم — يعرض فقط الرسوم المطابقة لمستوى الطالب */}
                     <Grid item xs={12} md={6}>
                         <SelectAuto
                             label="نوع الرسوم"
@@ -487,63 +504,124 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                             valueId={form.school_fee_id}
                             onChange={onFeeChange}
                             loading={feesLoading}
-                            getOptionLabel={(f) => f ? `${f.name} - ${f.amount ?? ""}` : ""}
+                            getOptionLabel={(f) => (f ? `${f.name} - ${f.amount ?? ""}` : "")}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <PaperLike>
+                            <FourCols>
+                                <Kpi title="قيمة القسط" value={`${feeAmount.toFixed(2)} ر.س`} />
+                                <Kpi title="الآن حتى المدفوع" value={`${paidSoFar.toFixed(2)} ر.س`} />
+                                <Kpi
+                                    title="المتبقي لهذا القسط"
+                                    value={`${remainingThisInstallment.toFixed(2)} ر.س`}
+                                    color={remainingThisInstallment > 0 ? "error.main" : "success.main"}
+                                />
+                                <Kpi
+                                    title="المتبقي بعد هذا الدفع (المتوقّع)"
+                                    value={`${expectedRemainingAfterPay.toFixed(2)} ر.س`}
+                                    color={expectedRemainingAfterPay > 0 ? "error.main" : "success.main"}
+                                />
+                            </FourCols>
+                            <Stack direction="row" justifyContent="center" sx={{ mt: 1.25 }}>
+                                <Chip
+                                    label={
+                                        form.discount_status !== "none"
+                                            ? `صافي الدفع (المتبقي - الخصم اليدوي - خصم الفئة ${Math.round(
+                                                categoryPct * 100
+                                            )}%) = ${suggestedToPay.toFixed(2)} ر.س`
+                                            : `صافي الدفع (المتبقي - الخصم) = ${suggestedToPay.toFixed(2)} ر.س`
+                                    }
+                                    sx={{ bgcolor: "#EDF6F9", borderRadius: 2, px: 1.25 }}
+                                />
+                            </Stack>
+                        </PaperLike>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            label="الخصم"
+                            fullWidth
+                            type="number"
+                            value={form.discount}
+                            onChange={(e) => setField("discount", e.target.value)}
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            label="المبلغ"
+                            fullWidth
+                            type="number"
+                            value={form.amount}
+                            onChange={(e) => setField("amount", e.target.value)}
                         />
                     </Grid>
 
                     <Grid item xs={12} md={6}>
                         <TextField
-                            label="الخصم" fullWidth type="number"
-                            value={form.discount} onChange={(e) => setField("discount", e.target.value)}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            label="المبلغ" fullWidth type="number"
-                            value={form.amount} onChange={(e) => setField("amount", e.target.value)}
-                        />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            select fullWidth label="حالة الخصم"
-                            value={form.discount_status} onChange={(e) => setField("discount_status", e.target.value)}
+                            select
+                            fullWidth
+                            label="حالة الخصم"
+                            value={form.discount_status}
+                            onChange={(e) => setField("discount_status", e.target.value)}
                         >
-                            {DISCOUNT_STATUS_OPTIONS.map(opt => (
-                                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                            {DISCOUNT_STATUS_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </MenuItem>
                             ))}
                         </TextField>
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField
-                            fullWidth type="datetime-local" label="تاريخ الدفع"
+                            fullWidth
+                            type="datetime-local"
+                            label="تاريخ الدفع"
                             InputLabelProps={{ shrink: true }}
-                            value={form.paid_at} onChange={(e) => setField("paid_at", e.target.value)}
+                            value={form.paid_at}
+                            onChange={(e) => setField("paid_at", e.target.value)}
+                            error={paidAtIsFuture}
+                            helperText="يجب أن يكون التاريخ يساوي أو قبل التاريخ الحالي (مع الساعة)."
                         />
                     </Grid>
 
                     <Grid item xs={12}>
                         <TextField
-                            select fullWidth label="حالة الدفع"
-                            value={form.status} onChange={(e) => setField("status", e.target.value)}
-                            sx={{ "& .MuiInputBase-root": { color: "#fff", backgroundColor: (form.status === "completed" ? "rgba(76,175,80,.9)" : form.status === "pending" ? "rgba(255,152,0,.9)" : "rgba(244,67,54,.9)") } }}
+                            select
+                            fullWidth
+                            label="حالة الدفع"
+                            value={form.status}
+                            onChange={(e) => setField("status", e.target.value)}
+                            sx={{
+                                "& .MuiInputBase-root": {
+                                    color: "#fff",
+                                    backgroundColor: _statusColor,
+                                },
+                            }}
                         >
-                            {STATUS_OPTIONS.map(opt => (
-                                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                            {STATUS_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </MenuItem>
                             ))}
                         </TextField>
                     </Grid>
                 </Grid>
 
                 <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
-                    <Button fullWidth variant="outlined" onClick={handleClose}>إلغاء</Button>
+                    <Button fullWidth variant="outlined" onClick={handleClose}>
+                        إلغاء
+                    </Button>
                     <Button
-                        fullWidth variant="contained" onClick={handleSubmit}
+                        fullWidth
+                        variant="contained"
+                        onClick={handleSubmit}
                         disabled={saving || anyLoading || createMut.isPending}
-                        startIcon={(saving || createMut.isPending) ? <CircularProgress size={18} /> : null}
+                        startIcon={saving || createMut.isPending ? <CircularProgress size={18} /> : null}
                         sx={{ background: "linear-gradient(90deg,#308A9F,#22385F)" }}
                     >
-                        {(saving || createMut.isPending) ? "جارٍ الحفظ..." : "دفع الرسوم"}
+                        {saving || createMut.isPending ? "جارٍ الحفظ..." : "دفع الرسوم"}
                     </Button>
                 </Box>
 
@@ -562,5 +640,39 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         </Modal>
     );
 };
+
+const PaperLike = ({ children }) => (
+    <Box
+        sx={{
+            px: 2,
+            py: 1.5,
+            borderRadius: 2,
+            border: "1px solid #E7EEF5",
+            bgcolor: "#fff",
+            mb: 1.5,
+        }}
+    >
+        {children}
+    </Box>
+);
+
+const FourCols = ({ children }) => (
+    <Box
+        sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
+            gap: 1.5,
+        }}
+    >
+        {children}
+    </Box>
+);
+
+const Kpi = ({ title, value, color }) => (
+    <Box sx={{ textAlign: "center" }}>
+        <Typography sx={{ color: "#637381", fontSize: 13 }}>{title}</Typography>
+        <Typography sx={{ fontWeight: 800, color: color || "#0F2C4B" }}>{value}</Typography>
+    </Box>
+);
 
 export default PaymentModal;

@@ -47,17 +47,6 @@ const Section1 = () => {
                     </Grid>
 
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Button
-                            variant="contained"
-                            startIcon={<FileDownloadIcon />}
-                            sx={{
-                                backgroundColor: '#35AFBC',
-                                '&:hover': { backgroundColor: '#30BA9F' },
-                                marginRight: 2
-                            }}
-                        >
-                            تصدير بيانات
-                        </Button>
 
                         <IconButton sx={{ color: '#35AFBC' }}>
                             <PrintIcon />

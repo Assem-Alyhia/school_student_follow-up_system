@@ -9,7 +9,6 @@ import {
     Chip,
     Divider,
     Stack,
-    Tooltip,
     Alert,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
@@ -25,6 +24,7 @@ import { getAdminComments } from "../../../../api/Admin/Comments/getAdminComment
 import { createAdminComment } from "../../../../api/Admin/Comments/createAdminComment";
 import { updateAdminComment } from "../../../../api/Admin/Comments/updateAdminComment";
 import { deleteAdminComment } from "../../../../api/Admin/Comments/deleteAdminComment";
+import PaginationSection from "../../../../layout/PaginationSection";
 
 const mainColor = "#2ea394";
 const isNumberId = (v) => typeof v === "number" && Number.isFinite(v);
@@ -146,12 +146,22 @@ export default function ChatCommentsStudentDetails({ studentId }) {
     const [err, setErr] = useState("");
 
     const sid = Number(studentId);
-    const queryKey = useMemo(() => ["admin", "comments", { studentId: sid }], [sid]);
+
+    // pagination
+    const [page, setPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const queryKey = useMemo(
+        () => ["admin", "comments", { studentId: sid, page, perPage: rowsPerPage }],
+        [sid, page, rowsPerPage]
+    );
 
     const { data, isLoading } = useQuery({
         queryKey,
-        queryFn: () => getAdminComments({ student_id: sid }),
+        queryFn: () => getAdminComments({ student_id: sid, page, perPage: rowsPerPage }),
         enabled: Number.isFinite(sid),
+        keepPreviousData: true,
+        staleTime: 30_000,
     });
 
     const addMut = useMutation({
@@ -168,25 +178,35 @@ export default function ChatCommentsStudentDetails({ studentId }) {
                 created_at: new Date().toISOString(),
                 user: null,
             };
-            qc.setQueryData(queryKey, (old) => ({
-                ...(old || {}),
-                data: [optimistic, ...(old?.data || [])],
-            }));
+            qc.setQueryData(queryKey, (old) => {
+                const arr = Array.isArray(old?.data) ? old.data : [];
+                let next = [optimistic, ...arr];
+                if (next.length > rowsPerPage) next = next.slice(0, rowsPerPage);
+                const meta = old?.meta
+                    ? { ...old.meta, total: (old.meta.total ?? old.meta.count ?? 0) + 1 }
+                    : old?.meta;
+                return { ...(old || {}), data: next, ...(meta ? { meta } : {}) };
+            });
             return { prev, tmpId };
         },
         onSuccess: (res, _v, ctx) => {
-            const serverItem = res?.data;
-            if (!serverItem || !ctx?.tmpId) return;
-            qc.setQueryData(queryKey, (old) => ({
-                ...(old || {}),
-                data: (old?.data || []).map((c) => (c.id === ctx.tmpId ? serverItem : c)),
-            }));
+            const serverItem = res?.data?.data ?? res?.data ?? res;
+            if (!serverItem) return;
+            qc.setQueryData(queryKey, (old) => {
+                const arr = Array.isArray(old?.data) ? old.data : [];
+                let next = arr.map((c) => (c.id === ctx?.tmpId ? serverItem : c));
+                if (!next.find((c) => String(c.id) === String(serverItem.id))) {
+                    next = [serverItem, ...next];
+                    if (next.length > rowsPerPage) next = next.slice(0, rowsPerPage);
+                }
+                return { ...(old || {}), data: next };
+            });
         },
         onError: (e, _v, ctx) => {
             if (ctx?.prev) qc.setQueryData(queryKey, ctx.prev);
             setErr(e?.message || "فشل إضافة التعليق");
         },
-        onSettled: () => qc.invalidateQueries({ queryKey }),
+        // لا نُعيد الجلب بعد الإضافة حتى لا يختفي التعليق الجديد من الصفحة الحالية
     });
 
     const editMut = useMutation({
@@ -214,10 +234,13 @@ export default function ChatCommentsStudentDetails({ studentId }) {
             if (!isNumberId(id)) return;
             await qc.cancelQueries({ queryKey });
             const prev = qc.getQueryData(queryKey);
-            qc.setQueryData(queryKey, (old) => ({
-                ...(old || {}),
-                data: (old?.data || []).filter((c) => c.id !== id),
-            }));
+            qc.setQueryData(queryKey, (old) => {
+                const next = (old?.data || []).filter((c) => c.id !== id);
+                const meta = old?.meta
+                    ? { ...old.meta, total: Math.max((old.meta.total ?? 1) - 1, 0) }
+                    : old?.meta;
+                return { ...(old || {}), data: next, ...(meta ? { meta } : {}) };
+            });
             return { prev };
         },
         onError: (e, _v, ctx) => {
@@ -228,12 +251,14 @@ export default function ChatCommentsStudentDetails({ studentId }) {
     });
 
     const send = () => {
-        if (!msg.trim()) return;
+        if (!msg.trim() || addMut.isPending) return;
         addMut.mutate(msg.trim());
         setMsg("");
     };
 
     const comments = data?.data || [];
+    const total = data?.meta?.total ?? data?.total ?? comments.length;
+    const lastPage = data?.meta?.last_page || Math.ceil(total / rowsPerPage) || 1;
 
     return (
         <Box sx={{ direction: "rtl", mt: 2 }}>
@@ -300,6 +325,19 @@ export default function ChatCommentsStudentDetails({ studentId }) {
                     ))
                 )}
             </Stack>
+
+            <PaginationSection
+                sx={{ direction: "ltr" }}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                total={total}
+                lastPage={lastPage}
+                onPageChange={(newPage) => setPage(newPage)}
+                onRowsPerPageChange={(event) => {
+                    setRowsPerPage(Number(event.target.value));
+                    setPage(1);
+                }}
+            />
         </Box>
     );
 }

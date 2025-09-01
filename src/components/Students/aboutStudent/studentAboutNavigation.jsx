@@ -3,7 +3,6 @@ import { Box, Button, Paper, Typography } from '@mui/material';
 import StudentDetails from './studentDetails';
 import DailySchedule from './DailySchedule';
 import StudentFeesAboutTable from './studentFeesTable';
-import ExamResults from './ExamResults';
 import WeeklySchedule from './WeeklySchedule';
 import StudentDayTimeline from './StudentDayTimeline/StudentDayTimeline';
 import { useParams } from 'react-router-dom';
@@ -39,7 +38,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '16%',
+                            minWidth: '19%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -54,7 +53,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '16%',
+                            minWidth: '19%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -68,7 +67,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '16%',
+                            minWidth: '19%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -82,7 +81,7 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '16%',
+                            minWidth: '19%',
                             whiteSpace: 'nowrap'
                         }}
                     >
@@ -97,26 +96,11 @@ const StudentNavigation = () => {
                             '&:hover': { backgroundColor: '#30BA9F' },
                             fontSize: '14px',
                             padding: '8px 16px',
-                            minWidth: '16%',
+                            minWidth: '19%',
                             whiteSpace: 'nowrap'
                         }}
                     >
                         الرسوم
-                    </Button>
-
-                    <Button
-                        variant="contained"
-                        onClick={() => handleTabChange('نتائج الامتحانات')}
-                        sx={{
-                            backgroundColor: activeTab === 'نتائج الامتحانات' ? '#22385F' : '#35AFBC',
-                            '&:hover': { backgroundColor: '#30BA9F' },
-                            fontSize: '14px',
-                            padding: '8px 16px',
-                            minWidth: '16%',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        نتائج الامتحانات
                     </Button>
                 </Box>
 
@@ -136,9 +120,6 @@ const StudentNavigation = () => {
                     )}
                     {activeTab === 'الرسوم' && (
                         <StudentFeesAboutTable />
-                    )}
-                    {activeTab === 'نتائج الامتحانات' && (
-                        <ExamResults />
                     )}
                 </Box>
             </Paper>

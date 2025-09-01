@@ -47,7 +47,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
 
     const errorMessage = isError ? (error?.response?.data?.message || error?.message) : null;
 
-    // تطبيع الداتا: {id, term, final_score, note}
+    // تطبيع الداتا: {id, term, final_score, note, subject_name}
     const rowsAll = useMemo(() => {
         if (isError) return [];
         const src = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
@@ -56,10 +56,11 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
             term: x?.term ?? "",
             final_score: Number(x?.final_score ?? 0),
             note: x?.note ?? "",
+            subject_name: x?.subject?.name ?? "", // ✅ اسم المادة
         }));
     }, [data, isError]);
 
-    // فلاتر محلية: بحث في (المعرّف/الملاحظة) + الفصل + مدى درجات
+    // فلاتر محلية: بحث (المادة/المعرّف/الملاحظة) + الفصل + مدى درجات
     const filteredRows = useMemo(() => {
         const q = (filters.q || "").toLowerCase().trim();
         const term = filters.term || "";
@@ -69,7 +70,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
         return rowsAll.filter((r) => {
             if (term && r.term !== term) return false;
             if (q) {
-                const hay = `${r.id} ${r.note}`.toLowerCase();
+                const hay = `${r.subject_name || ""} ${r.id} ${r.note || ""}`.toLowerCase();
                 if (!hay.includes(q)) return false;
             }
             if (min !== null && !Number.isNaN(min) && r.final_score < min) return false;
@@ -125,6 +126,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
     const columns = [
         { key: "id", label: "المعرّف", sortable: true },
         { key: "term", label: "الفصل الدراسي", sortable: true },
+        { key: "subject_name", label: "اسم المادة", sortable: true }, // ✅ عمود جديد
         { key: "final_score", label: "الدرجة النهائية", sortable: true },
         { key: "note", label: "ملاحظة", sortable: false },
     ];
@@ -141,6 +143,12 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
                 );
             case "final_score":
                 return <Typography sx={{ fontWeight: 800, color: "#1F2937" }}>{r.final_score}</Typography>;
+            case "subject_name":
+                return (
+                    <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
+                        {r.subject_name || "—"}
+                    </Typography>
+                );
             default:
                 return r[k] ?? "—";
         }
@@ -155,7 +163,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
                         <TextField
                             value={filters.q}
                             onChange={set("q")}
-                            placeholder="بحث بالملاحظة/المعرّف..."
+                            placeholder="بحث باسم المادة/الملاحظة/المعرّف..."
                             fullWidth
                             sx={fieldSx}
                         />
@@ -204,7 +212,7 @@ export default function Section2({ page = 1, rowsPerPage = 10, onMeta }) {
 
                 {/* الجدول */}
                 <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <Table aria-label="درجات الطالب" sx={{ minWidth: 800, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
+                    <Table aria-label="درجات الطالب" sx={{ minWidth: 900, "& th, & td": { textAlign: "center", verticalAlign: "middle" } }}>
                         <TableHead>
                             <TableRow sx={{ background: GRADIENT }}>
                                 {columns.map((col) => (

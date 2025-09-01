@@ -19,12 +19,13 @@ const pickRowValues = (raw) => {
     const code = raw?.prefix ?? raw?.code ?? (id != null ? `CL-${id}` : "—");
     const levelName = raw?.level?.name ?? "—";
     const gradeText = extractGradeFromLevelName(levelName);
+    const className = raw?.name ?? raw?.title ?? raw?.label ?? `صف #${id ?? "—"}`;
     const studentsCount =
         raw?.students_count ??
         raw?.studentsCount ??
         (Array.isArray(raw?.students) ? raw.students.length : "—");
     const capacity = raw?.capacity ?? raw?.max_capacity ?? "—";
-    return { id, code, gradeText, studentsCount, capacity };
+    return { id, code, gradeText, className, studentsCount, capacity };
 };
 
 const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
@@ -54,7 +55,6 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
         arr.sort((a, b) => {
             const av = a?.[orderBy] ?? "";
             const bv = b?.[orderBy] ?? "";
-            // فرز رقمي عندما يكون كلاهما أرقام
             if (typeof av === "number" && typeof bv === "number") {
                 return order === "asc" ? av - bv : bv - av;
             }
@@ -66,7 +66,6 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
         return arr;
     }, [rowsAll, order, orderBy]);
 
-    // تمرير الميتا للأب مع بديل احتياطي
     useEffect(() => {
         const m = data?.meta;
         if (m && typeof onMeta === "function") {
@@ -98,6 +97,7 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
     const columns = [
         { key: "code", label: "المعرّف" },
         { key: "gradeText", label: "الصف" },
+        { key: "className", label: "الشعبة" },
         { key: "studentsCount", label: "عدد الطلاب" },
         { key: "capacity", label: "السعة" },
     ];
@@ -106,16 +106,33 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
         <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="جدول الصفوف">
+                    <Table
+                        sx={{
+                            minWidth: 650,
+                            "& .MuiTableCell-root": { textAlign: "center" }, // توسيط جميع الخلايا افتراضيًا
+                        }}
+                        aria-label="جدول الصفوف"
+                    >
                         <TableHead sx={{ backgroundColor: "#308A9F" }}>
                             <TableRow>
                                 {columns.map((col) => (
-                                    <TableCell key={col.key} sx={{ color: "#fff", fontWeight: "bold" }}>
+                                    <TableCell
+                                        key={col.key}
+                                        align="center"
+                                        sx={{ color: "#fff", fontWeight: "bold" }}
+                                    >
                                         <TableSortLabel
                                             active={orderBy === col.key}
                                             direction={orderBy === col.key ? order : "asc"}
                                             onClick={() => handleRequestSort(col.key)}
-                                            sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
+                                            sx={{
+                                                color: "#fff",
+                                                "& .MuiTableSortLabel-icon": { color: "#fff !important" },
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center", // توسيط مُحتوى عنوان العمود مع زرّ الفرز
+                                                width: "100%",
+                                            }}
                                         >
                                             {col.label}
                                             {orderBy === col.key && (
@@ -139,14 +156,15 @@ const Section2 = ({ page = 1, rowsPerPage = 10, onMeta }) => {
                             ) : (
                                 sortedRows.map((row, idx) => (
                                     <TableRow key={`${row.code}-${idx}`} hover>
-                                        <TableCell>{row.code}</TableCell>
-                                        <TableCell>
-                                            <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
+                                        <TableCell align="center">{row.code}</TableCell>
+                                        <TableCell align="center">
+                                            <Typography sx={{ fontWeight: 600, color: "#22385F", textAlign: "center" }}>
                                                 {row.gradeText}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{row.studentsCount ?? "—"}</TableCell>
-                                        <TableCell>{row.capacity ?? "—"}</TableCell>
+                                        <TableCell align="center">{row.className}</TableCell>
+                                        <TableCell align="center">{row.studentsCount ?? "—"}</TableCell>
+                                        <TableCell align="center">{row.capacity ?? "—"}</TableCell>
                                     </TableRow>
                                 ))
                             )}

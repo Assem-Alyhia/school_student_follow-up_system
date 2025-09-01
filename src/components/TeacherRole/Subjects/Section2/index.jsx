@@ -79,8 +79,13 @@ const Section2 = ({ page = 1, rowsPerPage = 10 }) => {
         arr.sort((a, b) => {
             const av = a[orderBy] ?? "";
             const bv = b[orderBy] ?? "";
-            if (order === "asc") return av > bv ? 1 : av < bv ? -1 : 0;
-            return av < bv ? 1 : av > bv ? -1 : 0;
+            if (typeof av === "number" && typeof bv === "number") {
+                return order === "asc" ? av - bv : bv - av;
+            }
+            const as = av.toString();
+            const bs = bv.toString();
+            if (order === "asc") return as > bs ? 1 : as < bs ? -1 : 0;
+            return as < bs ? 1 : as > bs ? -1 : 0;
         });
         return arr;
     }, [rows, order, orderBy]);
@@ -95,24 +100,37 @@ const Section2 = ({ page = 1, rowsPerPage = 10 }) => {
     if (isError) {
         return (
             <Box sx={{ p: 3, textAlign: "center", color: "error.main" }}>
-                خطأ: {error.message}
+                خطأ: {error?.message || "تعذّر الجلب"}
             </Box>
         );
     }
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3 }} dir="rtl">
             <Paper elevation={0} sx={{ p: 2 }}>
                 <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="جدول المواد الدراسية">
+                    <Table
+                        sx={{
+                            minWidth: 650,
+                            "& .MuiTableCell-root": { textAlign: "center" }, // توسيط جميع الخلايا
+                        }}
+                        aria-label="جدول المواد الدراسية"
+                    >
                         <TableHead sx={{ backgroundColor: "#308A9F" }}>
                             <TableRow>
-                                <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     <TableSortLabel
                                         active={orderBy === "code"}
                                         direction={orderBy === "code" ? order : "asc"}
                                         onClick={() => handleRequestSort("code")}
-                                        sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
+                                        sx={{
+                                            color: "#fff",
+                                            "& .MuiTableSortLabel-icon": { color: "#fff !important" },
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center", // توسيط محتوى العنوان مع أيقونة الفرز
+                                            width: "100%",
+                                        }}
                                     >
                                         المعرّف
                                         {orderBy === "code" && (
@@ -123,12 +141,19 @@ const Section2 = ({ page = 1, rowsPerPage = 10 }) => {
                                     </TableSortLabel>
                                 </TableCell>
 
-                                <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     <TableSortLabel
                                         active={orderBy === "name"}
                                         direction={orderBy === "name" ? order : "asc"}
                                         onClick={() => handleRequestSort("name")}
-                                        sx={{ color: "#fff", "& .MuiTableSortLabel-icon": { color: "#fff !important" } }}
+                                        sx={{
+                                            color: "#fff",
+                                            "& .MuiTableSortLabel-icon": { color: "#fff !important" },
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                        }}
                                     >
                                         اسم المادة
                                         {orderBy === "name" && (
@@ -139,11 +164,11 @@ const Section2 = ({ page = 1, rowsPerPage = 10 }) => {
                                     </TableSortLabel>
                                 </TableCell>
 
-                                <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     الفصل
                                 </TableCell>
 
-                                <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold" }}>
                                     المرحلة الدراسية
                                 </TableCell>
                             </TableRow>
@@ -161,14 +186,14 @@ const Section2 = ({ page = 1, rowsPerPage = 10 }) => {
                             ) : (
                                 sortedRows.map((row, idx) => (
                                     <TableRow key={`${row.code}-${idx}`} hover>
-                                        <TableCell>{row.code}</TableCell>
-                                        <TableCell>
-                                            <Typography sx={{ fontWeight: 600, color: "#22385F" }}>
+                                        <TableCell align="center">{row.code}</TableCell>
+                                        <TableCell align="center">
+                                            <Typography sx={{ fontWeight: 600, color: "#22385F", textAlign: "center" }}>
                                                 {row.name}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{row.term}</TableCell>
-                                        <TableCell>{row.levelName}</TableCell>
+                                        <TableCell align="center">{row.term}</TableCell>
+                                        <TableCell align="center">{row.levelName}</TableCell>
                                     </TableRow>
                                 ))
                             )}

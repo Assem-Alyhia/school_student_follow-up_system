@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { getAvailableClassrooms } from '../../../api/Admin/Classrooms/getAvailableClassrooms';
 import { getAllAcademicYears } from '../../../api/Admin/AcademicYears/getAllAcademicYears';
 import { updateSchedule } from '../../../api/Admin/Schedules/updateSchedule';
+import SuccessAlert from '../../../layout/SuccessAlert';
 
 const fieldSx = {
     '& .MuiOutlinedInput-root': {
@@ -75,8 +76,8 @@ export default function UpdateScheduleModal({
     schedule,
     name = 'تعديل الحدث',
     onUpdated,
-    selectedClassroomId,   
-    selectedYearId,       
+    selectedClassroomId,
+    selectedYearId,
 }) {
     const [values, setValues] = useState({
         academic_year_id: '',
@@ -93,6 +94,14 @@ export default function UpdateScheduleModal({
     const [classes, setClasses] = useState([]);
     const [loadingYears, setLoadingYears] = useState(false);
     const [years, setYears] = useState([]);
+
+    // تنبيه النجاح/الخطأ
+    const [alert, setAlert] = useState({
+        show: false,
+        title: '',
+        message: '',
+        severity: 'success',
+    });
 
     useEffect(() => {
         if (!open) return;
@@ -215,10 +224,31 @@ export default function UpdateScheduleModal({
         try {
             setSaving(true);
             const updated = await updateSchedule(schedule.id, payload);
+
+            setAlert({
+                show: true,
+                title: 'تم التعديل',
+                message: 'تم حفظ التعديلات بنجاح.',
+                severity: 'success',
+            });
+
             onUpdated?.(updated);
-            onClose?.();
+
+            setTimeout(() => {
+                setAlert((a) => ({ ...a, show: false }));
+                onClose?.();
+            }, 1000);
         } catch (e) {
-            console.error(e);
+            const apiMsg =
+                e?.response?.data?.message ||
+                e?.message ||
+                'حدث خطأ أثناء حفظ التعديلات.';
+            setAlert({
+                show: true,
+                title: 'فشل التعديل',
+                message: apiMsg,
+                severity: 'error',
+            });
         } finally {
             setSaving(false);
         }
@@ -236,6 +266,15 @@ export default function UpdateScheduleModal({
             maxWidth="md"
             PaperProps={{ sx: { direction: 'rtl', borderRadius: 4, overflow: 'hidden', boxShadow: '0 14px 40px rgba(0,0,0,0.18)' } }}
         >
+            {alert.show && (
+                <SuccessAlert
+                    title={alert.title}
+                    message={alert.message}
+                    severity={alert.severity}
+                    onClose={() => setAlert((a) => ({ ...a, show: false }))}
+                />
+            )}
+
             <Box sx={{ position: 'relative', px: 2, pt: 1.25 }}>
                 <IconButton onClick={onClose} size="small" sx={{ position: 'absolute', left: 8, top: 8 }} aria-label="إغلاق" disabled={saving}>
                     <CloseRoundedIcon />

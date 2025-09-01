@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
     Dialog, DialogContent, IconButton, Box, Typography, Grid,
     TextField, Button, Divider, CircularProgress,
-    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    FormControl, Select, MenuItem
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -13,6 +14,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { getAllTeacherClassrooms } from "../../../../../api/Teacher/Classrooms/getAllTeacherClassrooms";
 import { getStudentsInClassroom } from "../../../../../api/Teacher/Students/getStudentsInClassroom";
 import { createTeacherExamResults } from "../../../../../api/Teacher/Exam/ExamResults/createTeacherExamResults";
+import { getTeacherExamsList } from "../../../../../api/Teacher/Exam/getTeacherExamsList";
 
 const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -24,6 +26,23 @@ const fieldSx = {
         "&.Mui-focused fieldset": { borderColor: "#1BB5C4", borderWidth: "2px" },
     },
     "& .MuiInputBase-input": { textAlign: "right", padding: "12px 14px" },
+};
+
+const termLabel = (v) =>
+    v === "term 1" ? "الفصل الأول" :
+        v === "term 2" ? "الفصل الثاني" :
+            v === "term 3" ? "الفصل الثالث" : (v || "—");
+
+// توحيد شكل عنصر الامتحان القادم من الـ API
+const normalizeExam = (raw) => {
+    if (!raw || typeof raw !== "object") return null;
+    const id = raw.id ?? raw.exam_id ?? null;
+    const subject = raw.subject || {};
+    const exam_type = raw.exam_type || {};
+    const subjectName = subject.name || "—";
+    const examTypeName = exam_type.name || "—";
+    const term = subject.term || raw.term || null;
+    return { id, subjectName, examTypeName, term };
 };
 
 export default function AddExamResultsModal({
@@ -43,22 +62,54 @@ export default function AddExamResultsModal({
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    // ✅ حالات قائمة الامتحانات
+    const [exams, setExams] = useState([]);
+    const [loadingExams, setLoadingExams] = useState(false);
+
+    // تحميل القوائم الأساسية (الشعب + الامتحانات) عند فتح المودال
     useEffect(() => {
         if (!open) return;
         let alive = true;
         (async () => {
             try {
                 setLoadingLists(true);
-                const cls = await getAllTeacherClassrooms();
+                const [cls] = await Promise.all([
+                    getAllTeacherClassrooms(),
+                ]);
                 if (!alive) return;
-                setClassrooms(Array.isArray(cls) ? cls : []);
+                setClassrooms(Array.isArray(cls) ? cls : (Array.isArray(cls?.data) ? cls.data : []));
             } finally {
-                setLoadingLists(false);
+                if (alive) setLoadingLists(false);
             }
         })();
         return () => { alive = false; };
     }, [open]);
 
+    // تحميل الامتحانات (إذا لم يُمرر examId جاهزًا من الأب)
+    useEffect(() => {
+        if (!open || !!examId) return;
+        let alive = true;
+        (async () => {
+            try {
+                setLoadingExams(true);
+                // اجلب عددًا كبيرًا في الصفحة الأولى لتغطية معظم الحالات
+                const res = await getTeacherExamsList(1, 200);
+                const arr = Array.isArray(res?.data) ? res.data : [];
+                const norm = arr.map(normalizeExam).filter(Boolean);
+                if (!alive) return;
+                setExams(norm);
+            } catch (e) {
+                console.error(e);
+                if (!alive) return;
+                setExams([]);
+            } finally {
+                if (alive) setLoadingExams(false);
+            }
+        })();
+        return () => { alive = false; };
+    }, [open, examId]);
+
+    // إعادة الضبط عند الفتح أو تغيّر examId القادم من الأب
     useEffect(() => {
         if (!open) return;
         setExamId(examId || "");
@@ -67,10 +118,10 @@ export default function AddExamResultsModal({
         setScores({});
     }, [open, examId]);
 
-    const selectedClassroom = useMemo(
-        () => classrooms.find((c) => String(c?.id) === String(classroomId)) || null,
-        [classrooms, classroomId]
-    );
+    // const selectedClassroom = useMemo(
+    //     () => classrooms.find((c) => String(c?.id) === String(classroomId)) || null,
+    //     [classrooms, classroomId]
+    // );
 
     const fetchStudents = async (cid) => {
         if (!cid) return;
@@ -125,6 +176,10 @@ export default function AddExamResultsModal({
     const labelCols = { xs: 3, md: 2 };
     const fieldCols = { xs: 9, md: 10 };
 
+    // دالة لعرض نص الامتحان في القائمتين (داخل العنصر وداخل الحقل المختار)
+    const examLabel = (ex) =>
+        ex ? `${ex.subjectName} — ${ex.examTypeName} — ${termLabel(ex.term)}` : "—";
+
     return (
         <Dialog
             open={open}
@@ -157,21 +212,37 @@ export default function AddExamResultsModal({
                 ) : (
                     <>
                         <Grid container spacing={2.25} alignItems="center">
+                            {/* ✅ اختيار الامتحان بدل إدخال المعرّف يدويًا */}
                             {!examId && (
                                 <>
                                     <Grid item {...labelCols}>
-                                        <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>معرّف الامتحان</Typography>
+                                        <Typography sx={{ color: "text.secondary", fontSize: 14, pr: 1 }}>
+                                            الامتحان
+                                        </Typography>
                                     </Grid>
                                     <Grid item {...fieldCols}>
-                                        <TextField
-                                            fullWidth
-                                            type="number"
-                                            value={exam_id}
-                                            onChange={(e) => setExamId(e.target.value)}
-                                            sx={fieldSx}
-                                            placeholder="أدخل معرّف الامتحان"
-                                            disabled={saving}
-                                        />
+                                        <FormControl fullWidth sx={fieldSx}>
+                                            <Select
+                                                value={exam_id}
+                                                onChange={(e) => setExamId(e.target.value)}
+                                                displayEmpty
+                                                disabled={saving || loadingExams}
+                                                renderValue={(selected) => {
+                                                    if (!selected) return "اختر الامتحان";
+                                                    const ex = exams.find((x) => String(x.id) === String(selected));
+                                                    return ex ? examLabel(ex) : "اختر الامتحان";
+                                                }}
+                                            >
+                                                <MenuItem value="" disabled>
+                                                    {loadingExams ? "جارٍ تحميل الامتحانات..." : "اختر الامتحان"}
+                                                </MenuItem>
+                                                {exams.map((ex) => (
+                                                    <MenuItem key={ex.id} value={ex.id}>
+                                                        {examLabel(ex)}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
                                     </Grid>
                                 </>
                             )}
@@ -182,7 +253,7 @@ export default function AddExamResultsModal({
                             <Grid item {...fieldCols}>
                                 <Autocomplete
                                     options={classrooms}
-                                    value={selectedClassroom}
+                                    value={classrooms.find((c) => String(c?.id) === String(classroomId)) || null}
                                     onChange={(_, v) => {
                                         const id = v?.id || "";
                                         setClassroomId(id);

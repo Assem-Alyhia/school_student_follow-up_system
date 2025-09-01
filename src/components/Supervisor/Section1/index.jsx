@@ -10,13 +10,40 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import { useQueryClient } from '@tanstack/react-query';
 import SupervisorCreateModal from '../SupervisorCreateModal';
+import SuccessAlert from '../../../layout/SuccessAlert';
 
 const Section1 = ({ searchTerm, onSearchChange }) => {
     const [openCreate, setOpenCreate] = useState(false);
+    const [success, setSuccess] = useState({
+        show: false,
+        title: '',
+        message: '',
+        severity: 'success',
+    });
     const queryClient = useQueryClient();
+
+    const handleCreated = () => {
+        queryClient.invalidateQueries({ queryKey: ['supervisors'] });
+        setOpenCreate(false);
+        setSuccess({
+            show: true,
+            title: 'تمت الإضافة',
+            message: 'تم إضافة المشرف بنجاح.',
+            severity: 'success',
+        });
+    };
 
     return (
         <Box sx={{ padding: 3 }}>
+            {success.show && (
+                <SuccessAlert
+                    title={success.title}
+                    message={success.message}
+                    severity={success.severity}
+                    onClose={() => setSuccess((s) => ({ ...s, show: false }))}
+                />
+            )}
+
             <Paper elevation={3} sx={{ padding: 2 }}>
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
@@ -59,7 +86,12 @@ const Section1 = ({ searchTerm, onSearchChange }) => {
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <Grid
+                        item
+                        xs={12}
+                        md={6}
+                        sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
+                    >
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
@@ -83,10 +115,7 @@ const Section1 = ({ searchTerm, onSearchChange }) => {
             <SupervisorCreateModal
                 open={openCreate}
                 onClose={() => setOpenCreate(false)}
-                onSuccess={() => {
-                    // تحديث قائمة المشرفين بعد الإنشاء
-                    queryClient.invalidateQueries(['supervisors']);
-                }}
+                onSuccess={handleCreated}
             />
         </Box>
     );

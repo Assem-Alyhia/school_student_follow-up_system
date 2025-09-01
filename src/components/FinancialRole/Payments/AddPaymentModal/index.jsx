@@ -88,7 +88,7 @@ export default function AddPaymentModal({ open, onClose }) {
         label: p.name || "",
     }));
 
-    // عرض اسم الطالب فقط + parent_id للاقتفاء
+    // الطلاب (نحتفظ بالـ _raw للوصول إلى المستوى)
     const students = useMemo(() => {
         return studentsRaw.map((s) => ({
             id: s.id,
@@ -99,13 +99,20 @@ export default function AddPaymentModal({ open, onClose }) {
         }));
     }, [studentsRaw]);
 
-    // إخفاء تكرار/الشهر (frequency) من رسم المدرسة
-    const fees = feesRaw.map((f) => ({
-        id: f.id,
-        name: f.name,
-        amount: f.amount,
-        label: `${f.name || ""} — ${f.amount ?? ""}`,
-    }));
+    // ✅ الأقساط مع levelId لفلترة حسب مستوى الطالب
+    const feesAll = useMemo(() => {
+        return feesRaw.map((f) => {
+            const levelId = f?.level?.id ?? f?.level_id ?? f?.class_level_id ?? null;
+            return {
+                id: f.id,
+                name: f.name,
+                amount: f.amount,
+                levelId,
+                label: `${f.name || ""} — ${f.amount ?? ""}`,
+                _raw: f,
+            };
+        });
+    }, [feesRaw]);
 
     const m = useMutation({
         mutationFn: createFinancialPayment,
@@ -174,6 +181,45 @@ export default function AddPaymentModal({ open, onClose }) {
         }
         // عمداً لم نضع parentOpt كتبعيات لتفادي loop
     }, [studentOpt, parents]);
+
+    // ✅ مستوى الطالب المختار
+    const selectedLevelId = useMemo(() => {
+        const s = studentOpt?._raw;
+        return s?.classroom?.level?.id ?? s?.level?.id ?? null;
+    }, [studentOpt]);
+
+    // ✅ فلترة الأقساط حسب المستوى
+    const feesFiltered = useMemo(() => {
+        if (!selectedLevelId) return feesAll;
+        const byLevel = feesAll.filter(
+            (f) => String(f.levelId) === String(selectedLevelId)
+        );
+        return byLevel.length ? byLevel : feesAll;
+    }, [feesAll, selectedLevelId]);
+
+    // ✅ عند تغيّر الطالب/المستوى: اضبط القسط المناسب تلقائيًا
+    useEffect(() => {
+        if (!open) return;
+        if (!feesFiltered.length) return;
+
+        const levelId = selectedLevelId;
+        const currentLevelId = feeOpt?.levelId ?? null;
+
+        // إن لم يكن القسط المحدد من نفس المستوى، اختر أول قسط مطابق
+        if (!levelId || String(currentLevelId) !== String(levelId)) {
+            const best =
+                feesFiltered.find((f) => String(f.levelId) === String(levelId)) ||
+                feesFiltered[0];
+
+            if (best && best.id !== feeOpt?.id) {
+                setFeeOpt(best);
+                const amountN = Number(best.amount ?? 0);
+                if ((!form.amount || Number(form.amount) === 0) && amountN) {
+                    setForm((p) => ({ ...p, amount: String(amountN) }));
+                }
+            }
+        }
+    }, [open, feesFiltered, selectedLevelId, feeOpt?.id, feeOpt?.levelId, form.amount]);
 
     return (
         <Modal
@@ -250,13 +296,19 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* رسم المدرسة — بدون عرض الشهر (frequency) */}
+                        {/* رسم المدرسة — ✅ مفلتر حسب مستوى الطالب */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
-                                options={fees}
+                                options={feesFiltered}
                                 loading={feesQ.isLoading}
                                 value={feeOpt}
-                                onChange={(_, v) => setFeeOpt(v)}
+                                onChange={(_, v) => {
+                                    setFeeOpt(v);
+                                    const amountN = Number(v?.amount ?? 0);
+                                    if ((!form.amount || Number(form.amount) === 0) && amountN) {
+                                        setForm((p) => ({ ...p, amount: String(amountN) }));
+                                    }
+                                }}
                                 isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
@@ -355,7 +407,7 @@ export default function AddPaymentModal({ open, onClose }) {
                                 size="medium"
                                 sx={fieldSX}
                                 error={(fieldErrors?.discount_status?.length ?? 0) > 0}
-                                helperText={fieldErrors?.discount_status?.[0] ?? ""}
+                                helperText={(fieldErrors?.discount_status?.length ?? 0) > 0 ? fieldErrors?.discount_status?.[0] : ""}
                             >
                                 {DISC_OPTS.map((o) => (
                                     <MenuItem key={o.value} value={o.value}>

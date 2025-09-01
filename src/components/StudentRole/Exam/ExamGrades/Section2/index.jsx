@@ -61,10 +61,12 @@ export default function Section2({
         const mapped = rows.map((item) => {
             const startISO = item?.exam?.start_time ?? "";
             const endISO = item?.exam?.end_time ?? "";
+            const subjectName = item?.exam?.subject?.name ?? item?.subject?.name ?? "";
             return {
                 id: item?.id ?? "",
                 score: item?.score ?? "",
                 term: item?.exam?.term ?? "",
+                subject_name: subjectName, // ✅ اسم المادة
                 start_time_raw: startISO,
                 end_time_raw: endISO,
                 start_time: onlyTime(startISO),
@@ -90,9 +92,9 @@ export default function Section2({
             // الفصل
             if (term && r.term !== term) return false;
 
-            // البحث: رقم الطالب + اسم الطالب
+            // البحث: رقم الطالب + اسم الطالب + اسم المادة
             if (q) {
-                const hay = `${r.student_prefix || ""} ${r.student_name || ""}`.toLowerCase();
+                const hay = `${r.student_prefix || ""} ${r.student_name || ""} ${r.subject_name || ""}`.toLowerCase();
                 if (!hay.includes(q)) return false;
             }
 
@@ -134,6 +136,7 @@ export default function Section2({
         { key: "student_prefix", label: "رقم الطالب", sortable: true },
         { key: "student_name", label: "اسم الطالب", sortable: true },
         { key: "term", label: "الفصل", sortable: true },
+        { key: "subject_name", label: "اسم المادة", sortable: true }, // ✅ عمود جديد
         { key: "start_time", label: "وقت البداية", sortable: true },
         { key: "end_time", label: "وقت النهاية", sortable: true },
         { key: "max_score", label: "العلامة الكاملة", sortable: true },
@@ -150,7 +153,7 @@ export default function Section2({
                         <TextField
                             value={filters.q}
                             onChange={set("q")}
-                            placeholder="بحث برقم/اسم الطالب..."
+                            placeholder="بحث برقم/اسم الطالب أو اسم المادة..."
                             fullWidth
                             sx={fieldSx}
                         />
@@ -252,6 +255,12 @@ export default function Section2({
                                             </Typography>
                                         </TableCell>
                                         <TableCell>{row.term}</TableCell>
+                                        {/* ✅ اسم المادة */}
+                                        <TableCell>
+                                            <Typography sx={{ fontWeight: 600, color: "#22385F", textAlign: "center" }}>
+                                                {row.subject_name}
+                                            </Typography>
+                                        </TableCell>
                                         <TableCell>{row.start_time}</TableCell>
                                         <TableCell>{row.end_time}</TableCell>
                                         <TableCell>{row.max_score}</TableCell>

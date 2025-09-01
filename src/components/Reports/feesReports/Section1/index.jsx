@@ -15,7 +15,6 @@ import { getStudentsGradesReports } from "../../../../api/Admin/Students/getStud
 import { getAllClassroomsNoPaginate } from "../../../../api/Admin/Classrooms/getAllClassroomsNoPaginate";
 import PaginationSection from "./../../../../layout/PaginationSection";
 
-// تطبيع نص عربي لبحث أدق
 const normalizeArabic = (str = "") =>
     String(str)
         .toLowerCase()
@@ -28,7 +27,6 @@ const normalizeArabic = (str = "") =>
         .replace(/\s+/g, " ")
         .trim();
 
-// استخرج قائمة المواد (حسب أول ظهور) من بيانات الصفحة المعروضة
 const extractSubjects = (students = []) => {
     const seen = new Set();
     const ordered = [];
@@ -45,7 +43,6 @@ const extractSubjects = (students = []) => {
     return ordered;
 };
 
-// جلب الدرجة لمادة بالاسم (يفضل final_score)
 const getGradeFor = (grades, subjectName) => {
     if (!Array.isArray(grades)) return "-";
     const g = grades.find((x) => x?.subject?.name?.trim() === subjectName);
@@ -56,7 +53,6 @@ const getGradeFor = (grades, subjectName) => {
     return v ?? "-";
 };
 
-// يحسب المتوسط من الدرجات الرقمية فقط
 const average = (arr) => {
     const nums = arr.map((v) => Number(v)).filter((n) => Number.isFinite(n));
     if (nums.length === 0) return null;
@@ -70,7 +66,6 @@ const Section1 = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    // Debounce
     useEffect(() => {
         const t = setTimeout(() => {
             setDebouncedSearch(searchTerm);
@@ -79,7 +74,6 @@ const Section1 = () => {
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    // الصفوف
     const {
         data: classrooms = [],
         isLoading: loadingClassrooms,
@@ -90,7 +84,6 @@ const Section1 = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    // التقارير
     const {
         data: reportsResp,
         isLoading: loadingReports,
@@ -111,7 +104,6 @@ const Section1 = () => {
         reportsResp?.meta?.last_page ?? Math.max(1, Math.ceil(total / rowsPerPage))
     );
 
-    // فلترة محلية إضافية
     const visibleReports = useMemo(() => {
         const q = normalizeArabic(debouncedSearch);
         if (!q) return reports;
@@ -122,12 +114,20 @@ const Section1 = () => {
         });
     }, [reports, debouncedSearch]);
 
-    // المواد الديناميكية من النتائج المرئية
-    const subjects = useMemo(() => extractSubjects(visibleReports), [visibleReports]);
+    // ✅ ترتيب تصاعدي بحسب id
+    const sortedReports = useMemo(() => {
+        const numId = (x) => {
+            const n = Number(x?.id);
+            return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+        };
+        return [...visibleReports].sort((a, b) => numId(a) - numId(b));
+    }, [visibleReports]);
+
+    // اعتمد المواد من البيانات بعد الفرز (ترتيب الصفوف لا يؤثر على الأعمدة لكن لتناسق المنطق)
+    const subjects = useMemo(() => extractSubjects(sortedReports), [sortedReports]);
 
     return (
         <Box sx={{ padding: 3, direction: "rtl" }}>
-            {/* شريط الأدوات */}
             <Paper elevation={3} sx={{ padding: 1.5, mb: 2 }}>
                 <Grid container spacing={1} alignItems="center">
                     <Grid item xs={12} md={6} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -211,12 +211,9 @@ const Section1 = () => {
                 </Grid>
             </Paper>
 
-            {/* الجدول */}
             <Paper elevation={3}>
                 {loadingReports ? (
-                    <Box
-                        sx={{ p: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}
-                    >
+                    <Box sx={{ p: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                         <CircularProgress size={20} />
                         <Typography>جارِ تحميل تقارير الدرجات...</Typography>
                     </Box>
@@ -226,7 +223,7 @@ const Section1 = () => {
                             تعذّر تحميل التقارير{error?.message ? `: ${error.message}` : "."}
                         </Typography>
                     </Box>
-                ) : visibleReports.length === 0 ? (
+                ) : sortedReports.length === 0 ? (
                     <Box sx={{ p: 3 }}>
                         <Typography color="text.secondary">لا توجد تقارير متاحة.</Typography>
                     </Box>
@@ -248,14 +245,10 @@ const Section1 = () => {
                                 </TableHead>
 
                                 <TableBody>
-                                    {visibleReports.map((student) => {
-                                        const rowGrades = subjects.map((subj) =>
-                                            getGradeFor(student.grades, subj)
-                                        );
-
+                                    {sortedReports.map((student) => {
+                                        const rowGrades = subjects.map((subj) => getGradeFor(student.grades, subj));
                                         const avg = average(rowGrades);
-                                        const result =
-                                            avg === null ? "—" : avg >= 60 ? "ناجح" : "راسب";
+                                        const result = avg === null ? "—" : avg >= 60 ? "ناجح" : "راسب";
 
                                         return (
                                             <TableRow key={student.id ?? `${student.name}-${student.prefix}`}>
@@ -303,7 +296,11 @@ const Section1 = () => {
                                                     const n = Number(g);
                                                     const isLow = Number.isFinite(n) && n < 60;
                                                     return (
-                                                        <TableCell key={`${student.id}-${subjects[idx]}`} align="center" sx={isLow ? { color: "red", fontWeight: 600 } : {}}>
+                                                        <TableCell
+                                                            key={`${student.id}-${subjects[idx]}`}
+                                                            align="center"
+                                                            sx={isLow ? { color: "red", fontWeight: 600 } : {}}
+                                                        >
                                                             {g ?? "-"}
                                                         </TableCell>
                                                     );
@@ -312,8 +309,10 @@ const Section1 = () => {
                                                 <TableCell align="center">
                                                     <Typography
                                                         sx={{
-                                                            backgroundColor: result === "ناجح" ? "#DFF5E4" : result === "راسب" ? "#FFEBEE" : "#EEE",
-                                                            color: result === "ناجح" ? "#2E7D32" : result === "راسب" ? "#C62828" : "#555",
+                                                            backgroundColor:
+                                                                result === "ناجح" ? "#DFF5E4" : result === "راسب" ? "#FFEBEE" : "#EEE",
+                                                            color:
+                                                                result === "ناجح" ? "#2E7D32" : result === "راسب" ? "#C62828" : "#555",
                                                             px: 1,
                                                             py: 0.5,
                                                             borderRadius: 1,
