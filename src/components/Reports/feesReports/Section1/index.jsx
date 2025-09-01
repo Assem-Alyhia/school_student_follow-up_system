@@ -1,9 +1,9 @@
 // Section1.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Box, Button, Grid, IconButton, Paper, TextField, Typography,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Avatar, MenuItem, Select, CircularProgress,
+    Avatar, MenuItem, Select, CircularProgress, Chip
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SortIcon from "@mui/icons-material/Sort";
@@ -15,15 +15,52 @@ import { getStudentsGradesReports } from "../../../../api/Admin/Students/getStud
 import { getAllClassroomsNoPaginate } from "../../../../api/Admin/Classrooms/getAllClassroomsNoPaginate";
 import PaginationSection from "./../../../../layout/PaginationSection";
 
-const pickGrade = (grades, key) => {
+// تطبيع نص عربي لبحث أدق
+const normalizeArabic = (str = "") =>
+    String(str)
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[إأآا]/g, "ا")
+        .replace(/ى/g, "ي")
+        .replace(/ؤ/g, "و")
+        .replace(/ئ/g, "ي")
+        .replace(/ء/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+// استخرج قائمة المواد (حسب أول ظهور) من بيانات الصفحة المعروضة
+const extractSubjects = (students = []) => {
+    const seen = new Set();
+    const ordered = [];
+    students.forEach((st) => {
+        const grades = Array.isArray(st?.grades) ? st.grades : [];
+        grades.forEach((g) => {
+            const name = g?.subject?.name?.trim();
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                ordered.push(name);
+            }
+        });
+    });
+    return ordered;
+};
+
+// جلب الدرجة لمادة بالاسم (يفضل final_score)
+const getGradeFor = (grades, subjectName) => {
     if (!Array.isArray(grades)) return "-";
-    for (const g of grades) {
-        const k = g?.subject?.key || g?.key || g?.slug || g?.name;
-        if (k && String(k).toLowerCase().includes(String(key).toLowerCase())) {
-            return g?.grade ?? g?.score ?? g?.value ?? g?.mark ?? "-";
-        }
-    }
-    return "-";
+    const g = grades.find((x) => x?.subject?.name?.trim() === subjectName);
+    if (!g) return "-";
+    const v = [g.final_score, g.grade, g.score, g.value, g.mark].find(
+        (val) => val !== undefined && val !== null && val !== ""
+    );
+    return v ?? "-";
+};
+
+// يحسب المتوسط من الدرجات الرقمية فقط
+const average = (arr) => {
+    const nums = arr.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+    if (nums.length === 0) return null;
+    return nums.reduce((s, n) => s + n, 0) / nums.length;
 };
 
 const Section1 = () => {
@@ -33,6 +70,7 @@ const Section1 = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
+    // Debounce
     useEffect(() => {
         const t = setTimeout(() => {
             setDebouncedSearch(searchTerm);
@@ -41,6 +79,7 @@ const Section1 = () => {
         return () => clearTimeout(t);
     }, [searchTerm]);
 
+    // الصفوف
     const {
         data: classrooms = [],
         isLoading: loadingClassrooms,
@@ -48,12 +87,15 @@ const Section1 = () => {
     } = useQuery({
         queryKey: ["classrooms"],
         queryFn: getAllClassroomsNoPaginate,
+        staleTime: 5 * 60 * 1000,
     });
 
+    // التقارير
     const {
         data: reportsResp,
         isLoading: loadingReports,
         isError: errorReports,
+        error,
     } = useQuery({
         queryKey: ["grades-reports", selectedClassId, page, rowsPerPage, debouncedSearch],
         queryFn: () =>
@@ -64,21 +106,28 @@ const Section1 = () => {
     });
 
     const reports = Array.isArray(reportsResp?.data) ? reportsResp.data : [];
-    const total = reportsResp?.meta?.total || 0;
-    const lastPage = reportsResp?.meta?.last_page || 1;
+    const total = Number(reportsResp?.meta?.total ?? reports.length);
+    const lastPage = Number(
+        reportsResp?.meta?.last_page ?? Math.max(1, Math.ceil(total / rowsPerPage))
+    );
 
-    const norm = (v) => String(v || "").toLowerCase();
-    const visibleReports =
-        debouncedSearch.trim() === ""
-            ? reports
-            : reports.filter(
-                (s) =>
-                    norm(s.name).includes(norm(debouncedSearch)) ||
-                    norm(s.prefix).includes(norm(debouncedSearch))
-            );
+    // فلترة محلية إضافية
+    const visibleReports = useMemo(() => {
+        const q = normalizeArabic(debouncedSearch);
+        if (!q) return reports;
+        return reports.filter((s) => {
+            const name = normalizeArabic(s?.name);
+            const pref = normalizeArabic(s?.prefix);
+            return name.includes(q) || pref.includes(q);
+        });
+    }, [reports, debouncedSearch]);
+
+    // المواد الديناميكية من النتائج المرئية
+    const subjects = useMemo(() => extractSubjects(visibleReports), [visibleReports]);
 
     return (
-        <Box sx={{ padding: 3 }}>
+        <Box sx={{ padding: 3, direction: "rtl" }}>
+            {/* شريط الأدوات */}
             <Paper elevation={3} sx={{ padding: 1.5, mb: 2 }}>
                 <Grid container spacing={1} alignItems="center">
                     <Grid item xs={12} md={6} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -96,18 +145,30 @@ const Section1 = () => {
                                 "& .MuiInputBase-root": { minHeight: 36, fontSize: "14px", px: 1 },
                             }}
                         />
-                        <Button size="small" variant="outlined" startIcon={<FilterListIcon />}
-                            sx={{ color: "#35AFBC", borderColor: "#35AFBC", minHeight: 36 }}>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<FilterListIcon />}
+                            sx={{ color: "#35AFBC", borderColor: "#35AFBC", minHeight: 36 }}
+                        >
                             فلترة
                         </Button>
-                        <Button size="small" variant="outlined" startIcon={<SortIcon />}
-                            sx={{ color: "#35AFBC", borderColor: "#35AFBC", minHeight: 36 }}>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<SortIcon />}
+                            sx={{ color: "#35AFBC", borderColor: "#35AFBC", minHeight: 36 }}
+                        >
                             ترتيب
                         </Button>
                     </Grid>
 
-                    <Grid item xs={12} md={6}
-                        sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1 }}>
+                    <Grid
+                        item
+                        xs={12}
+                        md={6}
+                        sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1 }}
+                    >
                         <Select
                             value={selectedClassId}
                             onChange={(e) => {
@@ -134,7 +195,11 @@ const Section1 = () => {
                             size="small"
                             variant="contained"
                             startIcon={<FileDownloadIcon />}
-                            sx={{ backgroundColor: "#35AFBC", "&:hover": { backgroundColor: "#30BA9F" }, minHeight: 36 }}
+                            sx={{
+                                backgroundColor: "#35AFBC",
+                                "&:hover": { backgroundColor: "#30BA9F" },
+                                minHeight: 36,
+                            }}
                             disabled={loadingReports}
                         >
                             تصدير البيانات
@@ -146,15 +211,20 @@ const Section1 = () => {
                 </Grid>
             </Paper>
 
+            {/* الجدول */}
             <Paper elevation={3}>
                 {loadingReports ? (
-                    <Box sx={{ p: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                    <Box
+                        sx={{ p: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}
+                    >
                         <CircularProgress size={20} />
                         <Typography>جارِ تحميل تقارير الدرجات...</Typography>
                     </Box>
                 ) : errorReports ? (
                     <Box sx={{ p: 3 }}>
-                        <Typography color="error">تعذّر تحميل التقارير.</Typography>
+                        <Typography color="error">
+                            تعذّر تحميل التقارير{error?.message ? `: ${error.message}` : "."}
+                        </Typography>
                     </Box>
                 ) : visibleReports.length === 0 ? (
                     <Box sx={{ p: 3 }}>
@@ -168,55 +238,82 @@ const Section1 = () => {
                                     <TableRow sx={{ backgroundColor: "#308A9F" }}>
                                         <TableCell sx={{ color: "white", textAlign: "center" }}>المعرف</TableCell>
                                         <TableCell sx={{ color: "white", textAlign: "center" }}>اسم الطالب</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>الفيزياء</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>الكيمياء</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>العلوم</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>اللغة العربية</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>اللغة الإنجليزية</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>التربية الإسلامية</TableCell>
-                                        <TableCell sx={{ color: "white", textAlign: "center" }}>الرياضيات</TableCell>
+                                        {subjects.map((name) => (
+                                            <TableCell key={name} sx={{ color: "white", textAlign: "center" }}>
+                                                {name}
+                                            </TableCell>
+                                        ))}
                                         <TableCell sx={{ color: "white", textAlign: "center" }}>النتيجة</TableCell>
                                     </TableRow>
                                 </TableHead>
+
                                 <TableBody>
-                                    {visibleReports.map((student, idx) => {
-                                        const physics = pickGrade(student.grades, "physics");
-                                        const chemistry = pickGrade(student.grades, "chemistry");
-                                        const science = pickGrade(student.grades, "science");
-                                        const arabic = pickGrade(student.grades, "arabic");
-                                        const english = pickGrade(student.grades, "english");
-                                        const islamic = pickGrade(student.grades, "islamic");
-                                        const math = pickGrade(student.grades, "math");
+                                    {visibleReports.map((student) => {
+                                        const rowGrades = subjects.map((subj) =>
+                                            getGradeFor(student.grades, subj)
+                                        );
+
+                                        const avg = average(rowGrades);
+                                        const result =
+                                            avg === null ? "—" : avg >= 60 ? "ناجح" : "راسب";
+
                                         return (
-                                            <TableRow key={idx}>
-                                                <TableCell align="center">{student.id}</TableCell>
+                                            <TableRow key={student.id ?? `${student.name}-${student.prefix}`}>
+                                                <TableCell align="center">{student.id ?? "—"}</TableCell>
+
                                                 <TableCell align="center">
                                                     <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
                                                         <Avatar src={"/images/avatar.png"} sx={{ width: 30, height: 30, ml: 1 }} />
-                                                        <Box>
-                                                            <Typography>{student.name}</Typography>
-                                                            {student.prefix && (
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {`رقم التسجيل: ${student.prefix}`}
-                                                                </Typography>
-                                                            )}
+                                                        <Box sx={{ textAlign: "right" }}>
+                                                            <Typography sx={{ fontWeight: 600 }}>
+                                                                {student.name || "—"}
+                                                            </Typography>
+
+                                                            <Box
+                                                                sx={{
+                                                                    display: "flex",
+                                                                    gap: 0.75,
+                                                                    justifyContent: "center",
+                                                                    mt: 0.25,
+                                                                    flexWrap: "wrap",
+                                                                }}
+                                                            >
+                                                                {student.prefix && (
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {`رقم التسجيل: ${student.prefix}`}
+                                                                    </Typography>
+                                                                )}
+                                                                {student?.classroom?.name && (
+                                                                    <Chip size="small" label={student.classroom.name} sx={{ height: 20 }} />
+                                                                )}
+                                                                {student?.classroom?.level?.name && (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        label={student.classroom.level.name}
+                                                                        sx={{ height: 20 }}
+                                                                    />
+                                                                )}
+                                                            </Box>
                                                         </Box>
                                                     </Box>
                                                 </TableCell>
-                                                <TableCell align="center">{physics}</TableCell>
-                                                <TableCell align="center">{chemistry}</TableCell>
-                                                <TableCell align="center">{science}</TableCell>
-                                                <TableCell align="center" sx={{ color: Number(arabic) < 60 ? "red" : "inherit" }}>
-                                                    {arabic}
-                                                </TableCell>
-                                                <TableCell align="center">{english}</TableCell>
-                                                <TableCell align="center">{islamic}</TableCell>
-                                                <TableCell align="center">{math}</TableCell>
+
+                                                {rowGrades.map((g, idx) => {
+                                                    const n = Number(g);
+                                                    const isLow = Number.isFinite(n) && n < 60;
+                                                    return (
+                                                        <TableCell key={`${student.id}-${subjects[idx]}`} align="center" sx={isLow ? { color: "red", fontWeight: 600 } : {}}>
+                                                            {g ?? "-"}
+                                                        </TableCell>
+                                                    );
+                                                })}
+
                                                 <TableCell align="center">
                                                     <Typography
                                                         sx={{
-                                                            backgroundColor: student.result === "ناجح" ? "#DFF5E4" : "#FFEBEE",
-                                                            color: student.result === "ناجح" ? "#2E7D32" : "#C62828",
+                                                            backgroundColor: result === "ناجح" ? "#DFF5E4" : result === "راسب" ? "#FFEBEE" : "#EEE",
+                                                            color: result === "ناجح" ? "#2E7D32" : result === "راسب" ? "#C62828" : "#555",
                                                             px: 1,
                                                             py: 0.5,
                                                             borderRadius: 1,
@@ -225,7 +322,7 @@ const Section1 = () => {
                                                             margin: "auto",
                                                         }}
                                                     >
-                                                        {student.result ?? "-"}
+                                                        {result}
                                                     </Typography>
                                                 </TableCell>
                                             </TableRow>
