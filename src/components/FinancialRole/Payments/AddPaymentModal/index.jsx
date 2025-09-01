@@ -30,14 +30,12 @@ const INIT = {
     discount: "", discount_status: "none",
 };
 
+// "2025-09-01T17:45" -> "2025-09-01 17:45:00"
 function toDateTime(value) {
-    // value from input: "2025-09-01T17:45"
     if (!value) return "";
-    // Split date and time
-    const [date, time] = value.split("T");
-    // If time is missing, default to 00:00:00
-    const formattedTime = time ? `${time}:00` : "00:00:00";
-    return `${date} ${formattedTime}`;
+    const [date, time] = String(value).split("T");
+    const t = time ? (time.length === 5 ? `${time}:00` : time) : "00:00:00";
+    return `${date} ${t}`;
 }
 
 export default function AddPaymentModal({ open, onClose }) {
@@ -51,9 +49,6 @@ export default function AddPaymentModal({ open, onClose }) {
     const [studentOpt, setStudentOpt] = useState(null);
     const [feeOpt, setFeeOpt] = useState(null);
 
-    // NEW: Store filtered fees based on student selection
-    const [filteredFees, setFilteredFees] = useState([]);
-
     useEffect(() => {
         if (!open) return;
         setForm(INIT);
@@ -62,7 +57,6 @@ export default function AddPaymentModal({ open, onClose }) {
         setParentOpt(null);
         setStudentOpt(null);
         setFeeOpt(null);
-        setFilteredFees([]);
     }, [open]);
 
     const parentsQ = useQuery({
@@ -90,72 +84,95 @@ export default function AddPaymentModal({ open, onClose }) {
     const studentsRaw = studentsQ.data?.data ?? studentsQ.data ?? [];
     const feesRaw = feesQ.data?.data ?? feesQ.data ?? [];
 
-    // Prepare parents for select
-    const parents = parentsRaw.map(p => ({
-        id: p.id,
-        prefix: p.prefix,
-        name: p.name,
-        label: `${p.prefix || "PA"} — ${p.name || ""}`.trim(),
-    }));
+    // Parents options
+    const parents = useMemo(() => {
+        return parentsRaw.map((p) => ({
+            id: p.id,
+            prefix: p.prefix,
+            name: p.name,
+            label: `${p.prefix || "PA"} — ${p.name || ""}`.trim(),
+            _raw: p,
+        }));
+    }, [parentsRaw]);
 
-    // Prepare students for select
-    const studentsFiltered = useMemo(() => {
-        const arr = studentsRaw.map(s => ({
+    // Students options
+    const students = useMemo(() => {
+        return studentsRaw.map((s) => ({
             id: s.id,
             prefix: s.prefix,
             name: s.name,
-            parent: s.parent, // parent object
-            classroom: s.classroom,
+            parent: s.parent ?? null, // may contain {id, ...}
+            parent_id: s.parent?.id ?? s.parent_id ?? null,
+            classroom: s.classroom ?? null, // may contain level
+            level_id: s.classroom?.level?.id ?? s.level?.id ?? null,
             label: `${s.prefix || "ST"} — ${s.name || ""}`.trim(),
+            _raw: s,
         }));
-        return arr;
     }, [studentsRaw]);
 
-    // Filter parents to only show the student's parent if a student is selected
+    // Fees options
+    const fees = useMemo(() => {
+        return feesRaw.map((f) => ({
+            id: f.id,
+            name: f.name,
+            amount: f.amount,
+            frequency: f.frequency,
+            level: f.level ?? null,
+            levelId: f.level?.id ?? f.level_id ?? f.class_level_id ?? null,
+            label: `${f.name || ""} — ${f.amount ?? ""} ${f.frequency ? `(${f.frequency})` : ""}`.trim(),
+            _raw: f,
+        }));
+    }, [feesRaw]);
+
+    // Filter parents to only the student's parent if student selected
     const filteredParents = useMemo(() => {
-        if (studentOpt && studentOpt.parent && studentOpt.parent.id) {
-            return parents.filter(p => Number(p.id) === Number(studentOpt.parent.id));
+        if (studentOpt?.parent_id) {
+            return parents.filter((p) => Number(p.id) === Number(studentOpt.parent_id));
         }
         return parents;
     }, [parents, studentOpt]);
 
-    // School fees now include level.id for filtering
-    const fees = feesRaw.map(f => ({
-        id: f.id, name: f.name, amount: f.amount, frequency: f.frequency,
-        level: f.level, // should have id
-        label: `${f.name || ""} — ${f.amount ?? ""} (${f.frequency ?? ""})`,
-    }));
+    // Filter fees by selected student's level
+    const selectedLevelId = studentOpt?.level_id ?? null;
+    const feesFiltered = useMemo(() => {
+        if (!selectedLevelId) return fees;
+        const byLevel = fees.filter((f) => String(f.levelId) === String(selectedLevelId));
+        return byLevel.length ? byLevel : fees;
+    }, [fees, selectedLevelId]);
 
-    // NEW: When student changes, auto-select parent and filter fees
+    // Auto-select parent & fee when student changes
     useEffect(() => {
-        if (studentOpt) {
-            // Auto-select parent
-            const studentParentId = studentOpt.parent_id;
-            if (studentParentId) {
-                const foundParent = parents.find(p => Number(p.id) === Number(studentParentId));
-                if (foundParent && (!parentOpt || parentOpt.id !== foundParent.id)) {
-                    setParentOpt(foundParent);
+        if (!studentOpt) {
+            setParentOpt(null);
+            setFeeOpt(null);
+            return;
+        }
+
+        // pick parent
+        if (studentOpt.parent_id) {
+            const foundParent = parents.find((p) => Number(p.id) === Number(studentOpt.parent_id));
+            setParentOpt(foundParent || null);
+        } else {
+            setParentOpt(null);
+        }
+
+        // ensure fee belongs to level
+        if (feesFiltered.length) {
+            const currentFeeMatchesLevel =
+                feeOpt && String(feeOpt.levelId) === String(selectedLevelId);
+            if (!currentFeeMatchesLevel) {
+                const best = feesFiltered[0];
+                setFeeOpt(best || null);
+                const amountN = Number(best?.amount ?? 0);
+                if ((!form.amount || Number(form.amount) === 0) && amountN) {
+                    setForm((p) => ({ ...p, amount: String(amountN) }));
                 }
-            }
-            // Filter fees by student classroom.level.id
-            const studentLevelId = studentOpt.classroom?.level?.id;
-            if (studentLevelId) {
-                const filtered = fees.filter(fee => fee.level?.id === studentLevelId);
-                setFilteredFees(filtered);
-                // If selected fee is not in filtered, reset fee selection
-                if (feeOpt && !filtered.some(f => f.id === feeOpt.id)) {
-                    setFeeOpt(null);
-                }
-            } else {
-                setFilteredFees([]);
-                setFeeOpt(null);
             }
         } else {
-            setFilteredFees([]);
             setFeeOpt(null);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [studentOpt, parents, fees]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [studentOpt, parents, feesFiltered]);
 
     const m = useMutation({
         mutationFn: createFinancialPayment,
@@ -212,58 +229,6 @@ export default function AddPaymentModal({ open, onClose }) {
         "& .MuiOutlinedInput-root": { borderRadius: 2, minHeight: 44 },
     };
 
-    // عند تغيير الطالب، حدّد وليّ الأمر المطابق تلقائياً
-    useEffect(() => {
-        if (!studentOpt) return;
-        const pid = studentOpt.parent_id ?? studentOpt._raw?.parent?.id ?? null;
-        if (!pid) return;
-
-        const match = parents.find((p) => Number(p.id) === Number(pid));
-        if (match && match.id !== parentOpt?.id) {
-            setParentOpt(match);
-        }
-        // عمداً لم نضع parentOpt كتبعيات لتفادي loop
-    }, [studentOpt, parents]);
-
-    // ✅ مستوى الطالب المختار
-    const selectedLevelId = useMemo(() => {
-        const s = studentOpt?._raw;
-        return s?.classroom?.level?.id ?? s?.level?.id ?? null;
-    }, [studentOpt]);
-
-    // ✅ فلترة الأقساط حسب المستوى
-    const feesFiltered = useMemo(() => {
-        if (!selectedLevelId) return feesAll;
-        const byLevel = feesAll.filter(
-            (f) => String(f.levelId) === String(selectedLevelId)
-        );
-        return byLevel.length ? byLevel : feesAll;
-    }, [feesAll, selectedLevelId]);
-
-    // ✅ عند تغيّر الطالب/المستوى: اضبط القسط المناسب تلقائيًا
-    useEffect(() => {
-        if (!open) return;
-        if (!feesFiltered.length) return;
-
-        const levelId = selectedLevelId;
-        const currentLevelId = feeOpt?.levelId ?? null;
-
-        // إن لم يكن القسط المحدد من نفس المستوى، اختر أول قسط مطابق
-        if (!levelId || String(currentLevelId) !== String(levelId)) {
-            const best =
-                feesFiltered.find((f) => String(f.levelId) === String(levelId)) ||
-                feesFiltered[0];
-
-            if (best && best.id !== feeOpt?.id) {
-                setFeeOpt(best);
-                const amountN = Number(best.amount ?? 0);
-                if ((!form.amount || Number(form.amount) === 0) && amountN) {
-                    setForm((p) => ({ ...p, amount: String(amountN) }));
-                }
-            }
-        }
-    }, [open, feesFiltered, selectedLevelId, feeOpt?.id, feeOpt?.levelId, form.amount]);
-
     return (
         <Modal
             open={open}
@@ -293,8 +258,7 @@ export default function AddPaymentModal({ open, onClose }) {
 
                 <Box component="form" onSubmit={submit} sx={{ p: 3.2 }}>
                     {errMsg && <Alert severity="error" sx={{ mb: 2 }}>{errMsg}</Alert>}
-                    {/* You already show field errors next to each field using helperText and error props */}
-                    {/* If you want to show all field errors at the top, add: */}
+
                     {Object.keys(fieldErrors).length > 0 && (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             {Object.entries(fieldErrors).map(([field, errors]) =>
@@ -304,23 +268,14 @@ export default function AddPaymentModal({ open, onClose }) {
                     )}
 
                     <Grid container spacing={3}>
-                        {/* الطالب — يعرض الاسم فقط */}
+                        {/* الطالب */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={students}
                                 loading={studentsQ.isLoading}
                                 value={studentOpt}
-                                onChange={(_, v) => {
-                                    setStudentOpt(v);
-                                    // Auto-select parent when student is chosen
-                                    if (v && v.parent && v.parent.id) {
-                                        const foundParent = parents.find(p => Number(p.id) === Number(v.parent.id));
-                                        setParentOpt(foundParent || null);
-                                    } else {
-                                        setParentOpt(null);
-                                    }
-                                }}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                onChange={(_, v) => setStudentOpt(v)}
+                                isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
                                     <TextField
@@ -335,14 +290,14 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* وليّ الأمر — يعرض الاسم فقط */}
+                        {/* وليّ الأمر (مفلتر بحسب الطالب) */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={filteredParents}
                                 loading={parentsQ.isLoading}
                                 value={parentOpt}
                                 onChange={(_, v) => setParentOpt(v)}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
                                     <TextField
@@ -357,10 +312,10 @@ export default function AddPaymentModal({ open, onClose }) {
                             />
                         </Grid>
 
-                        {/* رسم المدرسة — ✅ مفلتر حسب مستوى الطالب */}
+                        {/* رسم المدرسة — مفلتر حسب مستوى الطالب */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
-                                options={studentOpt ? filteredFees : fees}
+                                options={feesFiltered}
                                 loading={feesQ.isLoading}
                                 value={feeOpt}
                                 onChange={(_, v) => {
@@ -388,7 +343,7 @@ export default function AddPaymentModal({ open, onClose }) {
                         {/* تاريخ الدفع */}
                         <Grid item xs={12} md={4}>
                             <TextField
-                                type="datetime-local" // changed from "date"
+                                type="datetime-local"
                                 label="تاريخ الدفع"
                                 name="paid_at"
                                 value={form.paid_at}
