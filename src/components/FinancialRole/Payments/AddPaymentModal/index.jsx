@@ -31,8 +31,13 @@ const INIT = {
 };
 
 function toDateTime(value) {
+    // value from input: "2025-09-01T17:45"
     if (!value) return "";
-    return `${value} 00:00:00`;
+    // Split date and time
+    const [date, time] = value.split("T");
+    // If time is missing, default to 00:00:00
+    const formattedTime = time ? `${time}:00` : "00:00:00";
+    return `${date} ${formattedTime}`;
 }
 
 export default function AddPaymentModal({ open, onClose }) {
@@ -46,6 +51,9 @@ export default function AddPaymentModal({ open, onClose }) {
     const [studentOpt, setStudentOpt] = useState(null);
     const [feeOpt, setFeeOpt] = useState(null);
 
+    // NEW: Store filtered fees based on student selection
+    const [filteredFees, setFilteredFees] = useState([]);
+
     useEffect(() => {
         if (!open) return;
         setForm(INIT);
@@ -54,6 +62,7 @@ export default function AddPaymentModal({ open, onClose }) {
         setParentOpt(null);
         setStudentOpt(null);
         setFeeOpt(null);
+        setFilteredFees([]);
     }, [open]);
 
     const parentsQ = useQuery({
@@ -81,26 +90,72 @@ export default function AddPaymentModal({ open, onClose }) {
     const studentsRaw = studentsQ.data?.data ?? studentsQ.data ?? [];
     const feesRaw = feesQ.data?.data ?? feesQ.data ?? [];
 
+    // Prepare parents for select
     const parents = parentsRaw.map(p => ({
-        id: p.id, prefix: p.prefix, name: p.name,
+        id: p.id,
+        prefix: p.prefix,
+        name: p.name,
         label: `${p.prefix || "PA"} — ${p.name || ""}`.trim(),
     }));
 
+    // Prepare students for select
     const studentsFiltered = useMemo(() => {
         const arr = studentsRaw.map(s => ({
-            id: s.id, prefix: s.prefix, name: s.name, parent_id: s.parent_id,
+            id: s.id,
+            prefix: s.prefix,
+            name: s.name,
+            parent: s.parent, // parent object
+            classroom: s.classroom,
             label: `${s.prefix || "ST"} — ${s.name || ""}`.trim(),
         }));
-        if (parentOpt?.id && arr.some(x => typeof x.parent_id !== "undefined")) {
-            return arr.filter(x => Number(x.parent_id) === Number(parentOpt.id));
-        }
         return arr;
-    }, [studentsRaw, parentOpt]);
+    }, [studentsRaw]);
 
+    // Filter parents to only show the student's parent if a student is selected
+    const filteredParents = useMemo(() => {
+        if (studentOpt && studentOpt.parent && studentOpt.parent.id) {
+            return parents.filter(p => Number(p.id) === Number(studentOpt.parent.id));
+        }
+        return parents;
+    }, [parents, studentOpt]);
+
+    // School fees now include level.id for filtering
     const fees = feesRaw.map(f => ({
         id: f.id, name: f.name, amount: f.amount, frequency: f.frequency,
+        level: f.level, // should have id
         label: `${f.name || ""} — ${f.amount ?? ""} (${f.frequency ?? ""})`,
     }));
+
+    // NEW: When student changes, auto-select parent and filter fees
+    useEffect(() => {
+        if (studentOpt) {
+            // Auto-select parent
+            const studentParentId = studentOpt.parent_id;
+            if (studentParentId) {
+                const foundParent = parents.find(p => Number(p.id) === Number(studentParentId));
+                if (foundParent && (!parentOpt || parentOpt.id !== foundParent.id)) {
+                    setParentOpt(foundParent);
+                }
+            }
+            // Filter fees by student classroom.level.id
+            const studentLevelId = studentOpt.classroom?.level?.id;
+            if (studentLevelId) {
+                const filtered = fees.filter(fee => fee.level?.id === studentLevelId);
+                setFilteredFees(filtered);
+                // If selected fee is not in filtered, reset fee selection
+                if (feeOpt && !filtered.some(f => f.id === feeOpt.id)) {
+                    setFeeOpt(null);
+                }
+            } else {
+                setFilteredFees([]);
+                setFeeOpt(null);
+            }
+        } else {
+            setFilteredFees([]);
+            setFeeOpt(null);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [studentOpt, parents, fees]);
 
     const m = useMutation({
         mutationFn: createFinancialPayment,
@@ -176,8 +231,16 @@ export default function AddPaymentModal({ open, onClose }) {
 
                 <Box component="form" onSubmit={submit} sx={{ p: 3.2 }}>
                     {errMsg && <Alert severity="error" sx={{ mb: 2 }}>{errMsg}</Alert>}
+                    {/* You already show field errors next to each field using helperText and error props */}
+                    {/* If you want to show all field errors at the top, add: */}
+                    {Object.keys(fieldErrors).length > 0 && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {Object.entries(fieldErrors).map(([field, errors]) =>
+                                <div key={field}>{field}: {errors.join(", ")}</div>
+                            )}
+                        </Alert>
+                    )}
 
-                    {/* مسافات أوسع: spacing=3 وارتفاع مدخلات أكبر */}
                     <Grid container spacing={3}>
                         {/* الطالب أولاً */}
                         <Grid item xs={12} md={4}>
@@ -185,7 +248,16 @@ export default function AddPaymentModal({ open, onClose }) {
                                 options={studentsFiltered}
                                 loading={studentsQ.isLoading}
                                 value={studentOpt}
-                                onChange={(_, v) => setStudentOpt(v)}
+                                onChange={(_, v) => {
+                                    setStudentOpt(v);
+                                    // Auto-select parent when student is chosen
+                                    if (v && v.parent && v.parent.id) {
+                                        const foundParent = parents.find(p => Number(p.id) === Number(v.parent.id));
+                                        setParentOpt(foundParent || null);
+                                    } else {
+                                        setParentOpt(null);
+                                    }
+                                }}
                                 isOptionEqualToValue={(o, v) => o.id === v.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
@@ -204,10 +276,10 @@ export default function AddPaymentModal({ open, onClose }) {
                         {/* ولي الأمر ثانياً */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
-                                options={parents}
+                                options={filteredParents}
                                 loading={parentsQ.isLoading}
                                 value={parentOpt}
-                                onChange={(_, v) => { setParentOpt(v); /* إعادة تصفية الطلاب عند تغيير الولي */ setStudentOpt(null); }}
+                                onChange={(_, v) => setParentOpt(v)}
                                 isOptionEqualToValue={(o, v) => o.id === v.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
@@ -226,7 +298,7 @@ export default function AddPaymentModal({ open, onClose }) {
                         {/* رسم المدرسة */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
-                                options={fees}
+                                options={studentOpt ? filteredFees : fees}
                                 loading={feesQ.isLoading}
                                 value={feeOpt}
                                 onChange={(_, v) => setFeeOpt(v)}
@@ -248,7 +320,7 @@ export default function AddPaymentModal({ open, onClose }) {
                         {/* تاريخ الدفع */}
                         <Grid item xs={12} md={4}>
                             <TextField
-                                type="date"
+                                type="datetime-local" // changed from "date"
                                 label="تاريخ الدفع"
                                 name="paid_at"
                                 value={form.paid_at}
