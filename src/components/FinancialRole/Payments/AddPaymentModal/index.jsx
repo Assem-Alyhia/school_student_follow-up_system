@@ -81,25 +81,30 @@ export default function AddPaymentModal({ open, onClose }) {
     const studentsRaw = studentsQ.data?.data ?? studentsQ.data ?? [];
     const feesRaw = feesQ.data?.data ?? feesQ.data ?? [];
 
-    const parents = parentsRaw.map(p => ({
-        id: p.id, prefix: p.prefix, name: p.name,
-        label: `${p.prefix || "PA"} — ${p.name || ""}`.trim(),
+    // عرض اسم وليّ الأمر فقط
+    const parents = parentsRaw.map((p) => ({
+        id: p.id,
+        name: p.name,
+        label: p.name || "",
     }));
 
-    const studentsFiltered = useMemo(() => {
-        const arr = studentsRaw.map(s => ({
-            id: s.id, prefix: s.prefix, name: s.name, parent_id: s.parent_id,
-            label: `${s.prefix || "ST"} — ${s.name || ""}`.trim(),
+    // عرض اسم الطالب فقط + parent_id للاقتفاء
+    const students = useMemo(() => {
+        return studentsRaw.map((s) => ({
+            id: s.id,
+            name: s.name,
+            parent_id: (s.parent && (s.parent.id ?? s.parent_id)) ?? s.parent_id ?? null,
+            label: s.name || "",
+            _raw: s,
         }));
-        if (parentOpt?.id && arr.some(x => typeof x.parent_id !== "undefined")) {
-            return arr.filter(x => Number(x.parent_id) === Number(parentOpt.id));
-        }
-        return arr;
-    }, [studentsRaw, parentOpt]);
+    }, [studentsRaw]);
 
-    const fees = feesRaw.map(f => ({
-        id: f.id, name: f.name, amount: f.amount, frequency: f.frequency,
-        label: `${f.name || ""} — ${f.amount ?? ""} (${f.frequency ?? ""})`,
+    // إخفاء تكرار/الشهر (frequency) من رسم المدرسة
+    const fees = feesRaw.map((f) => ({
+        id: f.id,
+        name: f.name,
+        amount: f.amount,
+        label: `${f.name || ""} — ${f.amount ?? ""}`,
     }));
 
     const m = useMutation({
@@ -115,7 +120,7 @@ export default function AddPaymentModal({ open, onClose }) {
             const apiErr = err?.response?.data;
             setErrMsg(apiErr?.message || err?.message || "حدث خطأ غير متوقع");
             setFieldErrors(apiErr?.errors || {});
-        }
+        },
     });
 
     const onChange = (e) => {
@@ -123,14 +128,21 @@ export default function AddPaymentModal({ open, onClose }) {
         setForm((p) => ({ ...p, [name]: value }));
     };
 
-    const canSubmit = useMemo(() =>
-        parentOpt?.id && studentOpt?.id && feeOpt?.id &&
-        form.amount && form.status && form.paid_at
-        , [parentOpt, studentOpt, feeOpt, form]);
+    const canSubmit = useMemo(
+        () =>
+            parentOpt?.id &&
+            studentOpt?.id &&
+            feeOpt?.id &&
+            form.amount &&
+            form.status &&
+            form.paid_at,
+        [parentOpt, studentOpt, feeOpt, form]
+    );
 
     const submit = (e) => {
         e.preventDefault();
-        setErrMsg(""); setFieldErrors({});
+        setErrMsg("");
+        setFieldErrors({});
 
         const payload = {
             parent_id: Number(parentOpt?.id),
@@ -150,6 +162,19 @@ export default function AddPaymentModal({ open, onClose }) {
         "& .MuiOutlinedInput-root": { borderRadius: 2, minHeight: 44 },
     };
 
+    // عند تغيير الطالب، حدّد وليّ الأمر المطابق تلقائياً
+    useEffect(() => {
+        if (!studentOpt) return;
+        const pid = studentOpt.parent_id ?? studentOpt._raw?.parent?.id ?? null;
+        if (!pid) return;
+
+        const match = parents.find((p) => Number(p.id) === Number(pid));
+        if (match && match.id !== parentOpt?.id) {
+            setParentOpt(match);
+        }
+        // عمداً لم نضع parentOpt كتبعيات لتفادي loop
+    }, [studentOpt, parents]);
+
     return (
         <Modal
             open={open}
@@ -159,10 +184,13 @@ export default function AddPaymentModal({ open, onClose }) {
             <Paper sx={{ width: 860, maxWidth: "96vw", borderRadius: 3, overflow: "hidden", boxShadow: 8 }}>
                 <Box
                     sx={{
-                        p: 2.2, px: 3,
+                        p: 2.2,
+                        px: 3,
                         color: "#fff",
                         background: "linear-gradient(90deg,#35AFBC,#308A9F)",
-                        display: "flex", alignItems: "center", justifyContent: "space-between"
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                     }}
                 >
                     <Stack direction="row" spacing={1.2} alignItems="center">
@@ -177,16 +205,15 @@ export default function AddPaymentModal({ open, onClose }) {
                 <Box component="form" onSubmit={submit} sx={{ p: 3.2 }}>
                     {errMsg && <Alert severity="error" sx={{ mb: 2 }}>{errMsg}</Alert>}
 
-                    {/* مسافات أوسع: spacing=3 وارتفاع مدخلات أكبر */}
                     <Grid container spacing={3}>
-                        {/* الطالب أولاً */}
+                        {/* الطالب — يعرض الاسم فقط */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
-                                options={studentsFiltered}
+                                options={students}
                                 loading={studentsQ.isLoading}
                                 value={studentOpt}
                                 onChange={(_, v) => setStudentOpt(v)}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
                                     <TextField
@@ -194,21 +221,21 @@ export default function AddPaymentModal({ open, onClose }) {
                                         label="الطالب"
                                         size="medium"
                                         sx={fieldSX}
-                                        error={!!fieldErrors?.student_id}
-                                        helperText={fieldErrors?.student_id?.[0] || ""}
+                                        error={(fieldErrors?.student_id?.length ?? 0) > 0}
+                                        helperText={fieldErrors?.student_id?.[0] ?? ""}
                                     />
                                 )}
                             />
                         </Grid>
 
-                        {/* ولي الأمر ثانياً */}
+                        {/* وليّ الأمر — يعرض الاسم فقط */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={parents}
                                 loading={parentsQ.isLoading}
                                 value={parentOpt}
-                                onChange={(_, v) => { setParentOpt(v); /* إعادة تصفية الطلاب عند تغيير الولي */ setStudentOpt(null); }}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                onChange={(_, v) => { setParentOpt(v); }}
+                                isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
                                     <TextField
@@ -216,21 +243,21 @@ export default function AddPaymentModal({ open, onClose }) {
                                         label="وليّ الأمر"
                                         size="medium"
                                         sx={fieldSX}
-                                        error={!!fieldErrors?.parent_id}
-                                        helperText={fieldErrors?.parent_id?.[0] || ""}
+                                        error={(fieldErrors?.parent_id?.length ?? 0) > 0}
+                                        helperText={fieldErrors?.parent_id?.[0] ?? ""}
                                     />
                                 )}
                             />
                         </Grid>
 
-                        {/* رسم المدرسة */}
+                        {/* رسم المدرسة — بدون عرض الشهر (frequency) */}
                         <Grid item xs={12} md={4}>
                             <Autocomplete
                                 options={fees}
                                 loading={feesQ.isLoading}
                                 value={feeOpt}
                                 onChange={(_, v) => setFeeOpt(v)}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
+                                isOptionEqualToValue={(o, v) => o?.id === v?.id}
                                 getOptionLabel={(o) => o?.label || ""}
                                 renderInput={(params) => (
                                     <TextField
@@ -238,8 +265,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                         label="رسم المدرسة"
                                         size="medium"
                                         sx={fieldSX}
-                                        error={!!fieldErrors?.school_fee_id}
-                                        helperText={fieldErrors?.school_fee_id?.[0] || ""}
+                                        error={(fieldErrors?.school_fee_id?.length ?? 0) > 0}
+                                        helperText={fieldErrors?.school_fee_id?.[0] ?? ""}
                                     />
                                 )}
                             />
@@ -257,8 +284,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                 size="medium"
                                 sx={fieldSX}
                                 InputLabelProps={{ shrink: true }}
-                                error={!!fieldErrors?.paid_at}
-                                helperText={fieldErrors?.paid_at?.[0] || ""}
+                                error={(fieldErrors?.paid_at?.length ?? 0) > 0}
+                                helperText={fieldErrors?.paid_at?.[0] ?? ""}
                             />
                         </Grid>
 
@@ -273,11 +300,13 @@ export default function AddPaymentModal({ open, onClose }) {
                                 fullWidth
                                 size="medium"
                                 sx={fieldSX}
-                                error={!!fieldErrors?.status}
-                                helperText={fieldErrors?.status?.[0] || ""}
+                                error={(fieldErrors?.status?.length ?? 0) > 0}
+                                helperText={fieldErrors?.status?.[0] ?? ""}
                             >
-                                {STATUS_OPTS.map(o => (
-                                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                                {STATUS_OPTS.map((o) => (
+                                    <MenuItem key={o.value} value={o.value}>
+                                        {o.label}
+                                    </MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
@@ -293,8 +322,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                 size="medium"
                                 sx={fieldSX}
                                 InputProps={{ endAdornment: <InputAdornment position="end"></InputAdornment> }}
-                                error={!!fieldErrors?.amount}
-                                helperText={fieldErrors?.amount?.[0] || ""}
+                                error={(fieldErrors?.amount?.length ?? 0) > 0}
+                                helperText={fieldErrors?.amount?.[0] ?? ""}
                             />
                         </Grid>
 
@@ -309,8 +338,8 @@ export default function AddPaymentModal({ open, onClose }) {
                                 size="medium"
                                 sx={fieldSX}
                                 InputProps={{ endAdornment: <InputAdornment position="end"></InputAdornment> }}
-                                error={!!fieldErrors?.discount}
-                                helperText={fieldErrors?.discount?.[0] || ""}
+                                error={(fieldErrors?.discount?.length ?? 0) > 0}
+                                helperText={fieldErrors?.discount?.[0] ?? ""}
                             />
                         </Grid>
 
@@ -325,11 +354,13 @@ export default function AddPaymentModal({ open, onClose }) {
                                 fullWidth
                                 size="medium"
                                 sx={fieldSX}
-                                error={!!fieldErrors?.discount_status}
-                                helperText={fieldErrors?.discount_status?.[0] || ""}
+                                error={(fieldErrors?.discount_status?.length ?? 0) > 0}
+                                helperText={fieldErrors?.discount_status?.[0] ?? ""}
                             >
-                                {DISC_OPTS.map(o => (
-                                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                                {DISC_OPTS.map((o) => (
+                                    <MenuItem key={o.value} value={o.value}>
+                                        {o.label}
+                                    </MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
@@ -342,8 +373,11 @@ export default function AddPaymentModal({ open, onClose }) {
                             type="submit"
                             disabled={!canSubmit || m.isPending}
                             sx={{
-                                width: "16rem", color: "#fff", fontWeight: 700, borderRadius: 2.2,
-                                background: "linear-gradient(90deg,#00C6FF,#002952)"
+                                width: "16rem",
+                                color: "#fff",
+                                fontWeight: 700,
+                                borderRadius: 2.2,
+                                background: "linear-gradient(90deg,#00C6FF,#002952)",
                             }}
                         >
                             {m.isPending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "إضافة"}

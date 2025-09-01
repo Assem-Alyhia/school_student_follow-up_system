@@ -119,17 +119,18 @@ function pickCurrentAcademicYear(years) {
     return sorted[0] || years[0];
 }
 
-function pickFeeForStudent(fees, initialStudent) {
+function pickFeeForStudent(fees, student) {
     if (!Array.isArray(fees) || fees.length === 0) return null;
-    const levelId = initialStudent?.classroom?.level?.id;
-    const gradeLevel = initialStudent?.classroom?.level?.grade_level;
+    const levelId = student?.classroom?.level?.id || student?.level?.id;
+    const gradeLevel = student?.classroom?.level?.grade_level || student?.level?.grade_level;
 
+    // 1) بالمطابقة المباشرة على level id من fee.level.id أو fee.level_id أو fee.class_level_id
     const byLevelId = fees.find(f =>
-        String(f?.level_id) === String(levelId) ||
-        String(f?.class_level_id) === String(levelId)
+        String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(levelId)
     );
     if (byLevelId) return byLevelId;
 
+    // 2) بالمطابقة على grade_level
     const byGrade = fees.find(f =>
         Number(f?.grade_level) === Number(gradeLevel) ||
         (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
@@ -137,10 +138,12 @@ function pickFeeForStudent(fees, initialStudent) {
     );
     if (byGrade) return byGrade;
 
+    // 3) افتراضي معلّم/مفعل
     const flagged = fees.find(f => isTruthy(f?.is_default) || isTruthy(f?.active));
     if (flagged) return flagged;
 
-    return fees[0];
+    // 4) أول عنصر
+    return fees[0] || null;
 }
 
 const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated }) => {
@@ -236,6 +239,23 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         }));
     }, [open, initialStudent]);
 
+    // الطالب المختار حاليًا (من النموذج أو props كباك أب)
+    const selectedStudent = useMemo(() => {
+        const fromList = students.find(s => String(s?.id) === String(form.student_id));
+        return fromList || initialStudent || null;
+    }, [students, form.student_id, initialStudent]);
+
+    const selectedLevelId = selectedStudent?.classroom?.level?.id || selectedStudent?.level?.id || null;
+
+    // تصفية الرسوم بحسب Level الطالب (مع سقوط رجوعي إلى كافة الرسوم إن لا يوجد مطابق)
+    const feesFiltered = useMemo(() => {
+        if (!selectedLevelId) return fees;
+        const byLevel = fees.filter(f =>
+            String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(selectedLevelId)
+        );
+        return byLevel.length ? byLevel : fees;
+    }, [fees, selectedLevelId]);
+
     // عندما تكون القوائم جاهزة، اختر سنة دراسية ورسم مناسبين واضبط المبلغ
     useEffect(() => {
         if (!open) return;
@@ -249,8 +269,9 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                 if (y?.id) next.academic_year_id = y.id;
             }
 
-            if (!next.school_fee_id && fees.length) {
-                const fee = pickFeeForStudent(fees, initialStudent);
+            // اختر قسطًا بحسب Level الطالب الحالي (إن وُجد)
+            if ((!next.school_fee_id || !fees.find(f => String(f.id) === String(next.school_fee_id))) && fees.length) {
+                const fee = pickFeeForStudent(fees, selectedStudent);
                 if (fee?.id) {
                     next.school_fee_id = fee.id;
                     const feeAmount = fee?.amount ?? fee?.value;
@@ -262,7 +283,7 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
 
             return next;
         });
-    }, [open, years, fees, initialStudent]);
+    }, [open, years, fees, selectedStudent]);
 
     // تزامن ولي الأمر تلقائياً عند تغيير الطالب أو وصول القوائم
     useEffect(() => {
@@ -275,11 +296,32 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         }
     }, [open, form.student_id, students, parents]);
 
+    // عند تغيير الطالب أو تغيّر Level، تأكد أن القسط المختار يتبع نفس الـ Level، وإلا اختر قسطًا مناسبًا واضبط المبلغ إن لزم
+    useEffect(() => {
+        if (!open || !fees.length) return;
+
+        const currentFee = fees.find(f => String(f?.id) === String(form.school_fee_id));
+        const currentFeeLevel = currentFee?.level?.id ?? currentFee?.level_id ?? currentFee?.class_level_id;
+
+        if (selectedLevelId && String(currentFeeLevel) !== String(selectedLevelId)) {
+            const better = pickFeeForStudent(feesFiltered, selectedStudent);
+            if (better?.id) {
+                setForm(prev => ({
+                    ...prev,
+                    school_fee_id: better.id,
+                    ...(prev.amount === "" || Number(prev.amount) === 0
+                        ? { amount: String(better?.amount ?? better?.value ?? "") }
+                        : {})
+                }));
+            }
+        }
+    }, [open, selectedLevelId, feesFiltered, selectedStudent, fees, form.school_fee_id, form.amount]);
+
     // ========== Mutation (create payment) ==========
+    const _queryClient = useQueryClient();
     const createMut = useMutation({
         mutationFn: createPayment,
         onSuccess: (created) => {
-            // تحديث القوائم ذات الصلة
             queryClient.invalidateQueries({ queryKey: ["payments"] });
             if (form.student_id) {
                 queryClient.invalidateQueries({ queryKey: ["student", String(form.student_id)] });
@@ -294,7 +336,6 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
 
             onCreated && onCreated(created);
 
-            // إعادة ضبط جزئي
             setForm(f => ({
                 ...f,
                 amount: "",
@@ -316,7 +357,7 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
     });
 
     // ========== Helpers ==========
-    const statusColor = useMemo(() => (
+    const _statusColor = useMemo(() => (
         form.status === "completed" ? "rgba(76,175,80,.9)"
             : form.status === "pending" ? "rgba(255,152,0,.9)"
                 : "rgba(244,67,54,.9)"
@@ -331,7 +372,7 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
         if (!form.parent_id) return "يجب اختيار ولي الأمر.";
         if (!form.student_id) return "يجب اختيار الطالب.";
         if (!form.academic_year_id) return "يجب اختيار السنة الدراسية.";
-        if (!form.school_fee_id) return "يجب اختيار نوع الرسوم.";
+        if (!form.school_fee_id) return "يجب اختيار نوع الرسوم (المطابق لمستوى الطالب).";
         if (form.amount === "" || Number(form.amount) <= 0) return "أدخل مبلغًا صالحًا.";
         return null;
     };
@@ -390,15 +431,21 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                     إضافة رسوم للطالب
                 </Typography>
 
-                {anyLoading && <Box sx={{ p: 1, mb: 2 }}><CircularProgress size={22} /> جاري تحميل القوائم...</Box>}
-                {anyError && <Box sx={{ p: 1, mb: 2, color: "error.main" }}>حدث خطأ أثناء جلب البيانات: {firstErrorMsg}</Box>}
+                {(parentsLoading || studentsLoading || yearsLoading || feesLoading) && (
+                    <Box sx={{ p: 1, mb: 2 }}><CircularProgress size={22} /> جاري تحميل القوائم...</Box>
+                )}
+                {anyError && (
+                    <Box sx={{ p: 1, mb: 2, color: "error.main" }}>
+                        حدث خطأ أثناء جلب البيانات: {firstErrorMsg}
+                    </Box>
+                )}
 
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <SelectAuto
                             label="ولي الأمر" options={parents}
                             valueId={form.parent_id} onChange={(id) => setField("parent_id", id)}
-                            loading={anyLoading} getOptionLabel={(p) => p?.name || ""}
+                            loading={parentsLoading} getOptionLabel={(p) => p?.name || ""}
                         />
                     </Grid>
                     <Grid item xs={12} md={6}>
@@ -407,10 +454,20 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                             valueId={form.student_id}
                             onChange={(id, opt) => {
                                 setField("student_id", id);
+                                // اضبط وليّ الأمر تلقائياً حسب الطالب
                                 const pid = findParentForStudent(opt, parents);
                                 if (pid) setField("parent_id", pid);
+                                // اضبط نوع القسط بناءً على Level الطالب
+                                const fee = pickFeeForStudent(fees, opt);
+                                if (fee?.id) {
+                                    setField("school_fee_id", fee.id);
+                                    const feeAmount = fee?.amount ?? fee?.value;
+                                    if (!form.amount || Number(form.amount) === 0) {
+                                        setField("amount", String(feeAmount ?? ""));
+                                    }
+                                }
                             }}
-                            loading={anyLoading} getOptionLabel={(s) => s?.name || ""}
+                            loading={studentsLoading} getOptionLabel={(s) => s?.name || ""}
                         />
                     </Grid>
 
@@ -418,14 +475,19 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                         <SelectAuto
                             label="السنة الدراسية" options={years}
                             valueId={form.academic_year_id} onChange={(id) => setField("academic_year_id", id)}
-                            loading={anyLoading} getOptionLabel={(y) => y?.name || ""}
+                            loading={yearsLoading} getOptionLabel={(y) => y?.name || ""}
                         />
                     </Grid>
+
+                    {/* نوع الرسوم — يعرض فقط الرسوم المطابقة لمستوى الطالب */}
                     <Grid item xs={12} md={6}>
                         <SelectAuto
-                            label="نوع الرسوم" options={fees}
-                            valueId={form.school_fee_id} onChange={onFeeChange}
-                            loading={anyLoading} getOptionLabel={(f) => f ? `${f.name} - ${f.amount ?? ""}` : ""}
+                            label="نوع الرسوم"
+                            options={feesFiltered}
+                            valueId={form.school_fee_id}
+                            onChange={onFeeChange}
+                            loading={feesLoading}
+                            getOptionLabel={(f) => f ? `${f.name} - ${f.amount ?? ""}` : ""}
                         />
                     </Grid>
 
@@ -464,7 +526,7 @@ const PaymentModal = ({ open, handleClose, student: initialStudent, onCreated })
                         <TextField
                             select fullWidth label="حالة الدفع"
                             value={form.status} onChange={(e) => setField("status", e.target.value)}
-                            sx={{ "& .MuiInputBase-root": { color: "#fff", backgroundColor: statusColor } }}
+                            sx={{ "& .MuiInputBase-root": { color: "#fff", backgroundColor: (form.status === "completed" ? "rgba(76,175,80,.9)" : form.status === "pending" ? "rgba(255,152,0,.9)" : "rgba(244,67,54,.9)") } }}
                         >
                             {STATUS_OPTIONS.map(opt => (
                                 <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>

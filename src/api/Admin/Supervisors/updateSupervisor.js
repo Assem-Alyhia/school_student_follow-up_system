@@ -3,32 +3,44 @@ import axiosInstance from "../../axiosInstance";
 import apiEndpoints from "../../apiEndpoints";
 
 export const updateSupervisor = async (id, fields = {}) => {
-  try {
-    const data = new FormData();
-    data.append("_method", "PUT");
+  if (!id) throw new Error("المعرف مطلوب");
 
-    Object.entries(fields || {}).forEach(([key, value]) => {
-      if (value === null || value === undefined || value === "") return;
+  const data = new FormData();
+  data.append("_method", "PUT");
 
-      if (Array.isArray(value)) {
-        value.forEach((v) => data.append(`${key}[]`, v));
-      } else {
-        data.append(key, value); 
+  Object.entries(fields || {}).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") return;
+
+    if (Array.isArray(value)) {
+      value.forEach((v) => data.append(`${key}[]`, v));
+      return;
+    }
+
+    if (key === "image") {
+      if (value instanceof File && value.type?.startsWith("image/")) {
+        data.append("image", value, value.name);
       }
-    });
+      return;
+    }
 
-    const response = await axiosInstance.post(
-      apiEndpoints.updateSupervisor(id),
-      data,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    data.append(key, value);
+  });
 
-    return response.data;
-  } catch (error) {
-    throw new Error(
-      error?.response?.data?.message ||
-        error.message ||
-        "فشل في تحديث بيانات المشرف"
-    );
-  }
+  const response = await axiosInstance.post(
+    apiEndpoints.updateSupervisor(id),
+    data,
+    {
+      // اترك المتصفح يضع الـ boundary
+      transformRequest: [
+        (body, headers) => {
+          delete headers.post?.["Content-Type"];
+          delete headers.common?.["Content-Type"];
+          delete headers["Content-Type"];
+          return body;
+        },
+      ],
+    }
+  );
+
+  return response.data;
 };

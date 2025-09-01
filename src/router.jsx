@@ -96,6 +96,8 @@ import FinancialStudents from "./pages/FinancialRole/Students";
 import FinancialParents from "./pages/FinancialRole/Parents";
 import Financials from "./pages/Financials";
 import FinancialPayments from "./pages/FinancialRole/Payments";
+import Installment from "./pages/Installment";
+import StudentCommentsPage from "./components/StudentRole/Comments/StudentCommentsPage";
 
 const dashboardRoutes = [
   { path: "", element: <Dashboard /> },
@@ -123,6 +125,7 @@ const dashboardRoutes = [
   { path: "fees", element: <Fees /> },
   { path: "reports", element: <Reports /> },
   { path: "classes", element: <Classes /> },
+  { path: "installment", element: <Installment /> },
   { path: "exam/classesLists", element: <AdminClassesLists /> },
   { path: "exam/examlists", element: <AdminExamLists /> },
   { path: "exam/typesExams", element: <AdminTypesExams /> },
@@ -132,7 +135,6 @@ const dashboardRoutes = [
   { path: "student/studentFormAdd", element: <StudentForm /> },
   { path: "student/studentManagement/:id", element: <StudentManagement /> },
   { path: "student/updateStudent/:id", element: <StudentEditForm /> },
-
 ];
 
 
@@ -195,6 +197,7 @@ const studentDashboard = [
   { path: "exams/results", element: <StudentExamGrades /> },
   { path: "grades", element: <StudentGrades /> },
   { path: "buses", element: <StudentBuses /> },
+  { path: "student/comments", element: <StudentCommentsPage /> },
 ];
 
 

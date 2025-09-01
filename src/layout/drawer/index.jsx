@@ -174,6 +174,7 @@ const menuItems = [
     { text: 'المراحل الدراسية', icon: <LayersIcon />, url: '/dashboard/academicStages' },
     { text: 'الصفوف الدراسية', icon: <ClassIcon />, url: '/dashboard/classes' },
     { text: 'الدروس', icon: <MenuBookIcon />, url: '/dashboard/lessons' },
+    { text: 'الأقساط', icon: <MenuBookIcon />, url: '/dashboard/installment' },
     {
         text: 'الامتحانات',
         icon: <AssignmentIcon />,

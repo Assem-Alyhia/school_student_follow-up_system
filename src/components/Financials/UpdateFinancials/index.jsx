@@ -1,11 +1,25 @@
 // components/financials/EditFinancialModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Box, Modal, Paper, Typography, Button, TextField, MenuItem,
-    IconButton, Avatar, Grid, CircularProgress, InputAdornment,
-    Divider, Alert, Chip, Stack, Card, CardContent
+    Box,
+    Modal,
+    Paper,
+    Typography,
+    Button,
+    TextField,
+    MenuItem,
+    IconButton,
+    Avatar,
+    Grid,
+    CircularProgress,
+    Divider,
+    Alert,
+    Chip,
+    Stack,
+    Card,
+    CardContent,
 } from "@mui/material";
-import { Close as CloseIcon, Visibility, VisibilityOff } from "@mui/icons-material";
+import { Close as CloseIcon } from "@mui/icons-material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateFinancial } from "./../../../api/Admin/Financials/updateFinancial";
 
@@ -18,22 +32,32 @@ const asDateInput = (iso) => {
     if (!iso) return "";
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+    ).padStart(2, "0")}`;
 };
 
 const EditFinancialModal = ({ open, onClose, initialData }) => {
     const qc = useQueryClient();
-
 
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
     const [successMsg, setSuccessMsg] = useState("");
 
     const [form, setForm] = useState({
-        name: "", email: "", gender: "", dob: "", phone: "", hiring_date: "",
-        password: "", password_confirmation: "", image: null, imageUrl: ""
+        name: "",
+        email: "",
+        gender: "",
+        dob: "",
+        phone: "",
+        hiring_date: "",
+        password: "",
+        password_confirmation: "",
+        image: null, // File مع previewUrl
+        imageUrl: "", // رابط السيرفر الحالي
     });
 
+    // عند الفتح، عبّئ القيم
     useEffect(() => {
         if (!open) return;
         const u = initialData?.user ?? {};
@@ -44,9 +68,10 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
             dob: asDateInput(initialData?.dob),
             phone: initialData?.phone || "",
             hiring_date: asDateInput(initialData?.hiring_date),
-            password: "", password_confirmation: "",
+            password: "",
+            password_confirmation: "",
             image: null,
-            imageUrl: u.image || ""
+            imageUrl: u.image || "",
         });
         setError("");
         setFieldErrors({});
@@ -57,10 +82,32 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
         const { name, value } = e.target;
         setForm((p) => ({ ...p, [name]: value }));
     };
+
     const handleImageChange = (e) => {
         const f = e.target.files?.[0];
-        if (f) setForm((p) => ({ ...p, image: f, imageUrl: "" }));
+        if (f) {
+            // ألغِ أي URL سابق
+            if (form.image?.previewUrl) {
+                try {
+                    URL.revokeObjectURL(form.image.previewUrl);
+                } catch { console.log() }
+            }
+            f.previewUrl = URL.createObjectURL(f);
+            setForm((p) => ({ ...p, image: f, imageUrl: "" }));
+        }
     };
+
+    // تنظيف معاينات الصور عند الإغلاق/التبديل
+    useEffect(() => {
+        return () => {
+            if (form.image?.previewUrl) {
+                try {
+                    URL.revokeObjectURL(form.image.previewUrl);
+                } catch {  console.log() }
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     const canSubmit = useMemo(() => {
         return form.name && form.email && form.gender && form.dob && form.phone && form.hiring_date;
@@ -72,12 +119,15 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                 throw new Error("كلمتا المرور غير متطابقتين");
             }
             const payload = {
+                // بعض الـ APIs تحتاج user_id لتحديث صورة المستخدم المرتبط
+                user_id: initialData?.user?.id || "",
                 name: form.name,
                 email: form.email,
                 gender: form.gender,
-                dob: form.dob ? new Date(form.dob).toISOString() : "",
+                // نرسل التاريخ بصيغته من input[type=date]
+                dob: form.dob || "",
                 phone: form.phone,
-                hiring_date: form.hiring_date ? new Date(form.hiring_date).toISOString() : "",
+                hiring_date: form.hiring_date || "",
             };
             if (form.password) payload.password = form.password;
             if (form.password_confirmation) payload.password_confirmation = form.password_confirmation;
@@ -85,13 +135,30 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
 
             return updateFinancial(initialData.id, payload);
         },
-        onSuccess: async () => {
+        onSuccess: async (res) => {
             setSuccessMsg("تم تحديث بيانات الموظف المالي بنجاح");
+
+            // لو رجع السيرفر رابط الصورة الجديد، اعرضه مباشرة
+            const updated = res?.data ?? res;
+            const newImage =
+                updated?.data?.user?.image || updated?.user?.image || updated?.image || "";
+            if (newImage) {
+                // نظّف المعاينة السابقة
+                if (form.image?.previewUrl) {
+                    try {
+                        URL.revokeObjectURL(form.image.previewUrl);
+                    } catch { console.log() }
+                }
+                setForm((p) => ({ ...p, image: null, imageUrl: newImage }));
+            }
+
             await qc.invalidateQueries({ queryKey: ["financials"] });
             await qc.invalidateQueries({ queryKey: ["financials-all"] });
+
             setTimeout(() => onClose?.(), 900);
         },
         onError: (err) => {
+            // نعرض رسالة السيرفر وأخطاء الحقول (لا نغلف Axios Error في دالة الـ API)
             const msg = err?.response?.data?.message || err?.message || "حدث خطأ غير متوقع";
             setError(msg);
             setFieldErrors(err?.response?.data?.errors || {});
@@ -106,6 +173,9 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
         updateMut.mutate();
     };
 
+    // اعرض إما معاينة الصورة المرفوعة أو صورة السيرفر
+    const currentAvatar = form.image?.previewUrl || form.imageUrl || "";
+
     return (
         <Modal
             open={open}
@@ -118,7 +188,7 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                     maxWidth: "95vw",
                     borderRadius: 3,
                     overflow: "hidden",
-                    boxShadow: "0 12px 30px rgba(0,0,0,.08)"
+                    boxShadow: "0 12px 30px rgba(0,0,0,.08)",
                 }}
             >
                 <Box
@@ -133,9 +203,7 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                     }}
                 >
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-                            تعديل بيانات الموظف المالي
-                        </Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>تعديل بيانات الموظف المالي</Typography>
                         <Chip
                             size="small"
                             label="نموذج"
@@ -157,12 +225,10 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                         <Grid item xs={12} md={4}>
                             <Card sx={{ borderRadius: 3, height: "100%" }}>
                                 <CardContent>
-                                    <Typography sx={{ fontWeight: 700, color: "#22385F", mb: 2 }}>
-                                        الصورة
-                                    </Typography>
+                                    <Typography sx={{ fontWeight: 700, color: "#22385F", mb: 2 }}>الصورة</Typography>
                                     <Stack spacing={1.5} alignItems="center">
                                         <Avatar
-                                            src={form.image ? URL.createObjectURL(form.image) : form.imageUrl}
+                                            src={currentAvatar}
                                             sx={{
                                                 width: 120,
                                                 height: 120,
@@ -311,20 +377,24 @@ const EditFinancialModal = ({ open, onClose, initialData }) => {
                                 "&:hover": { opacity: 0.95 },
                             }}
                         >
-                            {updateMut.isPending ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "حفظ التعديلات"}
+                            {updateMut.isPending ? (
+                                <CircularProgress size={20} sx={{ color: "#fff" }} />
+                            ) : (
+                                "حفظ التعديلات"
+                            )}
                         </Button>
                         <Button
                             onClick={onClose}
                             variant="outlined"
                             sx={{
                                 width: "15rem",
-                                margin: '0 2rem !important',
+                                margin: "0 2rem !important",
                                 px: 5,
                                 py: 1.2,
                                 borderRadius: 2,
                                 color: "#2a8a89",
                                 borderColor: "#2a8a89",
-                                "&:hover": { borderColor: "#1f6e6d", color: "#1f6e6d" },
+                                "&:hover": { borderColor: "#1f6e6d", color: "#1f6e6d" }, // ✅ أصلحت الرمز
                             }}
                         >
                             إلغاء

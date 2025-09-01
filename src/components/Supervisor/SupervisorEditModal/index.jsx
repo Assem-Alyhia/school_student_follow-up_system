@@ -1,23 +1,11 @@
 // src/components/Admin/Supervisors/SupervisorEditModal.jsx
 import React from "react";
 import {
-    Box,
-    Modal,
-    Paper,
-    Typography,
-    IconButton,
-    Avatar,
-    TextField,
-    InputAdornment,
-    Grid,
-    Button,
-    MenuItem,
-    CircularProgress,
+    Box, Modal, Paper, Typography, IconButton, Avatar, TextField,
+    Grid, Button, MenuItem, CircularProgress, Alert
 } from "@mui/material";
 import {
     Close as CloseIcon,
-    Visibility,
-    VisibilityOff,
     PhotoCamera as UploadIcon,
     Person as PersonIcon,
 } from "@mui/icons-material";
@@ -25,21 +13,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSupervisorById } from "../../../api/Admin/Supervisors/getSupervisorById";
 import { updateSupervisor } from "../../../api/Admin/Supervisors/updateSupervisor";
 
-const asISO = (d) => (d ? new Date(d).toISOString() : "");
 const asDateInput = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 const asArGender = (g) => (g === "male" ? "male" : g === "female" ? "female" : "");
 
 export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
     const qc = useQueryClient();
 
-    // ⬇️ جلب بيانات المشرف
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ["supervisor-by-id", id],
         queryFn: () => getSupervisorById(id),
         enabled: open && !!id,
     });
 
-    // ⬇️ حالـة النموذج
     const [form, setForm] = React.useState({
         name: "",
         email: "",
@@ -48,12 +33,13 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
         address: "",
         dob: "",
         hiring_date: "",
-
     });
+
     const [imageFile, setImageFile] = React.useState(null);
     const [preview, setPreview] = React.useState("");
+    const [submitError, setSubmitError] = React.useState("");
+    const [fieldErrors, setFieldErrors] = React.useState({});
 
-    // ⬇️ ملء النموذج عند الجلب
     React.useEffect(() => {
         if (!data) return;
         const sup = data || {};
@@ -66,54 +52,74 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
             address: sup.address || "",
             dob: asDateInput(sup.dob),
             hiring_date: asDateInput(sup.hiring_date || user.created_at),
-
         });
         setPreview(user.image || "");
         setImageFile(null);
+        setSubmitError("");
+        setFieldErrors({});
     }, [data, open]);
 
-    // ⬇️ تحديث الحقول
+    React.useEffect(() => {
+        return () => {
+            try {
+                if (preview && preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+            } catch { console.log() }
+        };
+    }, [open]);
+
     const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-    // ⬇️ رفع صورة
     const onPickImage = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!file.type?.startsWith("image/")) {
+            setSubmitError("الملف المختار ليس صورة صالحة. يُسمح بالأنواع: jpeg, png, jpg, gif, svg");
+            return;
+        }
+        try {
+            if (preview && preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+        } catch { console.log() }
+        const url = URL.createObjectURL(file);
         setImageFile(file);
-        setPreview(URL.createObjectURL(file));
+        setPreview(url);
     };
 
-    // ⬇️ إرسال التعديل
     const mutation = useMutation({
         mutationFn: (payload) => updateSupervisor(id, payload),
         onSuccess: (res) => {
-            qc.invalidateQueries(["supervisor-by-id", id]);
-            qc.invalidateQueries(["supervisors"]);
+            qc.invalidateQueries({ queryKey: ["supervisor-by-id", id] });
+            qc.invalidateQueries({ queryKey: ["supervisors"] });
             onSuccess?.(res);
             onClose?.();
+        },
+        onError: (err) => {
+            const msg = err?.response?.data?.message || err?.message || "فشل في تحديث بيانات المشرف";
+            setSubmitError(msg);
+            setFieldErrors(err?.response?.data?.errors || {});
         },
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setSubmitError("");
+        setFieldErrors({});
 
-        const fd = new FormData();
-        if (imageFile) fd.append("image", imageFile);
-        fd.append("email", form.email || "");
-        fd.append("name", form.name || "");
-        fd.append("gender", form.gender || "");
-        fd.append("phone", form.phone || "");
-        fd.append("address", form.address || "");
-        fd.append("dob", form.dob ? asISO(form.dob) : "");
-        fd.append("hiring_date", form.hiring_date ? asISO(form.hiring_date) : "");
+        const payload = {
+            name: form.name || "",
+            email: form.email || "",
+            phone: form.phone || "",
+            gender: form.gender || "",
+            address: form.address || "",
+            // أرسل التاريخ كسلسلة YYYY-MM-DD (نفس حقل الإدخال)
+            dob: form.dob || "",
+            hiring_date: form.hiring_date || "",
+        };
 
-        // كلمة المرور اختيارية — نرسلها فقط إذا أدخلها المستخدم
-        if (form.password) {
-            fd.append("password", form.password);
-            fd.append("password_confirmation", form.password_confirmation || "");
+        if (imageFile instanceof File && imageFile.type?.startsWith("image/")) {
+            payload.image = imageFile;
         }
 
-        mutation.mutate(fd);
+        mutation.mutate(payload);
     };
 
     return (
@@ -136,7 +142,6 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                     direction: "rtl",
                 }}
             >
-                {/* Close */}
                 <IconButton onClick={onClose} sx={{ position: "absolute", top: 12, left: 14, color: "#308A9F" }}>
                     <CloseIcon />
                 </IconButton>
@@ -145,7 +150,6 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                     تعديل بيانات المشرف
                 </Typography>
 
-                {/* حالة تحميل / خطأ */}
                 {isLoading && (
                     <Box sx={{ display: "grid", placeItems: "center", py: 6 }}>
                         <CircularProgress size={26} />
@@ -161,6 +165,11 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
 
                 {!isLoading && !isError && (
                     <>
+                        {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
+                        {fieldErrors?.image?.length ? (
+                            <Alert severity="error" sx={{ mb: 2 }}>{fieldErrors.image.join(" • ")}</Alert>
+                        ) : null}
+
                         {/* الصورة + زر رفع */}
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
                             <Avatar
@@ -191,6 +200,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     value={form.name}
                                     onChange={(e) => setField("name", e.target.value)}
                                     fullWidth
+                                    error={!!fieldErrors?.name}
+                                    helperText={fieldErrors?.name?.[0] || ""}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
@@ -200,6 +211,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     onChange={(e) => setField("email", e.target.value)}
                                     fullWidth
                                     inputProps={{ inputMode: "email" }}
+                                    error={!!fieldErrors?.email}
+                                    helperText={fieldErrors?.email?.[0] || ""}
                                 />
                             </Grid>
 
@@ -210,6 +223,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     onChange={(e) => setField("phone", e.target.value)}
                                     fullWidth
                                     inputProps={{ inputMode: "tel", dir: "ltr" }}
+                                    error={!!fieldErrors?.phone}
+                                    helperText={fieldErrors?.phone?.[0] || ""}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
@@ -219,6 +234,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     value={form.gender}
                                     onChange={(e) => setField("gender", e.target.value)}
                                     fullWidth
+                                    error={!!fieldErrors?.gender}
+                                    helperText={fieldErrors?.gender?.[0] || ""}
                                 >
                                     <MenuItem value="male">ذكر</MenuItem>
                                     <MenuItem value="female">أنثى</MenuItem>
@@ -233,6 +250,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     onChange={(e) => setField("dob", e.target.value)}
                                     fullWidth
                                     InputLabelProps={{ shrink: true }}
+                                    error={!!fieldErrors?.dob}
+                                    helperText={fieldErrors?.dob?.[0] || ""}
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
@@ -243,6 +262,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     onChange={(e) => setField("hiring_date", e.target.value)}
                                     fullWidth
                                     InputLabelProps={{ shrink: true }}
+                                    error={!!fieldErrors?.hiring_date}
+                                    helperText={fieldErrors?.hiring_date?.[0] || ""}
                                 />
                             </Grid>
 
@@ -254,6 +275,8 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                     fullWidth
                                     multiline
                                     minRows={2}
+                                    error={!!fieldErrors?.address}
+                                    helperText={fieldErrors?.address?.[0] || ""}
                                 />
                             </Grid>
                         </Grid>
@@ -275,13 +298,6 @@ export default function SupervisorEditModal({ open, onClose, id, onSuccess }) {
                                 إلغاء
                             </Button>
                         </Box>
-
-                        {/* خطأ التحديث */}
-                        {mutation.isError && (
-                            <Typography sx={{ mt: 1.5, color: "error.main" }}>
-                                {mutation.error?.message || "فشل في تحديث بيانات المشرف"}
-                            </Typography>
-                        )}
                     </>
                 )}
             </Paper>

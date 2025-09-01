@@ -14,6 +14,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ModeCommentRoundedIcon from '@mui/icons-material/ModeCommentRounded';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -24,14 +25,14 @@ import { clearToken } from '../../api/authApi/tokenManager';
 import PeopleIcon from "@mui/icons-material/People";
 import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
 import DirectionsBusFilledIcon from "@mui/icons-material/DirectionsBusFilled";
-import CoPresentIcon from "@mui/icons-material/CoPresent";       
-import MenuBookIcon from "@mui/icons-material/MenuBook";           
-import ClassIcon from "@mui/icons-material/Class";                 
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth"; 
-import AssignmentIcon from "@mui/icons-material/Assignment";       
-import ListAltIcon from "@mui/icons-material/ListAlt";            
-import FactCheckIcon from "@mui/icons-material/FactCheck";        
-import GradeIcon from "@mui/icons-material/Grade";                
+import CoPresentIcon from "@mui/icons-material/CoPresent";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import ClassIcon from "@mui/icons-material/Class";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import GradeIcon from "@mui/icons-material/Grade";
 
 
 const drawerWidth = 240;
@@ -140,7 +141,7 @@ export const studentMenu = [
                 text: "قوائم الامتحانات",
                 icon: <ListAltIcon />,
                 url: "/studentDashboard/exams/lists",
-                disabled: true, 
+                disabled: true,
             },
             {
                 text: "نتائج الامتحانات",
@@ -246,8 +247,8 @@ export default function StudentDrawer() {
                                     </Link>
                                 </MenuItem>
                                 <MenuItem onClick={handleProfileMenuClose} sx={{ px: 2 }}>
-                                    <Link to="settings" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                                        <SettingsIcon sx={{ mr: 1 }} /> الإعدادات
+                                    <Link to="student/comments" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+                                        <ModeCommentRoundedIcon sx={{ mr: 1 }} /> تعليقات المدرسة
                                     </Link>
                                 </MenuItem>
 

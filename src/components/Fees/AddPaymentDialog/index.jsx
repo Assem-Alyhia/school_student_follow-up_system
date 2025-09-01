@@ -40,6 +40,37 @@ const discountStatuses = [
     { value: "employee_child", label: "ابن موظف" },
 ];
 
+// ===== Helpers for fee picking by student's level (like previous component) =====
+const isTruthy = (v) => v === true || v === 1 || v === "1" || v === "true";
+
+function pickFeeForStudent(fees, student) {
+    if (!Array.isArray(fees) || fees.length === 0) return null;
+    const levelId = student?.classroom?.level?.id || student?.level?.id;
+    const gradeLevel = student?.classroom?.level?.grade_level || student?.level?.grade_level;
+
+    // 1) Match by level id (supports various shapes)
+    const byLevelId = fees.find(f =>
+        String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(levelId)
+    );
+    if (byLevelId) return byLevelId;
+
+    // 2) Match by grade level (fallback)
+    const byGrade = fees.find(f =>
+        Number(f?.grade_level) === Number(gradeLevel) ||
+        (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
+            String(f?.name || f?.title || "").includes(String(gradeLevel)))
+    );
+    if (byGrade) return byGrade;
+
+    // 3) Default/active flag
+    const flagged = fees.find(f => isTruthy(f?.is_default) || isTruthy(f?.active));
+    if (flagged) return flagged;
+
+    // 4) Fallback first
+    return fees[0] || null;
+}
+// ==============================================================================
+
 const AddPaymentDialog = ({ open, onClose, onCreated }) => {
     const [form, setForm] = useState(defaultForm);
     const [errorMsg, setErrorMsg] = useState("");
@@ -185,19 +216,66 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
         );
     };
 
+    // ===== fees filtered by the student's level =====
+    const selectedStudent = studentValue; // convenience alias
+    const selectedLevelId = selectedStudent?.classroom?.level?.id || selectedStudent?.level?.id || null;
+
+    const feesFiltered = useMemo(() => {
+        if (!selectedLevelId) return fees;
+        const byLevel = fees.filter(f =>
+            String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(selectedLevelId)
+        );
+        return byLevel.length ? byLevel : fees;
+    }, [fees, selectedLevelId]);
+
+    // If current selected fee doesn't match student's level, fix it (and set amount if empty)
+    useEffect(() => {
+        if (!open || fees.length === 0) return;
+
+        const current = fees.find(f => String(f?.id) === String(form.school_fee_id));
+        const currentFeeLevel = current?.level?.id ?? current?.level_id ?? current?.class_level_id;
+
+        if (selectedLevelId && String(currentFeeLevel) !== String(selectedLevelId)) {
+            const better = pickFeeForStudent(feesFiltered, selectedStudent);
+            if (better?.id) {
+                setForm(prev => ({
+                    ...prev,
+                    school_fee_id: String(better.id),
+                    ...(prev.amount === "" || Number(prev.amount) === 0
+                        ? { amount: String(better?.amount ?? better?.value ?? "") }
+                        : {})
+                }));
+            }
+        }
+    }, [open, fees, feesFiltered, selectedLevelId, selectedStudent, form.school_fee_id, form.amount]);
+
     const handleStudentChange = async (_e, stu) => {
         const sid = stu?.id || "";
         setField("student_id", sid);
         setAutoParentText("");
 
+        // auto-pick parent by local object (instant)
         const instant = fastMatchParentFromStudentObj(stu);
         if (instant) {
             setForm((prev) => ({ ...prev, parent_id: String(instant.id) }));
             setAutoParentText(`تم ربط وليّ الأمر: ${instant?.name || instant?.user?.name || `#${instant.id}`}`);
         }
 
+        // auto-pick fee by level + set amount if empty
+        const fee = pickFeeForStudent(fees, stu);
+        if (fee?.id) {
+            setForm(prev => ({
+                ...prev,
+                school_fee_id: String(fee.id),
+                ...(prev.amount === "" || Number(prev.amount) === 0
+                    ? { amount: String(fee?.amount ?? fee?.value ?? "") }
+                    : {})
+            }));
+        }
+
         if (!sid) return;
 
+        // fetch student details to improve parent matching
         try {
             const details = await getStudentById(sid);
             const respParentId = details?.parent?.id;
@@ -240,7 +318,7 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                     </Box>
                 ) : (
                     <Grid container spacing={2}>
-                        {/* الطالب على اليمين (في RTL أول عنصر يظهر يمين) */}
+                        {/* الطالب */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={filteredStudents}
@@ -256,13 +334,13 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                                         label="الطالب"
                                         margin="dense"
                                         required
-                                        helperText="عند اختيار الطالب سيتم اختيار وليّ أمره تلقائيًا من القائمة"
+                                        helperText="عند اختيار الطالب سيتم اختيار وليّ أمره ونوع القسط تلقائيًا"
                                     />
                                 )}
                             />
                         </Grid>
 
-                        {/* وليّ الأمر على اليسار */}
+                        {/* وليّ الأمر */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={parents}
@@ -284,6 +362,7 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
+                        {/* السنة الدراسية */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={years}
@@ -302,17 +381,24 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                             />
                         </Grid>
 
+                        {/* نوع الرسوم — مُرشَّحة بحسب مستوى الطالب */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
-                                options={fees}
-                                value={feeValue}
+                                options={feesFiltered}
+                                value={feeValue && feesFiltered.find(f => String(f.id) === String(feeValue.id)) ? feeValue : null}
                                 isOptionEqualToValue={(opt, val) => String(opt?.id) === String(val?.id)}
                                 getOptionLabel={(o) => {
                                     const title = o?.title || o?.name || (o?.id ? `#${o.id}` : "");
-                                    const amt = o?.amount ? ` - ${Number(o.amount).toFixed(2)}$` : "";
+                                    const amt = o?.amount ? ` - ${Number(o.amount).toFixed(2)}` : "";
                                     return `${title}${amt}`;
                                 }}
-                                onChange={(_e, v) => setField("school_fee_id", v?.id || "")}
+                                onChange={(_e, v) => {
+                                    setField("school_fee_id", v?.id || "");
+                                    const feeAmount = v?.amount ?? v?.value;
+                                    if (feeAmount && (!form.amount || Number(form.amount) === 0)) {
+                                        setField("amount", String(feeAmount));
+                                    }
+                                }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="نوع الرسوم" margin="dense" required />
                                 )}

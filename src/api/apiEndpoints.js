@@ -52,7 +52,12 @@ const apiEndpoints = {
   // الرسوم
   getAllSchoolFees: "admin/school-fees",
   getAllSchoolFeesNoPaginate: "admin/school-fees/get-all",
+  getSchoolFeeById: (id) => `admin/school-fees/${id}`, 
+  createSchoolFee: "admin/school-fees", 
+  updateSchoolFee: (id) => `admin/school-fees/${id}`, 
+  deleteSchoolFee: (id) => `admin/school-fees/${id}`,
 
+  
   // المعلمون
   getAllTeachers: "admin/teachers",
   getTeacherById: (id) => `admin/teachers/${id}`,
@@ -341,6 +346,10 @@ const apiEndpoints = {
 
   // الباصات
   getStudentBuses: "student/buses",
+
+
+    // تعليقات الطالب
+  getStudentComments: "student/comments",
 
   // *****************************************************************************
   // ******************************{Financial}************************************

@@ -40,6 +40,70 @@ const emptyForm = {
     discount_status: "none",
 };
 
+// ===== helpers =====
+const isTruthy = (v) => v === true || v === 1 || v === "1" || v === "true";
+const norm = (s) => String(s || "").trim();
+
+function findParentForStudent(student, parents) {
+    if (!student || !Array.isArray(parents) || parents.length === 0) return null;
+
+    const candidateIds = [
+        student?.parent_id,
+        student?.parent?.id,
+        student?.guardian_id,
+    ].filter(Boolean);
+
+    for (const cid of candidateIds) {
+        const hit = parents.find((p) => String(p?.id) === String(cid));
+        if (hit) return hit.id;
+    }
+
+    const parentUserId = student?.parent?.user?.id || student?.parent_user_id;
+    if (parentUserId) {
+        const hit = parents.find((p) => String(p?.user?.id) === String(parentUserId));
+        if (hit) return hit.id;
+    }
+
+    const parentName = student?.parent?.name || student?.parent?.user?.name;
+    if (parentName) {
+        const hit = parents.find(
+            (p) => norm(p?.name) === norm(parentName) || norm(p?.user?.name) === norm(parentName)
+        );
+        if (hit) return hit.id;
+    }
+
+    return null;
+}
+
+function pickFeeForStudent(fees, student) {
+    if (!Array.isArray(fees) || fees.length === 0) return null;
+    const levelId = student?.classroom?.level?.id || student?.level?.id;
+    const gradeLevel = student?.classroom?.level?.grade_level || student?.level?.grade_level;
+
+    // 1) exact level id
+    const byLevelId = fees.find(
+        (f) => String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(levelId)
+    );
+    if (byLevelId) return byLevelId;
+
+    // 2) grade-based heuristic
+    const byGrade = fees.find(
+        (f) =>
+            Number(f?.grade_level) === Number(gradeLevel) ||
+            (/صف|grade|level|مرحلة/i.test(String(f?.name || f?.title || "")) &&
+                String(f?.name || f?.title || "").includes(String(gradeLevel)))
+    );
+    if (byGrade) return byGrade;
+
+    // 3) explicit default/active
+    const flagged = fees.find((f) => isTruthy(f?.is_default) || isTruthy(f?.active));
+    if (flagged) return flagged;
+
+    // 4) fallback
+    return fees[0] || null;
+}
+// ==================
+
 const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
     const [form, setForm] = useState(emptyForm);
     const [errorMsg, setErrorMsg] = useState("");
@@ -75,13 +139,16 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
         enabled: !!open && !!paymentId,
     });
 
+    // hydrate form from fetched payment
     useEffect(() => {
         if (!open || !paymentId) return;
         if (paymentQ.data) {
             const payment = paymentQ.data?.data ?? paymentQ.data;
+
             const parentId = payment?.parent?.id ?? payment?.parent_id ?? "";
             const studentId = payment?.student?.id ?? payment?.student_id ?? "";
-            const yearId = payment?.academicYear?.id ?? payment?.academic_year_id ?? payment?.year_id ?? "";
+            const yearId =
+                payment?.academicYear?.id ?? payment?.academic_year_id ?? payment?.year_id ?? "";
             const feeId = payment?.schoolFee?.id ?? payment?.school_fee_id ?? "";
             const amount = payment?.amount ?? payment?.schoolFee?.amount ?? "";
             const status = payment?.status ?? "pending";
@@ -91,6 +158,7 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                 : dayjs().format("YYYY-MM-DD HH:mm:ss");
             const discount = payment?.discount ?? "";
             const discount_status = payment?.discount_status ?? "none";
+
             setForm({
                 parent_id: String(parentId || ""),
                 student_id: String(studentId || ""),
@@ -105,10 +173,22 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
         }
     }, [open, paymentId, paymentQ.data]);
 
-    const parents = useMemo(() => Array.isArray(parentsQ.data) ? parentsQ.data : parentsQ.data?.data || [], [parentsQ.data]);
-    const students = useMemo(() => Array.isArray(studentsQ.data) ? studentsQ.data : studentsQ.data?.data || [], [studentsQ.data]);
-    const years = useMemo(() => Array.isArray(yearsQ.data) ? yearsQ.data : yearsQ.data?.data || [], [yearsQ.data]);
-    const fees = useMemo(() => Array.isArray(feesQ.data) ? feesQ.data : feesQ.data?.data || [], [feesQ.data]);
+    const parents = useMemo(
+        () => (Array.isArray(parentsQ.data) ? parentsQ.data : parentsQ.data?.data) || [],
+        [parentsQ.data]
+    );
+    const students = useMemo(
+        () => (Array.isArray(studentsQ.data) ? studentsQ.data : studentsQ.data?.data) || [],
+        [studentsQ.data]
+    );
+    const years = useMemo(
+        () => (Array.isArray(yearsQ.data) ? yearsQ.data : yearsQ.data?.data) || [],
+        [yearsQ.data]
+    );
+    const fees = useMemo(
+        () => (Array.isArray(feesQ.data) ? feesQ.data : feesQ.data?.data) || [],
+        [feesQ.data]
+    );
 
     const filteredStudents = useMemo(() => {
         if (!form.parent_id) return students;
@@ -163,6 +243,7 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
         onClose?.();
     };
 
+    // current selected values
     const parentValue = useMemo(
         () => parents.find((p) => String(p.id) === String(form.parent_id)) || null,
         [parents, form.parent_id]
@@ -179,6 +260,67 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
         () => fees.find((f) => String(f.id) === String(form.school_fee_id)) || null,
         [fees, form.school_fee_id]
     );
+
+    // ====== fees filtered by the student's level (like previous "Add" dialog) ======
+    const selectedStudent = studentValue;
+    const selectedLevelId =
+        selectedStudent?.classroom?.level?.id || selectedStudent?.level?.id || null;
+
+    const feesFiltered = useMemo(() => {
+        if (!selectedLevelId) return fees;
+        const byLevel = fees.filter(
+            (f) => String(f?.level?.id ?? f?.level_id ?? f?.class_level_id) === String(selectedLevelId)
+        );
+        return byLevel.length ? byLevel : fees;
+    }, [fees, selectedLevelId]);
+
+    // Ensure chosen fee matches student's level; if not, auto pick & maybe set amount
+    useEffect(() => {
+        if (!open || fees.length === 0) return;
+
+        const current = fees.find((f) => String(f?.id) === String(form.school_fee_id));
+        const currentFeeLevel = current?.level?.id ?? current?.level_id ?? current?.class_level_id;
+
+        if (selectedLevelId && String(currentFeeLevel) !== String(selectedLevelId)) {
+            const better = pickFeeForStudent(feesFiltered, selectedStudent);
+            if (better?.id) {
+                setForm((prev) => ({
+                    ...prev,
+                    school_fee_id: String(better.id),
+                    ...(prev.amount === "" || Number(prev.amount) === 0
+                        ? { amount: String(better?.amount ?? better?.value ?? "") }
+                        : {}),
+                }));
+            }
+        }
+    }, [
+        open,
+        fees,
+        feesFiltered,
+        selectedLevelId,
+        selectedStudent,
+        form.school_fee_id,
+        form.amount,
+    ]);
+
+    // When student changes manually, sync parent & align fee
+    const onStudentChange = (_e, v) => {
+        setField("student_id", v?.id || "");
+
+        const pid = findParentForStudent(v, parents);
+        if (pid) setField("parent_id", String(pid));
+
+        const fee = pickFeeForStudent(fees, v);
+        if (fee?.id) {
+            setForm((prev) => ({
+                ...prev,
+                school_fee_id: String(fee.id),
+                ...(prev.amount === "" || Number(prev.amount) === 0
+                    ? { amount: String(fee?.amount ?? fee?.value ?? "") }
+                    : {}),
+            }));
+        }
+    };
 
     const loadingLists = parentsQ.isLoading || studentsQ.isLoading || yearsQ.isLoading || feesQ.isLoading;
     const loadingPayment = paymentQ.isLoading;
@@ -198,11 +340,13 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                     </Box>
                 ) : (
                     <Grid container spacing={2}>
+                        {/* وليّ الأمر — عرض الاسم فقط */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={parents}
                                 value={parentValue}
-                                getOptionLabel={(o) => o?.name || o?.full_name || `#${o?.id}` || ""}
+                                isOptionEqualToValue={(o, v) => String(o?.id) === String(v?.id)}
+                                getOptionLabel={(o) => o?.name || o?.full_name || o?.user?.name || ""}
                                 onChange={(e, v) => setField("parent_id", v?.id || "")}
                                 renderInput={(params) => (
                                     <TextField {...params} label="ولي الأمر" margin="dense" required />
@@ -210,25 +354,32 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                             />
                         </Grid>
 
+                        {/* الطالب — عند تغييره نُحدّث الولي ونوع القسط تلقائيًا */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={filteredStudents}
                                 value={studentValue}
-                                getOptionLabel={(o) =>
-                                    o?.name || o?.user?.name || o?.full_name || `#${o?.id}` || ""
-                                }
-                                onChange={(e, v) => setField("student_id", v?.id || "")}
+                                isOptionEqualToValue={(o, v) => String(o?.id) === String(v?.id)}
+                                getOptionLabel={(o) => o?.name || o?.user?.name || o?.full_name || ""}
+                                onChange={onStudentChange}
                                 renderInput={(params) => (
                                     <TextField {...params} label="الطالب" margin="dense" required />
                                 )}
                             />
                         </Grid>
 
+                        {/* السنة الدراسية */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
                                 options={years}
                                 value={yearValue}
-                                getOptionLabel={(o) => o?.name || o?.label || `${o?.start} - ${o?.end}` || `#${o?.id}`}
+                                isOptionEqualToValue={(o, v) => String(o?.id) === String(v?.id)}
+                                getOptionLabel={(o) =>
+                                    o?.name ||
+                                    o?.label ||
+                                    (o?.start && o?.end ? `${o.start} - ${o.end}` : "") ||
+                                    ""
+                                }
                                 onChange={(e, v) => setField("academic_year_id", v?.id || "")}
                                 renderInput={(params) => (
                                     <TextField {...params} label="السنة الدراسية" margin="dense" required />
@@ -236,16 +387,28 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                             />
                         </Grid>
 
+                        {/* نوع الرسوم — مُرشَّحة بحسب مستوى الطالب، مع عرض الاسم والمبلغ فقط */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
-                                options={fees}
-                                value={feeValue}
+                                options={feesFiltered}
+                                value={
+                                    feeValue && feesFiltered.find((f) => String(f.id) === String(feeValue.id))
+                                        ? feeValue
+                                        : null
+                                }
+                                isOptionEqualToValue={(o, v) => String(o?.id) === String(v?.id)}
                                 getOptionLabel={(o) => {
-                                    const title = o?.title || o?.name || `#${o?.id}`;
-                                    const amt = o?.amount ? ` - ${Number(o.amount).toFixed(2)}$` : "";
+                                    const title = o?.title || o?.name || "";
+                                    const amt = o?.amount != null ? ` - ${Number(o.amount).toFixed(2)}` : "";
                                     return `${title}${amt}`;
                                 }}
-                                onChange={(e, v) => setField("school_fee_id", v?.id || "")}
+                                onChange={(e, v) => {
+                                    setField("school_fee_id", v?.id || "");
+                                    const feeAmount = v?.amount ?? v?.value;
+                                    if (feeAmount && (!form.amount || Number(form.amount) === 0)) {
+                                        setField("amount", String(feeAmount));
+                                    }
+                                }}
                                 renderInput={(params) => (
                                     <TextField {...params} label="نوع الرسوم" margin="dense" required />
                                 )}
@@ -276,7 +439,9 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                                     required
                                 >
                                     {statuses.map((s) => (
-                                        <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+                                        <MenuItem key={s.value} value={s.value}>
+                                            {s.label}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -319,7 +484,9 @@ const EditPaymentDialog = ({ open, onClose, paymentId, onUpdated }) => {
                                     onChange={(e) => setField("discount_status", e.target.value)}
                                 >
                                     {discountStatuses.map((s) => (
-                                        <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+                                        <MenuItem key={s.value} value={s.value}>
+                                            {s.label}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
