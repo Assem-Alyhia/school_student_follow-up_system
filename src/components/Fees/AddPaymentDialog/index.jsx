@@ -134,6 +134,14 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
             : students;
     }, [students, form.parent_id]);
 
+    const filteredFees = useMemo(() => {
+        if (!form.student_id) return fees;
+        const student = students.find(s => String(s.id) === String(form.student_id));
+        const levelId = student?.classroom?.level?.id;
+        if (!levelId) return fees;
+        return fees.filter(fee => fee?.level?.id === levelId);
+    }, [fees, students, form.student_id]);
+
     const setField = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
     const isValid = useMemo(() => {
@@ -384,8 +392,8 @@ const AddPaymentDialog = ({ open, onClose, onCreated }) => {
                         {/* نوع الرسوم — مُرشَّحة بحسب مستوى الطالب */}
                         <Grid item xs={12} md={6}>
                             <Autocomplete
-                                options={feesFiltered}
-                                value={feeValue && feesFiltered.find(f => String(f.id) === String(feeValue.id)) ? feeValue : null}
+                                options={filteredFees}
+                                value={feeValue}
                                 isOptionEqualToValue={(opt, val) => String(opt?.id) === String(val?.id)}
                                 getOptionLabel={(o) => {
                                     const title = o?.title || o?.name || (o?.id ? `#${o.id}` : "");
