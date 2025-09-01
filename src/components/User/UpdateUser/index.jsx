@@ -1,3 +1,4 @@
+// src/pages/Admin/Users/UpdateUser.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Box,
@@ -9,7 +10,10 @@ import {
     Divider,
     MenuItem,
     CircularProgress,
+    InputAdornment,
+    IconButton,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -31,7 +35,18 @@ const UpdateUser = () => {
         email: "",
         image: null,
         role: "",
+        password: "",
+        password_confirmation: "",
     });
+
+    // إظهار/إخفاء كلمة المرور
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPassword2, setShowPassword2] = useState(false);
+    // تحكم بظهور الأيقونة فقط عند التركيز أو وجود قيمة
+    const [pwdFocused, setPwdFocused] = useState(false);
+    const [pwd2Focused, setPwd2Focused] = useState(false);
+
+    const [pwdError, setPwdError] = useState("");
 
     const [preview, setPreview] = useState("");
     const [showSuccess, setShowSuccess] = useState(false);
@@ -71,6 +86,8 @@ const UpdateUser = () => {
                 (Array.isArray(apiUser.roles) ? apiUser.roles[0] : "") ??
                 "",
             image: null,
+            password: "",
+            password_confirmation: "",
         }));
         setPreview(apiUser.image || "");
     }, [apiUser]);
@@ -101,6 +118,9 @@ const UpdateUser = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+        if (name === "password" || name === "password_confirmation") {
+            setPwdError("");
+        }
     };
 
     const handleImageChange = (e) => {
@@ -110,7 +130,18 @@ const UpdateUser = () => {
     };
 
     const saveMut = useMutation({
-        mutationFn: async () => updateUser(id, form),
+        mutationFn: async () => {
+            // تحقق محلي من تطابق كلمتي المرور إن تم تعبئة أي منهما
+            if (
+                (form.password || form.password_confirmation) &&
+                form.password !== form.password_confirmation
+            ) {
+                const err = "كلمتا المرور غير متطابقتين";
+                setPwdError(err);
+                throw new Error(err);
+            }
+            return updateUser(id, form);
+        },
         onSuccess: async () => {
             setAlertTitle("تم تحديث المستخدم بنجاح!");
             setAlertMsg("تم حفظ التغييرات.");
@@ -124,7 +155,9 @@ const UpdateUser = () => {
         },
         onError: (error) => {
             setAlertTitle("فشل التحديث");
-            setAlertMsg(error?.response?.data?.message || error?.message || "حدث خطأ أثناء التحديث.");
+            setAlertMsg(
+                error?.response?.data?.message || error?.message || "حدث خطأ أثناء التحديث."
+            );
             setShowFail(true);
             setTimeout(() => setShowFail(false), 3000);
         },
@@ -136,7 +169,13 @@ const UpdateUser = () => {
 
     const needsTransientOption =
         form.role &&
-        !roleNames.some((n) => n.toLowerCase() === String(form.role).toLowerCase());
+        !roleNames.some(
+            (n) => n.toLowerCase() === String(form.role).toLowerCase()
+        );
+
+    // متى تظهر أيقونة العين؟
+    const showEye1 = pwdFocused || !!form.password;
+    const showEye2 = pwd2Focused || !!form.password_confirmation;
 
     return (
         <Box sx={{ p: 3, direction: "rtl", bgcolor: "#f8f9fa" }}>
@@ -203,6 +242,70 @@ const UpdateUser = () => {
                     sx={{ mb: 2 }}
                     disabled={loading || userLoading}
                 />
+
+                {/* كلمة المرور وتأكيدها (اختياريتان) */}
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                        gap: 2,
+                        mb: 2,
+                    }}
+                >
+                    <TextField
+                        label="كلمة المرور الجديدة (اختياري)"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={form.password}
+                        onChange={handleChange}
+                        onFocus={() => setPwdFocused(true)}
+                        onBlur={() => setPwdFocused(false)}
+                        disabled={loading || userLoading}
+                        error={Boolean(pwdError)}
+                        helperText={pwdError || ""}
+                        InputProps={{
+                            endAdornment: showEye1 ? (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        edge="end"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setShowPassword((s) => !s)}
+                                        aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                                    >
+                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                </InputAdornment>
+                            ) : null,
+                        }}
+                    />
+
+                    <TextField
+                        label="تأكيد كلمة المرور (اختياري)"
+                        name="password_confirmation"
+                        type={showPassword2 ? "text" : "password"}
+                        value={form.password_confirmation}
+                        onChange={handleChange}
+                        onFocus={() => setPwd2Focused(true)}
+                        onBlur={() => setPwd2Focused(false)}
+                        disabled={loading || userLoading}
+                        error={Boolean(pwdError)}
+                        helperText={pwdError || ""}
+                        InputProps={{
+                            endAdornment: showEye2 ? (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        edge="end"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setShowPassword2((s) => !s)}
+                                        aria-label={showPassword2 ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                                    >
+                                        {showPassword2 ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                </InputAdornment>
+                            ) : null,
+                        }}
+                    />
+                </Box>
 
                 <TextField
                     select
